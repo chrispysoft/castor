@@ -8,13 +8,13 @@
 #include <cstring>
 #include <cmath>
 #include <portaudio.h>
-#include <sndfile.h>
 #include "SinOsc.hpp"
+#include "FilePlayer.hpp"
 
 namespace lap {
 class Engine {
 
-    static constexpr double kDefaultSampleRate = 48000;
+    static constexpr double kDefaultSampleRate = 44100;
     static constexpr size_t kDefaultBufferSize = 512;
 
     double mSampleRate;
@@ -26,6 +26,7 @@ class Engine {
     PaStream *mStream;
     SinOsc mOscL;
     SinOsc mOscR;
+    FilePlayer mPlayer;
 
 public:
     Engine(double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
@@ -33,7 +34,8 @@ public:
         mBufferSize(tBufferSize),
         mStream(nullptr),
         mOscL(mSampleRate),
-        mOscR(mSampleRate)
+        mOscR(mSampleRate),
+        mPlayer("../The Plug.wav")
     {
         mOscL.setFrequency(440);
         mOscR.setFrequency(525);
@@ -60,12 +62,12 @@ public:
             printf("Output device name: '%s'\r", pInfo->name);
         }
 
-        inputParameters.channelCount = 4;
+        inputParameters.channelCount = 2;
         inputParameters.sampleFormat = paFloat32;
         inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
         inputParameters.hostApiSpecificStreamInfo = NULL;
 
-        outputParameters.channelCount = 4;
+        outputParameters.channelCount = 2;
         outputParameters.sampleFormat = paFloat32;
         outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
         outputParameters.hostApiSpecificStreamInfo = NULL;
@@ -127,22 +129,27 @@ private:
         float *in = (float*)inputBuffer;
         float *out = (float*)outputBuffer;
 
-        for (auto i = 0; i < framesPerBuffer; ++i) {
-            if (false) {
-                float sL = mOscL.process();
-                float sR = mOscR.process();
-                out[i*2] = sL;
-                out[i*2+1] = sR;
-            }
-            else {
-                *in++;
-                *in++;
-                *out++ = *in++;
-                *out++ = *in++;
-                *out++ = 0;
-                *out++ = 0;
-            }
-        }
+        mPlayer.read(out, framesPerBuffer);
+
+        // for (auto i = 0; i < framesPerBuffer; ++i) {
+        //     if (true) {
+        //         float sL = mOscL.process();
+        //         float sR = mOscR.process();
+        //         //out[i*2] = sL;
+        //         //out[i*2+1] = sR;
+
+        //         mPlayer.read(out, 1);
+
+        //     }
+        //     else {
+        //         *in++;
+        //         *in++;
+        //         *out++ = *in++;
+        //         *out++ = *in++;
+        //         *out++ = 0;
+        //         *out++ = 0;
+        //     }
+        // }
 
         return paContinue;
 
@@ -161,7 +168,7 @@ private:
     }
 
     
-    public:
+public:
 
     static Engine& instance() {
         static Engine instance;
