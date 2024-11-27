@@ -12,18 +12,22 @@ include_directories(${PORTAUDIO_INCLUDE_DIRS})
 pkg_check_modules(SNDFILE REQUIRED sndfile)
 include_directories(${SNDFILE_INCLUDE_DIRS})
 
+# Find FFmpeg
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libavfilter libswscale libswresample)
+include_directories(${FFMPEG_INCLUDE_DIRS})
+
 # Add the executable
 add_executable(lap src/main.cc)
 
 # Set RPATH properties
 set_target_properties(lap PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH TRUE
-    INSTALL_RPATH "${PORTAUDIO_LIBRARY_DIRS};${SNDFILE_LIBRARY_DIRS}"
+    INSTALL_RPATH "${PORTAUDIO_LIBRARY_DIRS};${SNDFILE_LIBRARY_DIRS};${FFMPEG_LIBRARY_DIRS}"
 )
 
 # Link libraries
 target_link_libraries(lap PUBLIC ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(lap PRIVATE ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES})
+target_link_libraries(lap PRIVATE ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} ${FFMPEG_LIBRARIES})
 
 # Compiler options
 target_compile_options(lap PRIVATE -Wno-psabi)

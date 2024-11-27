@@ -9,7 +9,8 @@
 #include <cmath>
 #include <portaudio.h>
 #include "SinOsc.hpp"
-#include "FilePlayer.hpp"
+#include "WAVPlayer.hpp"
+#include "MP3Player.hpp"
 
 namespace lap {
 class Engine {
@@ -26,7 +27,7 @@ class Engine {
     PaStream *mStream;
     SinOsc mOscL;
     SinOsc mOscR;
-    FilePlayer mPlayer;
+    MP3Player mPlayer;
 
 public:
     Engine(double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
@@ -35,7 +36,7 @@ public:
         mStream(nullptr),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mPlayer("../The Plug.wav")
+        mPlayer("../audio/Alternate Gate 6 Master.mp3", mSampleRate)
     {
         mOscL.setFrequency(440);
         mOscR.setFrequency(525);
@@ -72,7 +73,7 @@ public:
         outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
         outputParameters.hostApiSpecificStreamInfo = NULL;
 
-        PaError res = Pa_OpenStream(&mStream, &inputParameters, &outputParameters, mSampleRate, mBufferSize, paNoFlag, &Engine::paCallback, this);
+        auto res = Pa_OpenStream(&mStream, &inputParameters, &outputParameters, mSampleRate, mBufferSize, paNoFlag, &Engine::paCallback, this);
 
         if (res != paNoError) {
             return false;
@@ -92,7 +93,7 @@ public:
     bool close() {
         if (!mStream) return false;
 
-        PaError res = Pa_CloseStream(mStream);
+        auto res = Pa_CloseStream(mStream);
         mStream = nullptr;
 
         return res == paNoError;
@@ -101,7 +102,7 @@ public:
     bool start() {
         if (!mStream) return false;
 
-        PaError res = Pa_StartStream(mStream);
+        auto res = Pa_StartStream(mStream);
 
         return res == paNoError;
     }
@@ -109,7 +110,7 @@ public:
     bool stop() {
         if (!mStream) return false;
 
-        PaError res = Pa_StopStream(mStream);
+        auto res = Pa_StopStream(mStream);
 
         return res == paNoError;
     }

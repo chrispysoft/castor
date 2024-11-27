@@ -3,13 +3,13 @@
 #include <sndfile.h>
 
 namespace lap {
-class FilePlayer {
+class WAVPlayer {
 
     SNDFILE* mFile;
     SF_INFO mInfo;
 
 public:
-    FilePlayer(const std::string& tPath) {
+    WAVPlayer(const std::string& tPath) {
         mFile = sf_open(tPath.data(), SFM_READ, &mInfo);
         if (sf_error(mFile) != SF_ERR_NO_ERROR) {
             std::string reason(sf_strerror(mFile));
@@ -18,7 +18,7 @@ public:
         }
     }
 
-    ~FilePlayer() {
+    ~WAVPlayer() {
         sf_close(mFile);
     }
 
