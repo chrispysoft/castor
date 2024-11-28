@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
-#include <cmath>
+#include <bits/stdc++.h>
 #include <portaudio.h>
 
 namespace lap {
@@ -45,8 +45,11 @@ public:
 
     void start(const std::string& tDeviceName) {
         auto deviceID = getDeviceID(tDeviceName);
-        if (deviceID == -1) deviceID = Pa_GetDefaultOutputDevice();
-        std::cout << "Using deviceID " << deviceID << std::endl;
+        if (deviceID == -1) {
+            std::cout << "Device '" << tDeviceName << "' not found - using default" << std::endl;
+            deviceID = Pa_GetDefaultOutputDevice();
+        }
+        std::cout << "Starting audio stream with device id " << deviceID << ", sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
         
         if (openStream(deviceID, deviceID)) {
             startStream();
@@ -64,22 +67,29 @@ public:
 
 private:
     
-
-    int getDeviceID(const std::string& name) {
+    std::vector<std::string> getDeviceNames() {
+        
         using namespace std;
         auto numDevices = Pa_GetDeviceCount();
-        cout << numDevices << " devices" << endl;
-        const PaDeviceInfo *deviceInfo;
+        cout << "Found " << numDevices << " devices:" << endl;
+
+        vector<string> deviceNames(numDevices);
+
+        const PaDeviceInfo* info;
         int deviceID = -1;
-        for (int i=0; i<numDevices; i++ ) {
-            deviceInfo = Pa_GetDeviceInfo(i);
-            const auto& devName = string(deviceInfo->name);
-            cout << "#" << i << " " << deviceInfo->maxInputChannels << " " << deviceInfo->maxOutputChannels << " " << devName << endl;
-            if (devName == name) {
-                return i;
-            }
+        for (auto i = 0; i < numDevices; i++ ) {
+            info = Pa_GetDeviceInfo(i);
+            deviceNames[i] = string(info->name);
+            cout << "#" << i << " " << info->maxInputChannels << " " << info->maxOutputChannels << " " << deviceNames[i] << endl;
         }
-        return -1;
+        return deviceNames;
+    }
+
+    int getDeviceID(const std::string& tDeviceName) {
+        const auto names = getDeviceNames();
+        auto it = std::find(names.begin(), names.end(), tDeviceName);
+        int idx = it - names.begin();
+        return idx;
     }
 
     bool openStream(const PaDeviceIndex& inDeviceIdx, const PaDeviceIndex& outDeviceIdx) {

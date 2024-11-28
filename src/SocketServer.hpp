@@ -11,16 +11,16 @@
 namespace lap {
 class SocketServer {
 
-    std::atomic<int> mSocket;
+    int mSocket;
     std::string mSocketPath;
     std::atomic<bool> mRunning;
-    std::thread listenerThread;
+    std::thread mListenerThread;
 
 public:
-    // Constructor
-    SocketServer(const std::string& socketPath) :
+
+    SocketServer(const std::string& tSocketPath) :
         mSocket(-1),
-        mSocketPath(socketPath),
+        mSocketPath(tSocketPath),
         mRunning(false)
     {}
 
@@ -31,34 +31,34 @@ public:
 
     void start() {
         if (mRunning.load()) {
-            std::cerr << "Server is already running!" << std::endl;
+            std::cerr << "SocketServer already running" << std::endl;
             return;
         }
 
         mRunning.store(true);
 
-        // Create a Unix Domain Socket
+        // create UDS
         mSocket = socket(AF_UNIX, SOCK_STREAM, 0);
         if (mSocket < 0) {
             throw std::runtime_error("Socket creation failed");
         }
 
-        // Set the socket to non-blocking mode
+        // non-blocking mode
         int flags = fcntl(mSocket, F_GETFL, 0);
         if (flags == -1) {
-            throw std::runtime_error("fcntl(F_GETFL) failed");
+            throw std::runtime_error("fcntl failed");
         }
 
         if (fcntl(mSocket, F_SETFL, flags | O_NONBLOCK) == -1) {
-            throw std::runtime_error("fcntl(F_SETFL) failed to set non-blocking");
+            throw std::runtime_error("fcntl failed to set non-blocking");
         }
 
-        // Bind the socket to the file path
+        // bind to file path
         sockaddr_un serverAddr{};
         serverAddr.sun_family = AF_UNIX;
         strncpy(serverAddr.sun_path, mSocketPath.c_str(), sizeof(serverAddr.sun_path) - 1);
 
-        // Remove any existing socket file
+        // remove any existing socket file
         unlink(mSocketPath.c_str());
 
         if (bind(mSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
@@ -66,35 +66,35 @@ public:
             throw std::runtime_error("Bind failed");
         }
 
-        // Start listening for connections
+        // start listening for connections
         if (listen(mSocket, 5) < 0) {
             close(mSocket);
             throw std::runtime_error("Listen failed");
         }
 
-        // Start the listener thread
-        listenerThread = std::thread(&SocketServer::run, this);
+        // start listener thread
+        mListenerThread = std::thread(&SocketServer::run, this);
 
-        std::cout << "Server started on socket: " << mSocketPath << std::endl;
+        std::cout << "SocketServer started on socket '" << mSocketPath << "'" << std::endl;
     }
 
-    // Stop the server
     void stop() {
         if (!mRunning.load()) {
+            std::cerr << "SocketServer not running" << std::endl;
             return;
         }
 
         mRunning.store(false);
 
-        std::cout << "Closing socket..." << std::endl;
+        // std::cout << "Closing socket..." << std::endl;
         if (mSocket >= 0) {
             close(mSocket);
-            mSocket.exchange(-1);
+            mSocket = -1;
         }
 
         // std::cout << "Waiting for listener to finish..." << std::endl;
-        if (listenerThread.joinable()) {
-            listenerThread.join();
+        if (mListenerThread.joinable()) {
+            mListenerThread.join();
         }
 
         // std::cout << "Unlinking socket..." << std::endl;
@@ -118,12 +118,12 @@ private:
                 break;
             }
 
-            // Check if server socket is ready to accept
+            // check if server socket is ready to accept
             if (fds[0].revents & POLLIN) {
                 sockaddr_un clientAddr{};
                 socklen_t clientLen = sizeof(clientAddr);
 
-                // Accept a new client connection
+                // accept new client connection
                 int clientSocket = accept(mSocket, (struct sockaddr*)&clientAddr, &clientLen);
                 if (clientSocket < 0) {
                     if (errno == EINTR) continue;  // Retry if interrupted
@@ -137,7 +137,6 @@ private:
         }
     }
 
-    // Handle client communication
     void handleClient(int clientSocket) {
         char buffer[1024];
         while (true) {
