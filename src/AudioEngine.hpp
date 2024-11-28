@@ -14,7 +14,7 @@
 
 namespace lap {
 class AudioEngine : public AudioClientRenderer {
-    static constexpr char* const kDefaultDeviceName = "Soundcraft Signature 12 MTK: USB Audio (hw:2,0)";
+    static constexpr const char* kDefaultDeviceName = "Soundcraft Signature 12 MTK: USB Audio (hw:2,0)";
     static constexpr double kDefaultSampleRate = 44100;
     static constexpr size_t kDefaultBufferSize = 512;
 

@@ -90,7 +90,7 @@ public:
         }
 
         av_opt_set_int(swrCtx, "in_channel_layout", codecCtx->channel_layout, 0);
-        av_opt_set_int(swrCtx, "out_channel_layout", codecCtx->channel_layout, 0);
+        av_opt_set_int(swrCtx, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
         av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
         av_opt_set_int(swrCtx, "out_sample_rate", mSampleRate, 0);
         av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
@@ -120,7 +120,7 @@ public:
                 if (avcodec_send_packet(codecCtx, packet) >= 0) {
                     while (avcodec_receive_frame(codecCtx, frame) >= 0) {
                         // Resample frame data to float format
-                        int nbChannels = av_get_channel_layout_nb_channels(codecCtx->channel_layout);
+                        int nbChannels = codecCtx->ch_layout.nb_channels; //av_get_channel_layout_nb_channels(codecCtx->channel_layout);
                         int outSamples = swr_get_out_samples(swrCtx, frame->nb_samples);
                         std::vector<float> resampledData(outSamples * nbChannels);
 
