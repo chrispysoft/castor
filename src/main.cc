@@ -1,6 +1,6 @@
-#include "Engine.hpp"
+#include "LAP.hpp"
 
 int main() {
-    lap::Engine::instance().run();
+    lap::LAP::instance().run();
     return 0;
 }
