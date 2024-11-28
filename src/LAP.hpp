@@ -41,7 +41,7 @@ public:
     void run() {
         mRunning.store(true);
         mSocket.start();
-        mEngine.connect();
+        mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning.load()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -53,7 +53,7 @@ public:
     void stop() {
         std::cout << "STOPPING..." << std::endl;
         mSocket.stop();
-        mEngine.disconnect();
+        mEngine.stop();
         mRunning.store(false);
         std::cout << "STOPPED" << std::endl;
     }
