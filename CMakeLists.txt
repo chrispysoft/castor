@@ -19,6 +19,13 @@ include_directories(${FFMPEG_INCLUDE_DIRS})
 # Add the executable
 add_executable(lap src/main.cc)
 
+# Set the C++ standard
+set_target_properties(lap PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+
 # Set RPATH properties
 set_target_properties(lap PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH TRUE
