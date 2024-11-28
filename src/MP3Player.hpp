@@ -158,11 +158,16 @@ public:
 
     
     bool read(float* tBuffer, size_t tFrameCount) {
-        memset(tBuffer, 0, sizeof(float) * tFrameCount * mChannelCount);
-        memcpy(tBuffer, mSamples.data() + mReadPos * mChannelCount, tFrameCount * mChannelCount * sizeof(float));
-        mReadPos += tFrameCount;
-        if (mReadPos >= mSamples.size()) mReadPos = 0; // loop
-        return true;
+        auto bytesz = sizeof(float) * tFrameCount * mChannelCount;
+        memset(tBuffer, 0, bytesz);
+
+        if (mReadPos < mSamples.size()) {
+            memcpy(tBuffer, mSamples.data() + mReadPos * mChannelCount, bytesz);
+            mReadPos += tFrameCount;
+            return true;
+        }
+        
+        return false;
     }
 };
 }
