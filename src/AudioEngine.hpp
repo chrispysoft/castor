@@ -28,6 +28,7 @@ class AudioEngine : public AudioClientRenderer {
     SinOsc mOscL;
     SinOsc mOscR;
     MP3Player mPlayer;
+    std::vector<MP3Player> mFilePlayers;
     SilenceDetector mSilenceDet;
     
 public:
@@ -55,6 +56,15 @@ public:
 
     void stop() {
         mAudioClient.stop();
+    }
+
+    void play(const std::string& tURL) {
+        try {
+            auto player = MP3Player(tURL, mSampleRate);
+        }
+        catch (...) {
+            std::cout << "Failed to load '" << tURL << "'" << std::endl;
+        }
     }
 
 

@@ -7,6 +7,7 @@
 
 #include "AudioEngine.hpp"
 #include "SocketServer.hpp"
+#include "Controller.hpp"
 
 namespace lap {
 class LAP {
@@ -17,15 +18,25 @@ class LAP {
     std::atomic<bool> mRunning;
     AudioEngine mEngine;
     SocketServer mSocket;
+    Controller mController;
 
 public:
     LAP() :
         mRunning(false),
         mEngine(),
-        mSocket(kSocketPath)
+        mSocket(kSocketPath),
+        mController()
     {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
+
+        mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
+            this->mController.parse(buffer, size, txCallback);
+        };
+
+        mController.commandHandler = [this](const auto& cmdstr) {
+            this->mEngine.play(cmdstr);
+        };
     }
 
     static LAP& instance() {

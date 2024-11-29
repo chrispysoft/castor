@@ -104,8 +104,8 @@ private:
         }
 
         const PaDeviceInfo* pInfo = Pa_GetDeviceInfo(inDeviceIdx);
-        if (pInfo != 0) {
-            printf("Output device name: '%s'\r", pInfo->name);
+        if (!pInfo) {
+            return false;
         }
 
         inputParameters.channelCount = 2;

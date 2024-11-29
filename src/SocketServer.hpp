@@ -1,7 +1,10 @@
+#pragma once
+
 #include <iostream>
 #include <thread>
 #include <atomic>
 #include <cstring>
+#include <functional>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <poll.h>
@@ -17,6 +20,10 @@ class SocketServer {
     std::thread mListenerThread;
 
 public:
+
+    typedef std::function<void(const std::string& msg)> TxCallback;
+    typedef std::function<void(const char* data, size_t len, TxCallback txCallback)> RxHandler;
+    RxHandler rxHandler;
 
     SocketServer(const std::string& tSocketPath) :
         mSocket(-1),
@@ -149,9 +156,16 @@ private:
                 break;
             }
 
-            std::cout << "Received: " << buffer << std::endl;
+            // std::cout << "Received: " << buffer << std::endl;
+
+            if (rxHandler) {
+                rxHandler(buffer, bytesRead, [clientSocket](const auto& response) {
+                    // std::cout << "Sending response '" << response << "'" << std::endl;
+                    send(clientSocket, response.c_str(), response.size(), 0);
+                });
+            }
             
-            send(clientSocket, buffer, bytesRead, 0);
+            // send(clientSocket, buffer, bytesRead, 0);
         }
     }
 };
