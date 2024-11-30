@@ -1,0 +1,13 @@
+services:
+  lap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/app
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      - PA_ALSA_PLUG=1
+    working_dir: /app
+    command: ["lap"]
