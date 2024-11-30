@@ -27,7 +27,7 @@ class AudioEngine : public AudioClientRenderer {
     AudioClient mAudioClient;
     SinOsc mOscL;
     SinOsc mOscR;
-    MP3Player mPlayer;
+    MP3Player* mPlayer;
     std::vector<MP3Player> mFilePlayers;
     SilenceDetector mSilenceDet;
     
@@ -38,12 +38,12 @@ public:
         mAudioClient(mSampleRate, mBufferSize),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mPlayer("../audio/A maj.mp3", mSampleRate),
+        mPlayer(nullptr),
         mSilenceDet()
     {
         mAudioClient.setRenderer(this);
-        mOscL.setFrequency(440);
-        mOscR.setFrequency(525);
+        mOscL.setFrequency(432);
+        mOscR.setFrequency(432 + (432.0/12.0*3));
     }
 
     ~AudioEngine() override {
@@ -59,12 +59,21 @@ public:
     }
 
     void play(const std::string& tURL) {
+        if (mPlayer) {
+            delete mPlayer;
+            mPlayer = nullptr;
+        }
         try {
-            auto player = MP3Player(tURL, mSampleRate);
+            auto player = new MP3Player(tURL, mSampleRate);
+            mPlayer = player;
         }
         catch (...) {
             std::cout << "Failed to load '" << tURL << "'" << std::endl;
         }
+    }
+
+    void roll(double position) {
+        if (mPlayer) mPlayer->roll(position);
     }
 
 
@@ -89,7 +98,8 @@ private:
                 break;
             }
             case MixerMode::FILE: {
-                mPlayer.read(out, nframes);
+                if (mPlayer) mPlayer->read(out, nframes);
+                else memset(out, 0, nframes * 2 * sizeof(float));
                 break;
             };
         }

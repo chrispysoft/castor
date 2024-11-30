@@ -15,8 +15,9 @@ class MP3Player {
 
     const double mSampleRate;
     const size_t mChannelCount;
-    size_t mReadPos = 0;
+    std::atomic<size_t> mReadPos = 0;
     std::vector<float> mSamples;
+    double mDuration;
     
 
 public:
@@ -154,7 +155,14 @@ public:
         avcodec_free_context(&codecCtx);
         avformat_close_input(&formatCtx);
 
-        std::cout << "Read " << mSamples.size() << " samples" << std::endl;
+        mDuration = mSamples.size() / mChannelCount / mSampleRate;
+        std::cout << "Read " << mSamples.size() << " samples" << " with duration " << mDuration << std::endl;
+    }
+
+    void roll(double pos) {
+        // std::cout << "MP3Player rolling to " << pos << std::endl;
+        size_t samPos = pos * mSampleRate * mChannelCount;
+        mReadPos = samPos;
     }
 
     

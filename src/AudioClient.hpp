@@ -71,7 +71,7 @@ private:
         
         using namespace std;
         auto numDevices = Pa_GetDeviceCount();
-        cout << "Found " << numDevices << " devices:" << endl;
+        // cout << "Found " << numDevices << " devices:" << endl;
 
         vector<string> deviceNames(numDevices);
 
@@ -80,7 +80,7 @@ private:
         for (auto i = 0; i < numDevices; i++ ) {
             info = Pa_GetDeviceInfo(i);
             deviceNames[i] = string(info->name);
-            cout << "#" << i << " " << info->maxInputChannels << " " << info->maxOutputChannels << " " << deviceNames[i] << endl;
+            // cout << "#" << i << " " << info->maxInputChannels << " " << info->maxOutputChannels << " " << deviceNames[i] << endl;
         }
         return deviceNames;
     }

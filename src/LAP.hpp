@@ -8,6 +8,7 @@
 #include "AudioEngine.hpp"
 #include "SocketServer.hpp"
 #include "Controller.hpp"
+#include "util.hpp"
 
 namespace lap {
 class LAP {
@@ -37,6 +38,16 @@ public:
         mController.commandHandler = [this](const auto& cmdstr) {
             this->mEngine.play(cmdstr);
         };
+
+        mController.registerCommand("in_queue_0", "push", [&](auto args, auto callback) {
+            const auto url = util::extractUrl(args);
+            this->mEngine.play(url);
+        });
+
+        mController.registerCommand("in_queue_0", "roll", [&](auto args, auto callback) {
+            auto pos = std::stod(args);
+            this->mEngine.roll(pos);
+        });
     }
 
     static LAP& instance() {

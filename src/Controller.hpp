@@ -19,6 +19,11 @@ public:
     CommandHandler commandHandler;
 
 
+    void registerCommand(const std::string& namespaze, const std::string& command, std::function<void(const std::string&, SendHandler)> callback) {
+        commands[namespaze+"."+command] = callback;
+    }
+
+
     Controller() {
         mStartTime = std::time(0);
 
@@ -56,7 +61,7 @@ public:
         auto found = cmdstr.find(" ");
         std::string param = "";
         if (found != std::string::npos) {
-            param = cmdstr.substr(found, cmdstr.length() - 1 - found);
+            param = cmdstr.substr(found + 1, cmdstr.length() - found);
             cmdstr.erase(found, cmdstr.length() - 1);
         }
         auto it = commands.find(cmdstr);
