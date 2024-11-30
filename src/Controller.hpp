@@ -24,14 +24,14 @@ public:
 
         static const std::string endToken = "\nEND\r\n";
         commands["aura_engine.version"] = [&](auto param, SendHandler sendHandler) {
-            sendHandler("{ \"core\": \"0.0.1\", \"liquidsoap\": \"-1\" }" + endToken); //"{\"uptime\": 1, \"is_fallback\": false}\n\r");
+            sendHandler("{ \"core\": \"0.0.1\", \"liquidsoap\": \"-1\" }" + endToken);
         };
         commands["aura_engine.status"] = [&](auto param, SendHandler sendHandler) {
             sendHandler("{ \"uptime\": \"0d 00h 01m 11s\", \"is_fallback\": true }" + endToken);
         };
         commands["uptime"] = [&](auto param, SendHandler sendHandler) {
             auto uptime = std::time(0) - this->mStartTime;
-            sendHandler("0d 00h 01m 11s" + endToken); //(std::to_string(uptime) + "\n\r");
+            sendHandler("0d 00h 01m 11s" + endToken);
         };
         commands["mixer.inputs"] = [&](auto param, SendHandler sendHandler) {
             //commandCallback()
@@ -46,7 +46,7 @@ public:
             sendHandler("ready=false selected=false single=false volume=100% remaining=inf" + endToken);
         };
         commands["mixer.status"] = [&](auto param, SendHandler sendHandler) {
-            sendHandler("ready=false selected=false single=false volume=100% remaining=inf" + endToken); // ready=false selected=false single=false volume=100% remaining=inf
+            sendHandler("ready=false selected=false single=false volume=100% remaining=inf" + endToken);
         };
     }
 

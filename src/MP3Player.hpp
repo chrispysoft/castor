@@ -161,7 +161,8 @@ public:
         auto bytesz = sizeof(float) * tFrameCount * mChannelCount;
         memset(tBuffer, 0, bytesz);
 
-        if (mReadPos < mSamples.size()) {
+        auto samPos = mReadPos * mChannelCount;
+        if (samPos < mSamples.size()) {
             memcpy(tBuffer, mSamples.data() + mReadPos * mChannelCount, bytesz);
             mReadPos += tFrameCount;
             return true;
