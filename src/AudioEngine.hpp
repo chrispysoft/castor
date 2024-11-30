@@ -38,7 +38,7 @@ public:
         mAudioClient(mSampleRate, mBufferSize),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mPlayer("../audio/Alternate Gate 6 Master.mp3", mSampleRate),
+        mPlayer("../audio/A maj.mp3", mSampleRate),
         mSilenceDet()
     {
         mAudioClient.setRenderer(this);

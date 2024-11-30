@@ -23,6 +23,7 @@ public:
     MP3Player(const std::string& tPath, double tSampleRate, size_t tChannelCount = kDefaultChannelCount) :
         mSampleRate(tSampleRate),
         mChannelCount(tChannelCount),
+        mReadPos(0),
         mSamples(0)
     {
         readFile(tPath);
@@ -158,17 +159,17 @@ public:
 
     
     bool read(float* tBuffer, size_t tFrameCount) {
-        auto bytesz = sizeof(float) * tFrameCount * mChannelCount;
-        memset(tBuffer, 0, bytesz);
-
-        auto samPos = mReadPos * mChannelCount;
-        if (samPos < mSamples.size()) {
-            memcpy(tBuffer, mSamples.data() + mReadPos * mChannelCount, bytesz);
-            mReadPos += tFrameCount;
-            return true;
-        }
+        auto sampleCount = tFrameCount * mChannelCount;
+        auto byteSize = sampleCount * sizeof(float);
         
-        return false;
+        if (mReadPos + sampleCount < mSamples.size()) {
+            memcpy(tBuffer, mSamples.data() + mReadPos, byteSize);
+            mReadPos += sampleCount;
+            return true;
+        } else {
+            memset(tBuffer, 0, byteSize);
+            return false;
+        }
     }
 };
 }

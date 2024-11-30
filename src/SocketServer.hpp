@@ -32,7 +32,7 @@ public:
     {}
 
     ~SocketServer() {
-        stop();
+        // stop();
     }
 
 
@@ -50,7 +50,7 @@ public:
             throw std::runtime_error("Socket creation failed");
         }
 
-        // non-blocking mode
+        // non-blocking
         int flags = fcntl(mSocket, F_GETFL, 0);
         if (flags == -1) {
             throw std::runtime_error("fcntl failed");
@@ -118,7 +118,7 @@ private:
             fds[0].fd = mSocket;
             fds[0].events = POLLIN;
 
-            int ret = poll(fds, 1, 0);
+            auto ret = poll(fds, 1, 0);
             if (ret < 0) {
                 if (errno == EINTR) continue;
                 std::cout << "Poll failed" << std::endl;
@@ -131,9 +131,9 @@ private:
                 socklen_t clientLen = sizeof(clientAddr);
 
                 // accept new client connection
-                int clientSocket = accept(mSocket, (struct sockaddr*)&clientAddr, &clientLen);
+                auto clientSocket = accept(mSocket, (struct sockaddr*)&clientAddr, &clientLen);
                 if (clientSocket < 0) {
-                    if (errno == EINTR) continue;  // Retry if interrupted
+                    if (errno == EINTR) continue; // retry if interrupted
                     std::cout << "Accept failed" << std::endl;
                     continue;
                 }
@@ -148,7 +148,7 @@ private:
         char buffer[1024];
         while (true) {
             memset(buffer, 0, sizeof(buffer));
-            ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+            auto bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
             if (bytesRead <= 0) {
                 std::cout << "Client disconnected" << std::endl;
