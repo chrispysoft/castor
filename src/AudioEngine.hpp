@@ -10,6 +10,7 @@
 #include "SinOsc.hpp"
 #include "WAVPlayer.hpp"
 #include "MP3Player.hpp"
+#include "StreamPlayer.hpp"
 #include "SilenceDetector.hpp"
 
 namespace lap {
@@ -28,6 +29,7 @@ class AudioEngine : public AudioClientRenderer {
     SinOsc mOscL;
     SinOsc mOscR;
     MP3Player* mPlayer;
+    StreamPlayer* mStreamPlayer;
     std::vector<MP3Player> mFilePlayers;
     SilenceDetector mSilenceDet;
     
@@ -39,6 +41,7 @@ public:
         mOscL(mSampleRate),
         mOscR(mSampleRate),
         mPlayer(nullptr),
+        mStreamPlayer(nullptr),
         mSilenceDet()
     {
         mAudioClient.setRenderer(this);
@@ -72,6 +75,21 @@ public:
         }
     }
 
+    void stream(const std::string& tURL) {
+        if (mStreamPlayer) {
+            delete mStreamPlayer;
+            mStreamPlayer = nullptr;
+        }
+        try {
+            auto player = new StreamPlayer(mSampleRate);
+            mStreamPlayer = player;
+            mStreamPlayer->open(tURL);
+        }
+        catch (...) {
+            std::cout << "Failed to load '" << tURL << "'" << std::endl;
+        }
+    }
+
     void roll(double position) {
         if (mPlayer) mPlayer->roll(position);
     }
@@ -98,7 +116,7 @@ private:
                 break;
             }
             case MixerMode::FILE: {
-                if (mPlayer) mPlayer->read(out, nframes);
+                if (mStreamPlayer) mStreamPlayer->read(out, nframes);
                 else memset(out, 0, nframes * 2 * sizeof(float));
                 break;
             };

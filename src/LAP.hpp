@@ -65,6 +65,7 @@ public:
         mSocket.start();
         mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
+            this->mEngine.stream("https://stream.fro.at/fro128.mp3");
             while (this->mRunning.load()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
