@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -5,39 +7,38 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 }
+#include "AudioSource.hpp"
 #include <iostream>
 #include <string>
 
 namespace lap {
-class MP3Player {
+class MP3Player : public AudioSource {
 
-    static constexpr size_t kDefaultChannelCount = 2;
+    static constexpr size_t kChannelCount = 2;
 
     const double mSampleRate;
-    const size_t mChannelCount;
     std::atomic<size_t> mReadPos = 0;
     std::vector<float> mSamples;
     double mDuration;
     
 
 public:
-    MP3Player(const std::string& tPath, double tSampleRate, size_t tChannelCount = kDefaultChannelCount) :
+    MP3Player(double tSampleRate) :
         mSampleRate(tSampleRate),
-        mChannelCount(tChannelCount),
         mReadPos(0),
         mSamples(0)
     {
-        readFile(tPath);
-    }
-
-    ~MP3Player() {
         
     }
 
-    void readFile(const std::string& tPath) {
+    ~MP3Player() override {
+        
+    }
+
+    void open(const std::string& tURL) override {
         // open input file
         AVFormatContext* formatCtx = nullptr;
-        if (avformat_open_input(&formatCtx, tPath.c_str(), nullptr, nullptr) < 0) {
+        if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, nullptr) < 0) {
             throw std::runtime_error("Could not open input file.");
         }
 
@@ -164,28 +165,30 @@ public:
         avcodec_free_context(&codecCtx);
         avformat_close_input(&formatCtx);
 
-        mDuration = mSamples.size() / mChannelCount / mSampleRate;
+        mDuration = mSamples.size() / kChannelCount / mSampleRate;
         std::cout << "Read " << mSamples.size() << " samples" << " with duration " << mDuration << std::endl;
     }
 
-    void roll(double pos) {
+    void roll(double pos) override {
         // std::cout << "MP3Player rolling to " << pos << std::endl;
-        size_t samPos = pos * mSampleRate * mChannelCount;
+        size_t samPos = pos * mSampleRate * kChannelCount;
         mReadPos = samPos;
     }
 
+    void clear() override {
+        
+    }
+
     
-    bool read(float* tBuffer, size_t tFrameCount) {
-        auto sampleCount = tFrameCount * mChannelCount;
+    void process(const float*, float* tBuffer, size_t tFrameCount) override {
+        auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
         
         if (mReadPos + sampleCount < mSamples.size()) {
             memcpy(tBuffer, mSamples.data() + mReadPos, byteSize);
             mReadPos += sampleCount;
-            return true;
         } else {
             memset(tBuffer, 0, byteSize);
-            return false;
         }
     }
 };

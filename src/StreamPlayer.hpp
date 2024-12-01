@@ -1,12 +1,15 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include "AudioSource.hpp"
 #include "util.hpp"
 
 namespace lap {
-class StreamPlayer {
+class StreamPlayer : public AudioSource {
 
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRingBufferSize = 1024 * 1024;
@@ -15,26 +18,24 @@ class StreamPlayer {
 
 
     const double mSampleRate;
-    const size_t mChannelCount;
     util::RingBuffer<float> mRingBuffer;
 
 public:
-    StreamPlayer(double tSampleRate, size_t tChannelCount = kChannelCount, size_t tRingBufferSize = kRingBufferSize) :
+    StreamPlayer(double tSampleRate, size_t tRingBufferSize = kRingBufferSize) :
         mSampleRate(tSampleRate),
-        mChannelCount(tChannelCount),
         mRingBuffer(tRingBufferSize)
     {
 
     }
 
-    ~StreamPlayer() {
+    ~StreamPlayer() override {
         
     }
 
-    void open(const std::string& tURL) {
+    void open(const std::string& tURL) override {
         std::cout << "StreamPlayer open " << tURL << std::endl;
         
-        std::string command = "ffmpeg -i \"" + tURL + "\" -ac " + std::to_string(mChannelCount) + " -ar " + std::to_string(int(mSampleRate)) + " -channel_layout stereo -f f32le - 2>/dev/null";
+        std::string command = "ffmpeg -i \"" + tURL + "\" -ac " + std::to_string(kChannelCount) + " -ar " + std::to_string(int(mSampleRate)) + " -channel_layout stereo -f f32le - 2>/dev/null";
         // std::cout << command << std::endl;
         FILE* pipe = popen(command.c_str(), "r");
         if (!pipe) {
@@ -53,26 +54,32 @@ public:
 
         std::cout << "StreamPlayer finished" << std::endl;
     }
+
+    void roll(double) override {
+        std::cout << "StreamPlayer can't roll" << std::endl;
+    }
+
+    void clear() override {
+        
+    }
     
-    bool read(float* tBuffer, size_t tFrameCount) {
-        auto sampleCount = tFrameCount * mChannelCount;
+    void process(const float*, float* tBuffer, size_t tFrameCount) override {
+        auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
 
         if (mRingBuffer.size() < kMinRenderBufferSize) {
-            // std::cout << "mRingBuffer.size " << mRingBuffer.size << std::endl;
+            // std::cout << "mRingBuffer.size " << mRingBuffer.size() << std::endl;
             memset(tBuffer, 0, byteSize);
-            return false;
+            return;
         }
         
         size_t bytesRead = mRingBuffer.read(tBuffer, sampleCount);
         if (bytesRead) {
             // std::cout << "read " << bytesRead << " from ringbuffer" << std::endl;
             // mReadPos += sampleCount;
-            return true;
         } else {
             std::cout << "0 bytes read" << std::endl; 
             memset(tBuffer, 0, byteSize);
-            return false;
         }
     }
 };

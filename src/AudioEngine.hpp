@@ -6,10 +6,10 @@
 #include <string>
 #include <cmath>
 
+#include "Controller.hpp"
 #include "AudioClient.hpp"
-#include "SinOsc.hpp"
-#include "MP3Player.hpp"
-#include "StreamPlayer.hpp"
+#include "Mixer.hpp"
+#include "Fallback.hpp"
 #include "SilenceDetector.hpp"
 
 namespace lap {
@@ -21,15 +21,9 @@ class AudioEngine : public AudioClientRenderer {
     double mSampleRate;
     size_t mBufferSize;
 
-    std::unique_ptr<std::thread> mWorker = nullptr;
-    std::atomic<bool> mRunning;
-
     AudioClient mAudioClient;
-    SinOsc mOscL;
-    SinOsc mOscR;
-    MP3Player* mPlayer;
-    StreamPlayer* mStreamPlayer;
-    std::vector<MP3Player> mFilePlayers;
+    Mixer mMixer;
+    Fallback mFallback;
     SilenceDetector mSilenceDet;
     
 public:
@@ -37,19 +31,31 @@ public:
         mSampleRate(tSampleRate),
         mBufferSize(tBufferSize),
         mAudioClient(mSampleRate, mBufferSize),
-        mOscL(mSampleRate),
-        mOscR(mSampleRate),
-        mPlayer(nullptr),
-        mStreamPlayer(nullptr),
+        mMixer(mSampleRate, mBufferSize),
+        mFallback(mSampleRate),
         mSilenceDet()
     {
         mAudioClient.setRenderer(this);
-        mOscL.setFrequency(432);
-        mOscR.setFrequency(432 + (432.0/12.0*3));
     }
 
     ~AudioEngine() override {
         
+    }
+
+    void registerControlCommands(Controller* tController) {
+        tController->registerCommand("aura_engine", "status", [&](auto args, auto callback) {
+            const std::string uptime = "0d 00h 01m 11s";
+            const std::string isFallback = this->mSilenceDet.silenceDetected() ? "true" : "false";
+            const auto status = "{ \"uptime\": \"" + uptime + "\", \"is_fallback\": " + isFallback + " }";
+            callback(status);
+        });
+
+        tController->registerCommand("aura_engine", "version", [&](auto args, auto callback) {
+            auto version = "{ \"core\": \"0.0.1\", \"liquidsoap\": \"-1\" }";
+            callback(version);
+        });
+
+        mMixer.registerControlCommands(tController);
     }
 
     void start(const std::string& tDeviceName = kDefaultDeviceName) {
@@ -60,76 +66,16 @@ public:
         mAudioClient.stop();
     }
 
-    void play(const std::string& tURL) {
-        if (mPlayer) {
-            delete mPlayer;
-            mPlayer = nullptr;
-        }
-        try {
-            auto player = new MP3Player(tURL, mSampleRate);
-            mPlayer = player;
-        }
-        catch (...) {
-            std::cout << "Failed to load '" << tURL << "'" << std::endl;
-        }
-    }
-
-    void stream(const std::string& tURL) {
-        if (mStreamPlayer) {
-            delete mStreamPlayer;
-            mStreamPlayer = nullptr;
-        }
-        try {
-            auto player = new StreamPlayer(mSampleRate);
-            mStreamPlayer = player;
-            mStreamPlayer->open(tURL);
-        }
-        catch (...) {
-            std::cout << "Failed to load '" << tURL << "'" << std::endl;
-        }
-    }
-
-    void roll(double position) {
-        if (mPlayer) mPlayer->roll(position);
-    }
-
-
-    std::vector<int> inChannelMap = {6,7};
-    std::vector<int> outChannelMap = {10,11};
-
-    enum MixerMode {
-        LINE,
-        FILE
-    };
-
-    MixerMode mMode = MixerMode::FILE;
-
 
 private:
 
     void renderCallback(const float* in, float* out, size_t nframes) override {
 
-        switch (mMode) {
-            case MixerMode::LINE: {
-                memcpy(out, in, nframes * 2 * sizeof(float));
-                break;
-            }
-            case MixerMode::FILE: {
-                if (mStreamPlayer) mStreamPlayer->read(out, nframes);
-                else memset(out, 0, nframes * 2 * sizeof(float));
-                break;
-            };
-        }
-
+        mMixer.process(in, out, nframes);
         mSilenceDet.process(out, nframes);
 
         if (mSilenceDet.silenceDetected()) {
-            for (auto i = 0; i < nframes; ++i) {
-                float sL = mOscL.process();
-                float sR = mOscR.process();
-                out[i*2] = sL;
-                out[i*2+1] = sR;
-            }
+            mFallback.process(in, out, nframes);
         }
     }
 };

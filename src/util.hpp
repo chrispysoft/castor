@@ -26,12 +26,12 @@ std::map<std::string, std::string> extractMetadata(const std::string& annotation
 }
 
 std::string extractUrl(const std::string& annotation) {
-    static constexpr char delimiter = ':';
-    size_t lastColon = annotation.find_last_of(delimiter);
-    if (lastColon != std::string::npos) {
-        return annotation.substr(lastColon + 1);
+    std::regex pattern(R"((?:[^:]*:){2}(.*))");
+    std::smatch match;
+    if (std::regex_match(annotation, match, pattern)) {
+        return match[1];
     }
-    return {};
+    return "";
 }
 
 

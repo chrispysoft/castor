@@ -15,14 +15,17 @@ class LAP {
 
     const std::string kSocketPath = "/tmp/lap_socket";
     
-    std::unique_ptr<std::thread> mWorker = nullptr;
+    time_t mStartTime;
     std::atomic<bool> mRunning;
+    std::unique_ptr<std::thread> mWorker = nullptr;
     AudioEngine mEngine;
     SocketServer mSocket;
     Controller mController;
+    
 
 public:
     LAP() :
+        mStartTime(std::time(0)),
         mRunning(false),
         mEngine(),
         mSocket(kSocketPath),
@@ -35,19 +38,7 @@ public:
             this->mController.parse(buffer, size, txCallback);
         };
 
-        mController.commandHandler = [this](const auto& cmdstr) {
-            this->mEngine.play(cmdstr);
-        };
-
-        mController.registerCommand("in_queue_0", "push", [&](auto args, auto callback) {
-            const auto url = util::extractUrl(args);
-            this->mEngine.play(url);
-        });
-
-        mController.registerCommand("in_queue_0", "roll", [&](auto args, auto callback) {
-            auto pos = std::stod(args);
-            this->mEngine.roll(pos);
-        });
+        mEngine.registerControlCommands(&mController);
     }
 
     static LAP& instance() {
@@ -65,7 +56,8 @@ public:
         mSocket.start();
         mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
-            this->mEngine.stream("https://stream.fro.at/fro128.mp3");
+            const std::string testCmd = "in_stream_0.push ::https://stream.fro.at/fro128.mp3\n";
+            this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
             while (this->mRunning.load()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
