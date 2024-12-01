@@ -4,37 +4,26 @@ project(lap)
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-# Find PortAudio
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 include_directories(${PORTAUDIO_INCLUDE_DIRS})
 
-# Find libsndfile
-pkg_check_modules(SNDFILE REQUIRED sndfile)
-include_directories(${SNDFILE_INCLUDE_DIRS})
-
-# Find FFmpeg
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libavfilter libswscale libswresample)
 include_directories(${FFMPEG_INCLUDE_DIRS})
 
-# Add the executable
 add_executable(lap src/main.cc)
 
-# Set the C++ standard
 set_target_properties(lap PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
 
-# Set RPATH properties
 set_target_properties(lap PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH TRUE
     INSTALL_RPATH "${PORTAUDIO_LIBRARY_DIRS};${SNDFILE_LIBRARY_DIRS};${FFMPEG_LIBRARY_DIRS}"
 )
 
-# Link libraries
 target_link_libraries(lap PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(lap PRIVATE ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES} ${FFMPEG_LIBRARIES})
 
-# Compiler options
 target_compile_options(lap PRIVATE -Wno-psabi)

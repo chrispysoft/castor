@@ -8,7 +8,6 @@
 
 #include "AudioClient.hpp"
 #include "SinOsc.hpp"
-#include "WAVPlayer.hpp"
 #include "MP3Player.hpp"
 #include "StreamPlayer.hpp"
 #include "SilenceDetector.hpp"
