@@ -6,9 +6,12 @@
 #include "Controller.hpp"
 #include "MP3Player.hpp"
 #include "StreamPlayer.hpp"
+#include "LinePlayer.hpp"
 
 namespace lap {
 class Mixer {
+
+    static constexpr size_t kChannelCount = 2;
     const std::string mNamespace = "mixer";
     const std::vector<std::string> kSourceNames = { "in_queue_0", "in_queue_1", "in_stream_0", "in_stream_1", "aura_engine_line_in_0" };
     
@@ -16,43 +19,47 @@ public:
 
     const double mSampleRate;
     std::vector<Input*> mInputs;
-    std::vector<float> mTmpBuffer;
+    std::vector<float> mSumBuf;
 
     MP3Player mMP3Player1;
     MP3Player mMP3Player2;
     StreamPlayer mStreamPlayer1;
     StreamPlayer mStreamPlayer2;
+    LinePlayer mLinePlayer1;
 
     Input mMP3Input1;
     Input mMP3Input2;
     Input mStreamInput1;
     Input mStreamInput2;
+    Input mLineInput1;
 
     Mixer(double tSampleRate, size_t tBufferSize) :
         mSampleRate(tSampleRate),
-        mTmpBuffer(tBufferSize),
+        mSumBuf(tBufferSize * kChannelCount),
         mMP3Player1(mSampleRate),
         mMP3Player2(mSampleRate),
         mStreamPlayer1(mSampleRate),
         mStreamPlayer2(mSampleRate),
+        mLinePlayer1(mSampleRate),
         mMP3Input1(kSourceNames[0], mMP3Player1),
         mMP3Input2(kSourceNames[1], mMP3Player2),
         mStreamInput1(kSourceNames[2], mStreamPlayer1),
         mStreamInput2(kSourceNames[3], mStreamPlayer2),
-        mInputs {&mMP3Input1, &mMP3Input2, &mStreamInput1, &mStreamInput2}
+        mLineInput1(kSourceNames[4], mLinePlayer1),
+        mInputs { &mMP3Input1, &mMP3Input2, &mStreamInput1, &mStreamInput2, &mLineInput1 }
     {
 
     }
 
     void process(const float* in, float* out, size_t nframes) {
-        memset(out, 0, nframes * sizeof(float) * 2);
+        memset(out, 0, nframes * kChannelCount * sizeof(float));
 
         for (Input* input : mInputs) {
-            if (input->selected()) {
-                input->process(in, out, nframes);
-                
-                for (auto i = 0; i < mTmpBuffer.size(); ++i) {
-                    out[i] += mTmpBuffer[i] * input->volume();
+            if (input->getSelected()) {
+                input->process(in, mSumBuf.data(), nframes);
+                auto vol = input->getVolume();
+                for (auto i = 0; i < mSumBuf.size(); ++i) {
+                    out[i] += mSumBuf[i] * vol;
                 }
             }
         }
@@ -88,7 +95,12 @@ public:
 
 
     std::string getInputs() {
-        return "in_queue_0.2 in_queue_1.2 in_stream_0.2 in_stream_1.2 aura_engine_line_in_0";
+        std::string res = "";
+        for (const auto& input : mInputs) {
+            res += input->getNamespace() + " ";
+        }
+        return res;
+        //return "in_queue_0.2 in_queue_1.2 in_stream_0.2 in_stream_1.2 aura_engine_line_in_0";
     }
 
     std::string getOutputs() {

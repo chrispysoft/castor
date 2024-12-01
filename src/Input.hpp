@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <atomic>
 #include "Controller.hpp"
 #include "AudioSource.hpp"
 #include "MP3Player.hpp"
@@ -12,8 +13,8 @@ namespace lap {
 class Input {
     const std::string mNamespace;
     AudioSource& mSource;
-    bool mSelected;
-    float mVolume;
+    std::atomic<bool> mSelected;
+    std::atomic<float> mVolume;
 
 public:
 
@@ -43,12 +44,24 @@ public:
         });
     }
 
-    bool selected() {
+    std::string getNamespace() {
+        return mNamespace;
+    }
+
+    bool getSelected() {
         return mSelected;
     }
 
-    float volume() {
+    void setSelected(bool tSelected) {
+        mSelected = tSelected;
+    }
+
+    float getVolume() {
         return mVolume;
+    }
+
+    void setVolume(float tVolume) {
+        mVolume = tVolume;
     }
 
     void push(const std::string& tURL) {
