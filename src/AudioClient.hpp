@@ -46,10 +46,10 @@ public:
     void start(const std::string& tDeviceName) {
         auto deviceID = getDeviceID(tDeviceName);
         if (deviceID == -1) {
-            std::cout << "Device '" << tDeviceName << "' not found - using default" << std::endl;
+            std::cout << "AudioClient device '" << tDeviceName << "' not found - using default" << std::endl;
             deviceID = Pa_GetDefaultOutputDevice();
         }
-        std::cout << "Starting audio stream with device id " << deviceID << ", sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
+        std::cout << "AudioClient starting PortAudio stream with device id " << deviceID << ", sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
         
         if (openStream(deviceID, deviceID)) {
             startStream();
@@ -159,7 +159,7 @@ private:
     }
 
     void paStreamFinishedMethod() {
-        std::cout << "Audio stream finished" << std::endl;
+        std::cout << "AudioClient Portaudio stream finished" << std::endl;
     }
 
     static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {
