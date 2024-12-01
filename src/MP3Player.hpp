@@ -91,7 +91,16 @@ public:
             throw std::runtime_error("Could not allocate resampler context.");
         }
 
-        av_opt_set_int(swrCtx, "in_channel_layout", codecCtx->channel_layout, 0);
+        char inChLayoutDesc[128];
+        int sts = av_channel_layout_describe(&codecCtx->ch_layout, inChLayoutDesc, sizeof(inChLayoutDesc));
+        if (sts < 0) {
+            swr_free(&swrCtx);
+            avcodec_free_context(&codecCtx);
+            avformat_close_input(&formatCtx);
+            throw std::runtime_error("Could not load input channel layout description");
+        }
+
+        av_opt_set(swrCtx, "in_chlayout", inChLayoutDesc, 0);
         av_opt_set_int(swrCtx, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
         av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
         av_opt_set_int(swrCtx, "out_sample_rate", mSampleRate, 0);
