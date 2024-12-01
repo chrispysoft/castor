@@ -81,11 +81,19 @@ public:
         });
 
         tController->registerCommand(mNamespace, "volume", [&](auto args, auto callback) {
-            callback("ready=false selected=false single=false volume=100% remaining=inf");
+            auto [chns, vols] = util::splitBy(args, ' ');
+            auto chn = std::stoul(chns);
+            auto vol = std::stof(vols) / 100.0f;
+            mInputs[chn]->setVolume(vol);
+            auto status = mInputs[chn]->getStatusString();
+            callback(status);
         });
 
         tController->registerCommand(mNamespace, "status", [&](auto args, auto callback) {
-            callback("ready=false selected=false single=false volume=100% remaining=inf");
+            auto [chns, nil] = util::splitBy(args, ' ');
+            auto chn = std::stoul(chns);
+            auto status = mInputs[chn]->getStatusString();
+            callback(status);
         });
 
         for (auto input : mInputs) {

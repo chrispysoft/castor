@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 #include <map>
 #include <regex>
 #include <mutex>
@@ -9,6 +10,18 @@
 
 namespace lap {
 namespace util {
+
+std::string boolstr(const bool& flag) {
+    return flag ? "true" : "false";
+}
+
+std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
+    size_t pos = input.find(delim);
+    if (pos == std::string::npos) {
+        return {input, ""};
+    }
+    return {input.substr(0, pos), input.substr(pos + 1)};
+}
 
 std::map<std::string, std::string> extractMetadata(const std::string& annotation) {
     using namespace std;

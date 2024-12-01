@@ -5,6 +5,7 @@
 #include <functional>
 #include <regex>
 #include <ctime>
+#include "util.hpp"
 
 namespace lap {
 class Controller {
@@ -21,16 +22,11 @@ public:
     void parse(const char* tBuffer, size_t tSize, SendHandler tSendHandler) {
         auto input = std::string(tBuffer, tSize - 1);
         auto cmdstr = std::regex_replace(input, std::regex("\n+"), "");
-        auto found = cmdstr.find(" ");
-        std::string param = "";
-        if (found != std::string::npos) {
-            param = cmdstr.substr(found + 1, cmdstr.length() - found);
-            cmdstr.erase(found, cmdstr.length() - 1);
-        }
-        auto it = commands.find(cmdstr);
+        auto [cmd, args] = util::splitBy(cmdstr, ' ');
+        auto it = commands.find(cmd);
         if (it != commands.end()) {
             std::cout << "Controller: executing '" << input << "'" << std::endl;
-            it->second(param, [tSendHandler](auto response) {
+            it->second(args, [tSendHandler](auto response) {
                 static constexpr const char* endToken = "\nEND\r\n";
                 tSendHandler(response + endToken);
             });

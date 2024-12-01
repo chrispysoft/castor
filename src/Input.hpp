@@ -14,6 +14,7 @@ class Input {
     const std::string mNamespace;
     AudioSource& mSource;
     std::atomic<bool> mSelected;
+    std::atomic<bool> mReady;
     std::atomic<float> mVolume;
 
 public:
@@ -76,6 +77,13 @@ public:
 
     void clear() {
         mSource.clear();
+    }
+
+    std::string getStatusString() {
+        auto readyStr = util::boolstr(mReady);
+        auto selStr = util::boolstr(mSelected);
+        auto volStr = std::to_string(static_cast<int>(getVolume() * 100));
+        return "ready="+readyStr+" selected="+selStr+" single=false volume="+volStr+"% remaining=inf";
     }
 
     void process(const float* in, float* out, size_t nframes) const {
