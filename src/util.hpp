@@ -6,13 +6,16 @@
 #include <map>
 #include <regex>
 #include <mutex>
-#include <condition_variable>
 
 namespace lap {
 namespace util {
 
 std::string boolstr(const bool& flag) {
     return flag ? "true" : "false";
+}
+
+bool strbool(const std::string& str) {
+    return str == "true" || str == "True";
 }
 
 std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
@@ -50,52 +53,50 @@ std::string extractUrl(const std::string& annotation) {
 
 template <typename T>
 class RingBuffer {
-    std::vector<T> buffer;
-    size_t head = 0;
-    size_t tail = 0;
+    const size_t mCapacity;
     size_t mSize = 0;
-    size_t capacity;
-    std::mutex mtx;
-    std::condition_variable dataAvailable;
+    size_t mHead = 0;
+    size_t mTail = 0;
+    std::vector<T> mBuffer;
+    std::mutex mMutex;
 
 public:
-    explicit RingBuffer(size_t capacity) :
-        buffer(capacity),
-        capacity(capacity)
+    explicit RingBuffer(size_t tCapacity) :
+        mCapacity(tCapacity),
+        mBuffer(mCapacity)
     {}
 
     size_t size() {
         return mSize;
     }
 
-    void write(const T* data, size_t len) {
-        std::unique_lock<std::mutex> lock(mtx);
-        for (size_t i = 0; i < len; ++i) {
-            buffer[tail] = data[i];
-            tail = (tail + 1) % capacity;
-            if (mSize < capacity) {
+    void write(const T* tData, size_t tLen) {
+        std::unique_lock<std::mutex> lock(mMutex);
+        for (auto i = 0; i < tLen; ++i) {
+            mBuffer[mTail] = tData[i];
+            mTail = (mTail + 1) % mCapacity;
+            if (mSize < mCapacity) {
                 ++mSize;
             } else {
-                head = (head + 1) % capacity; // Overwrite the oldest data
+                mHead = (mHead + 1) % mCapacity; // overwrite
             }
         }
-        dataAvailable.notify_one();
     }
 
-    size_t read(T* data, size_t len) {
-        std::unique_lock<std::mutex> lock(mtx);
-        while (mSize == 0) {
-            dataAvailable.wait(lock); // Wait for data to be available
+    size_t read(T* tData, size_t tLen) {
+        std::unique_lock<std::mutex> lock(mMutex);
+        if (mSize < tLen) {
+            return 0;
         }
 
-        size_t nRead = 0;
-        while (nRead < len && mSize > 0) {
-            data[nRead++] = buffer[head];
-            head = (head + 1) % capacity;
+        size_t read = 0;
+        while (read < tLen && mSize > 0) {
+            tData[read++] = mBuffer[mHead];
+            mHead = (mHead + 1) % mCapacity;
             --mSize;
         }
 
-        return nRead;
+        return read;
     }
 };
 

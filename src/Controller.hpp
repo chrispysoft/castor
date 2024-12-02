@@ -15,7 +15,8 @@ class Controller {
 public:
 
     void registerCommand(const std::string& namespaze, const std::string& command, std::function<void(const std::string&, SendHandler)> callback) {
-        commands[namespaze+"."+command] = callback;
+        auto key = (namespaze == "") ? command : namespaze+"."+command;
+        commands[key] = callback;
         std::cout << "Controller registered " << namespaze+"."+command << std::endl;
     }
 

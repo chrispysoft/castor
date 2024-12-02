@@ -38,7 +38,7 @@ public:
     void process(const float* tInBuffer, float* tOutBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
-        //memcpy(tOutBuffer, tInBuffer, byteSize);
+        memcpy(tOutBuffer, tInBuffer, byteSize);
     }
 };
 }

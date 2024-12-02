@@ -39,9 +39,18 @@ public:
             callback("OK");
         });
 
-        tController->registerCommand(mNamespace, "clear", [this](auto args, auto callback) {
-            auto pos = std::stod(args);
+        tController->registerCommand(mNamespace, "clear", [this](auto, auto callback) {
             this->clear();
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "stop", [this](auto, auto callback) {
+            this->clear();
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "set_track_metadata", [this](auto, auto callback) {
+            callback("OK");
         });
     }
 

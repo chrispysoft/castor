@@ -77,13 +77,18 @@ public:
         });
 
         tController->registerCommand(mNamespace, "select", [&](auto args, auto callback) {
-            callback("OK");
+            auto [chns, sels] = util::splitBy(args, ' ');
+            auto chn = std::stoul(chns);
+            auto sel = util::strbool(sels);
+            mInputs[chn]->setSelected(sel);
+            auto status = mInputs[chn]->getStatusString();
+            callback(status);
         });
 
         tController->registerCommand(mNamespace, "volume", [&](auto args, auto callback) {
             auto [chns, vols] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
-            auto vol = std::stof(vols) / 100.0f;
+            auto vol = std::stof(vols);
             mInputs[chn]->setVolume(vol);
             auto status = mInputs[chn]->getStatusString();
             callback(status);
@@ -93,6 +98,7 @@ public:
             auto [chns, nil] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
             auto status = mInputs[chn]->getStatusString();
+            // std::cout << status << std::endl;
             callback(status);
         });
 
@@ -105,7 +111,8 @@ public:
     std::string getInputs() {
         std::string res = "";
         for (const auto& input : mInputs) {
-            res += input->getNamespace() + " ";
+            res += input->getNamespace();
+            if (input != mInputs.back()) res += " ";
         }
         return res;
         //return "in_queue_0.2 in_queue_1.2 in_stream_0.2 in_stream_1.2 aura_engine_line_in_0";
