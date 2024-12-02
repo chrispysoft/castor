@@ -33,6 +33,11 @@ public:
             callback("OK");
         });
 
+        tController->registerCommand(mNamespace, "url", [&](auto args, auto callback) {
+            this->push(args);
+            callback("OK");
+        });
+
         tController->registerCommand(mNamespace, "roll", [this](auto args, auto callback) {
             auto pos = std::stod(args);
             this->roll(pos);
@@ -47,6 +52,15 @@ public:
         tController->registerCommand(mNamespace, "stop", [this](auto, auto callback) {
             this->clear();
             callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "start", [this](auto, auto callback) {
+            this->mReady = true;
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "status", [this](auto, auto callback) {
+            callback("connected");
         });
 
         tController->registerCommand(mNamespace, "set_track_metadata", [this](auto, auto callback) {
