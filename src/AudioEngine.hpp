@@ -43,6 +43,12 @@ public:
     }
 
     void registerControlCommands(Controller* tController) {
+
+        tController->registerCommand("", "uptime", [&](auto args, auto callback) {
+            const std::string uptime = "0d 00h 01m 11s";
+            callback(uptime);
+        });
+
         tController->registerCommand("aura_engine", "status", [&](auto args, auto callback) {
             const std::string uptime = "0d 00h 01m 11s";
             const std::string isFallback = this->mSilenceDet.silenceDetected() ? "true" : "false";
