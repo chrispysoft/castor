@@ -27,11 +27,11 @@ public:
     StreamPlayer mStreamPlayer2;
     LinePlayer mLinePlayer1;
 
-    Input mMP3Input1;
-    Input mMP3Input2;
-    Input mStreamInput1;
-    Input mStreamInput2;
-    Input mLineInput1;
+    FileInput mMP3Input1;
+    FileInput mMP3Input2;
+    StreamInput mStreamInput1;
+    StreamInput mStreamInput2;
+    LineInput mLineInput1;
 
     Mixer(double tSampleRate, size_t tBufferSize) :
         mSampleRate(tSampleRate),

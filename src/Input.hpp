@@ -4,69 +4,31 @@
 #include <string>
 #include <atomic>
 #include "Controller.hpp"
-#include "AudioSource.hpp"
+#include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
 #include "StreamPlayer.hpp"
+#include "LinePlayer.hpp"
 #include "util.hpp"
 
 namespace lap {
 class Input {
+protected:
     const std::string mNamespace;
-    AudioSource& mSource;
+    AudioProcessor& mSource;
     std::atomic<bool> mSelected;
     std::atomic<bool> mReady;
     std::atomic<float> mVolume;
 
 public:
 
-    Input(const std::string tNamespace, AudioSource& tSource) :
+    Input(const std::string tNamespace, AudioProcessor& tSource) :
         mNamespace(tNamespace),
         mSource(tSource)
     {
 
     }
 
-    void registerControlCommands(Controller* tController) {
-        tController->registerCommand(mNamespace, "push", [&](auto args, auto callback) {
-            const auto url = util::extractUrl(args);
-            this->push(url);
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "url", [&](auto args, auto callback) {
-            this->push(args);
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "roll", [this](auto args, auto callback) {
-            auto pos = std::stod(args);
-            this->roll(pos);
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "clear", [this](auto, auto callback) {
-            this->clear();
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "stop", [this](auto, auto callback) {
-            this->clear();
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "start", [this](auto, auto callback) {
-            this->mReady = true;
-            callback("OK");
-        });
-
-        tController->registerCommand(mNamespace, "status", [this](auto, auto callback) {
-            callback("connected");
-        });
-
-        tController->registerCommand(mNamespace, "set_track_metadata", [this](auto, auto callback) {
-            callback("OK");
-        });
-    }
+    virtual void registerControlCommands(Controller* tController) = 0;
 
     std::string getNamespace() {
         return mNamespace;
@@ -78,6 +40,7 @@ public:
 
     void setSelected(bool tSelected) {
         mSelected = tSelected;
+        mVolume = mSelected ? 1 : 0;
     }
 
     float getVolume() {
@@ -86,20 +49,6 @@ public:
 
     void setVolume(float tVolume) {
         mVolume = tVolume;
-    }
-
-    void push(const std::string& tURL) {
-        mSelected = true;
-        mVolume = 1;
-        mSource.open(tURL);
-    }
-
-    void roll(double tPos) {
-        mSource.roll(tPos);
-    }
-
-    void clear() {
-        mSource.clear();
     }
 
     std::string getStatusString() {
@@ -111,6 +60,89 @@ public:
 
     void process(const float* in, float* out, size_t nframes) const {
         mSource.process(in, out, nframes);
+    }
+};
+
+class FileInput : public Input {
+    MP3Player& mFilePlayer;
+public:
+
+    FileInput(const std::string tNamespace, MP3Player& tSource) :
+        Input(tNamespace, tSource),
+        mFilePlayer(tSource)
+    {}
+
+    void registerControlCommands(Controller* tController) override {
+        tController->registerCommand(mNamespace, "push", [this](auto args, auto callback) {
+            const auto url = util::extractUrl(args);
+            this->mFilePlayer.open(url);
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "roll", [this](auto args, auto callback) {
+            auto pos = std::stod(args);
+            this->mFilePlayer.roll(pos);
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "clear", [this](auto, auto callback) {
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "status", [this](auto, auto callback) {
+            callback("OK");
+        });
+    }
+};
+
+class StreamInput : public Input {
+    StreamPlayer& mStreamPlayer;
+public:
+
+    StreamInput(const std::string tNamespace, StreamPlayer& tSource) :
+        Input(tNamespace, tSource),
+        mStreamPlayer(tSource)
+    {}
+
+    void registerControlCommands(Controller* tController) override {
+        
+        tController->registerCommand(mNamespace, "url", [this](auto url, auto callback) {
+            this->mStreamPlayer.open(url);
+            callback("OK " + url);
+        });
+
+        tController->registerCommand(mNamespace, "start", [this](auto, auto callback) {
+            this->mReady = true;
+            this->setSelected(true);
+            callback("connected");
+        });
+        
+        tController->registerCommand(mNamespace, "stop", [this](auto, auto callback) {
+            this->mReady = false;
+            callback("OK");
+        });
+
+        tController->registerCommand(mNamespace, "status", [this](auto, auto callback) {
+            callback("connected");
+            //auto status = this->getStatusString();
+            //callback(status);
+        });
+    }
+};
+
+class LineInput : public Input {
+    LinePlayer& mLinePlayer;
+public:
+
+    LineInput(const std::string tNamespace, LinePlayer& tSource) :
+        Input(tNamespace, tSource),
+        mLinePlayer(tSource)
+    {}
+
+    void registerControlCommands(Controller* tController) override {
+        tController->registerCommand(mNamespace, "set_track_metadata", [this](auto, auto callback) {
+            callback("OK");
+        });
     }
 };
 }

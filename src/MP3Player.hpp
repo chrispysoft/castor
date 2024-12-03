@@ -7,12 +7,12 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 }
-#include "AudioSource.hpp"
+#include "AudioProcessor.hpp"
 #include <iostream>
 #include <string>
 
 namespace lap {
-class MP3Player : public AudioSource {
+class MP3Player : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;
 
@@ -35,7 +35,7 @@ public:
         
     }
 
-    void open(const std::string& tURL) override {
+    void open(const std::string& tURL) {
         // open input file
         AVFormatContext* formatCtx = nullptr;
         if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, nullptr) < 0) {
@@ -169,14 +169,10 @@ public:
         std::cout << "Read " << mSamples.size() << " samples" << " with duration " << mDuration << std::endl;
     }
 
-    void roll(double pos) override {
+    void roll(double pos) {
         // std::cout << "MP3Player rolling to " << pos << std::endl;
         size_t samPos = pos * mSampleRate * kChannelCount;
         mReadPos = samPos;
-    }
-
-    void clear() override {
-        
     }
 
     

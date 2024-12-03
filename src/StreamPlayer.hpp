@@ -3,15 +3,16 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <thread>
 #include <condition_variable>
-#include "AudioSource.hpp"
+#include "AudioProcessor.hpp"
 #include "util.hpp"
 
 namespace lap {
-class StreamPlayer : public AudioSource {
+class StreamPlayer : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRingBufferSize = 1024 * 1024;
@@ -35,7 +36,7 @@ public:
         
     }
 
-    void open(const std::string& tURL) override {
+    void open(const std::string& tURL) {
         using namespace std;
 
         if (mRunning) {
@@ -69,11 +70,7 @@ public:
         });
     }
 
-    void roll(double) override {
-        std::cout << "StreamPlayer can't roll" << std::endl;
-    }
-
-    void clear() override {
+    void stop() {
         mRunning = false;
         if (mReadThread && mReadThread->joinable()) {
             mReadThread->join();

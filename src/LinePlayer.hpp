@@ -1,11 +1,11 @@
 #pragma once
 
-#include "AudioSource.hpp"
+#include "AudioProcessor.hpp"
 #include <iostream>
 #include <string>
 
 namespace lap {
-class LinePlayer : public AudioSource {
+class LinePlayer : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;
     const double mSampleRate;
@@ -22,19 +22,6 @@ public:
         
     }
 
-    void open(const std::string& tURL) override {
-        
-    }
-
-    void roll(double pos) override {
-        
-    }
-
-    void clear() override {
-        
-    }
-
-    
     void process(const float* tInBuffer, float* tOutBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
