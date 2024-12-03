@@ -4,6 +4,8 @@
 
 namespace lap {
 class Fallback {
+    static constexpr double kGain = 0.25;
+    
     SinOsc mOscL;
     SinOsc mOscR;
 public:
@@ -17,10 +19,8 @@ public:
 
     void process(const float* in, float* out, size_t nframes) {
         for (auto i = 0; i < nframes; ++i) {
-            float sL = mOscL.process();
-            float sR = mOscR.process();
-            out[i*2] = sL;
-            out[i*2+1] = sR;
+            out[i*2]   = mOscL.process() * kGain;
+            out[i*2+1] = mOscR.process() * kGain;
         }
     }
 };
