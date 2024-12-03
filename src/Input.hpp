@@ -113,12 +113,13 @@ public:
         });
 
         tController->registerCommand(mNamespace, "start", [this](auto, auto callback) {
+            this->mStreamPlayer.start();
             this->mReady = true;
-            this->setSelected(true);
             callback("connected");
         });
         
         tController->registerCommand(mNamespace, "stop", [this](auto, auto callback) {
+            this->mStreamPlayer.stop();
             this->mReady = false;
             callback("OK");
         });

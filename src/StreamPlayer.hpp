@@ -18,7 +18,6 @@ class StreamPlayer : public AudioProcessor {
     static constexpr size_t kRingBufferSize = 1024 * 1024;
     static constexpr size_t kPipeBufferSize = 4096;
 
-
     const double mSampleRate;
     util::RingBuffer<float> mRingBuffer;
     std::unique_ptr<std::thread> mReadThread = nullptr;
@@ -68,6 +67,10 @@ public:
             mRunning = false;
             cout << "StreamPlayer finished" << endl;
         });
+    }
+
+    void start() {
+        
     }
 
     void stop() {
