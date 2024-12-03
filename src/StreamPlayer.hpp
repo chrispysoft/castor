@@ -32,7 +32,7 @@ public:
     }
 
     ~StreamPlayer() override {
-        
+        stop();
     }
 
     void open(const std::string& tURL) {
@@ -79,7 +79,7 @@ public:
             mReadThread->join();
         }
         mReadThread = nullptr;
-        std::cout << "StreamPlayer cleared" << std::endl;
+        std::cout << "StreamPlayer stopped" << std::endl;
     }
     
     void process(const float*, float* tBuffer, size_t tFrameCount) override {
