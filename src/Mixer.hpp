@@ -4,7 +4,7 @@
 #include <string>
 #include "Input.hpp"
 #include "Controller.hpp"
-#include "MP3Player.hpp"
+#include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
 
@@ -21,14 +21,14 @@ public:
     std::vector<Input*> mInputs;
     std::vector<float> mSumBuf;
 
-    MP3Player mMP3Player1;
-    MP3Player mMP3Player2;
+    QueuePlayer mQueuePlayer1;
+    QueuePlayer mQueuePlayer2;
     StreamPlayer mStreamPlayer1;
     StreamPlayer mStreamPlayer2;
     LinePlayer mLinePlayer1;
 
-    FileInput mMP3Input1;
-    FileInput mMP3Input2;
+    QueueInput mQueueInput1;
+    QueueInput mQueueInput2;
     StreamInput mStreamInput1;
     StreamInput mStreamInput2;
     LineInput mLineInput1;
@@ -36,17 +36,17 @@ public:
     Mixer(double tSampleRate, size_t tBufferSize) :
         mSampleRate(tSampleRate),
         mSumBuf(tBufferSize * kChannelCount),
-        mMP3Player1(mSampleRate),
-        mMP3Player2(mSampleRate),
+        mQueuePlayer1(mSampleRate),
+        mQueuePlayer2(mSampleRate),
         mStreamPlayer1(mSampleRate),
         mStreamPlayer2(mSampleRate),
         mLinePlayer1(mSampleRate),
-        mMP3Input1(kSourceNames[0], mMP3Player1),
-        mMP3Input2(kSourceNames[1], mMP3Player2),
+        mQueueInput1(kSourceNames[0], mQueuePlayer1),
+        mQueueInput2(kSourceNames[1], mQueuePlayer2),
         mStreamInput1(kSourceNames[2], mStreamPlayer1),
         mStreamInput2(kSourceNames[3], mStreamPlayer2),
         mLineInput1(kSourceNames[4], mLinePlayer1),
-        mInputs { &mMP3Input1, &mMP3Input2, &mStreamInput1, &mStreamInput2, &mLineInput1 }
+        mInputs { &mQueueInput1, &mQueueInput2, &mStreamInput1, &mStreamInput2, &mLineInput1 }
     {
 
     }

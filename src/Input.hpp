@@ -5,7 +5,7 @@
 #include <atomic>
 #include "Controller.hpp"
 #include "AudioProcessor.hpp"
-#include "MP3Player.hpp"
+#include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
 #include "util.hpp"
@@ -63,29 +63,30 @@ public:
     }
 };
 
-class FileInput : public Input {
-    MP3Player& mFilePlayer;
+class QueueInput : public Input {
+    QueuePlayer& mQueuePlayer;
 public:
 
-    FileInput(const std::string tNamespace, MP3Player& tSource) :
+    QueueInput(const std::string tNamespace, QueuePlayer& tSource) :
         Input(tNamespace, tSource),
-        mFilePlayer(tSource)
+        mQueuePlayer(tSource)
     {}
 
     void registerControlCommands(Controller* tController) override {
         tController->registerCommand(mNamespace, "push", [this](auto args, auto callback) {
             const auto url = util::extractUrl(args);
-            this->mFilePlayer.open(url);
+            this->mQueuePlayer.push(url);
             callback("OK");
         });
 
         tController->registerCommand(mNamespace, "roll", [this](auto args, auto callback) {
             auto pos = std::stod(args);
-            this->mFilePlayer.roll(pos);
+            this->mQueuePlayer.roll(pos);
             callback("OK");
         });
 
         tController->registerCommand(mNamespace, "clear", [this](auto, auto callback) {
+            this->mQueuePlayer.clear();
             callback("OK");
         });
 

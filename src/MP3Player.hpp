@@ -19,6 +19,7 @@ class MP3Player : public AudioProcessor {
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
     std::vector<float> mSamples;
+    std::string mCurrURL = "";
     double mDuration;
     
 
@@ -34,8 +35,12 @@ public:
     ~MP3Player() override {
         
     }
+    
+    std::string currentURL() {
+        return mCurrURL;
+    }
 
-    void open(const std::string& tURL) {
+    void load(const std::string& tURL) {
         // open input file
         AVFormatContext* formatCtx = nullptr;
         if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, nullptr) < 0) {
@@ -166,13 +171,28 @@ public:
         avformat_close_input(&formatCtx);
 
         mDuration = mSamples.size() / kChannelCount / mSampleRate;
+        mCurrURL = tURL;
         std::cout << "Read " << mSamples.size() << " samples" << " with duration " << mDuration << std::endl;
+    }
+
+    void eject() {
+        mSamples.clear();
+        mReadPos = 0;
+        mCurrURL = "";
     }
 
     void roll(double pos) {
         // std::cout << "MP3Player rolling to " << pos << std::endl;
-        size_t samPos = pos * mSampleRate * kChannelCount;
-        mReadPos = samPos;
+        size_t idx = round(pos * mSampleRate * kChannelCount);
+        if (idx < mSamples.size()) {
+            mReadPos = idx;
+        } else {
+            std::cout << "Roll position exceeds duration" << std::endl;
+        }
+    }
+
+    bool isIdle() {
+        return mSamples.size() == 0 || mReadPos >= mSamples.size();
     }
 
     
@@ -180,9 +200,13 @@ public:
         auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
         
-        if (mReadPos + sampleCount < mSamples.size()) {
-            memcpy(tBuffer, mSamples.data() + mReadPos, byteSize);
+        if (mReadPos < mSamples.size()) {
+            auto ncopyable = std::min(sampleCount, mSamples.size() - mReadPos);
+            memcpy(tBuffer, mSamples.data() + mReadPos, ncopyable * sizeof(float));
             mReadPos += sampleCount;
+            if (ncopyable < sampleCount) {
+                memset(tBuffer+ncopyable, 0, (sampleCount-ncopyable) * sizeof(float));
+            }
         } else {
             memset(tBuffer, 0, byteSize);
         }
