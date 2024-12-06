@@ -3,7 +3,9 @@
 #include <thread>
 #include <atomic>
 #include <string>
+#include <string_view>
 #include <queue>
+#include <iostream>
 #include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
 
@@ -25,8 +27,19 @@ public:
     }
 
     void push(const std::string& tURL) {
-        
-        mQueue.push(tURL);
+        std::cout << "PUSH " << tURL << std::endl;
+        if (std::string_view(tURL).ends_with(".m3u")) {
+            std::cout << "QueuePlayer opening m3u file " << tURL << std::endl;
+            std::ifstream file(tURL);
+            std::string line;
+            while (getline(file, line)) {
+                std::cout << "QueuePlayer pushing " << line << std::endl;
+                mQueue.push(line);
+            }
+            file.close();
+        } else {
+            mQueue.push(tURL);
+        }
         
         if (mWorker == nullptr) {
             mRunning = true;
