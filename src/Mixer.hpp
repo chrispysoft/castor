@@ -7,6 +7,7 @@
 #include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
+#include "APIClient.hpp"
 
 namespace lap {
 class Mixer {
@@ -105,6 +106,10 @@ public:
         for (auto input : mInputs) {
             input->registerControlCommands(tController);
         }
+    }
+
+    void setAPIClient(APIClient* tAPIClient) {
+        tAPIClient->postPlaylog("");
     }
 
 

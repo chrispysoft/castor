@@ -11,6 +11,8 @@
 #include "Mixer.hpp"
 #include "Fallback.hpp"
 #include "SilenceDetector.hpp"
+#include "Recorder.hpp"
+#include "APIClient.hpp"
 
 namespace lap {
 class AudioEngine : public AudioClientRenderer {
@@ -25,6 +27,7 @@ class AudioEngine : public AudioClientRenderer {
     Mixer mMixer;
     Fallback mFallback;
     SilenceDetector mSilenceDet;
+    Recorder mRecorder;
     
 public:
     AudioEngine(double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
@@ -33,7 +36,8 @@ public:
         mAudioClient(mSampleRate, mBufferSize),
         mMixer(mSampleRate, mBufferSize),
         mFallback(mSampleRate),
-        mSilenceDet()
+        mSilenceDet(),
+        mRecorder(mSampleRate)
     {
         mAudioClient.setRenderer(this);
     }
@@ -64,8 +68,21 @@ public:
         mMixer.registerControlCommands(tController);
     }
 
+    void setAPIClient(APIClient* tAPIClient) {
+        mMixer.setAPIClient(tAPIClient);
+    }
+
     void start(const std::string& tDeviceName = kDefaultDeviceName) {
         mAudioClient.start(tDeviceName);
+        // try {
+        //     mRecorder.start("/home/fro/code/lap/audio/test.mp3");
+        // }
+        // catch (const std::exception& e) {
+        //     std::cout << "Start record failed: " << e.what() << std::endl;
+        // }
+        // catch (...) {
+        //     std::cout << "Start record failed due to other error" << std::endl;
+        // }
     }
 
     void stop() {
@@ -82,6 +99,10 @@ private:
 
         if (mSilenceDet.silenceDetected()) {
             mFallback.process(in, out, nframes);
+        }
+
+        if (mRecorder.isRunning()) {
+            mRecorder.process(out, nframes);
         }
     }
 };

@@ -8,6 +8,7 @@
 #include "AudioEngine.hpp"
 #include "SocketServer.hpp"
 #include "Controller.hpp"
+#include "APIClient.hpp"
 #include "util.hpp"
 
 namespace lap {
@@ -21,6 +22,7 @@ class LAP {
     AudioEngine mEngine;
     SocketServer mSocket;
     Controller mController;
+    APIClient mAPIClient;
     
 
 public:
@@ -29,16 +31,21 @@ public:
         mRunning(false),
         mEngine(),
         mSocket(kSocketPath),
-        mController()
+        mController(),
+        mAPIClient()
     {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
+        std::signal(SIGQUIT, handlesig);
+        std::signal(SIGKILL, handlesig);
+        std::signal(SIGSYS, handlesig);
 
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
             this->mController.parse(buffer, size, txCallback);
         };
 
         mEngine.registerControlCommands(&mController);
+        mEngine.setAPIClient(&mAPIClient);
     }
 
     static LAP& instance() {
@@ -56,7 +63,15 @@ public:
         mSocket.start();
         mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
-            const std::string testCmd = "in_stream_0.push ::https://stream.fro.at/fro128.mp3\n";
+            std::string testCmd = "mixer.select 0 true\n";
+            this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
+            //testCmd = "in_stream_0.url https://stream.fro.at/fro128.mp3\n";
+            testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/test.m3u\n";
+            //for (int i = 0; i < 5; ++i) {
+                //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/A maj.mp3\n";
+                //this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
+            //}
+            //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/Alternate Gate 6 Master.mp3\n";
             this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
             while (this->mRunning.load()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
