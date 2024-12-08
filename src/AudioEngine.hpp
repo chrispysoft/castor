@@ -16,7 +16,7 @@
 
 namespace lap {
 class AudioEngine : public AudioClientRenderer {
-    static constexpr const char* kDefaultDeviceName = "Soundcraft Signature 12 MTK: USB Audio (hw:2,0)";
+    static constexpr const char* kDefaultDeviceName = "default";
     static constexpr double kDefaultSampleRate = 44100;
     static constexpr size_t kDefaultBufferSize =  4096;
 
@@ -30,10 +30,10 @@ class AudioEngine : public AudioClientRenderer {
     Recorder mRecorder;
     
 public:
-    AudioEngine(double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
+    AudioEngine(const std::string& tIDevName = kDefaultDeviceName, const std::string& tODevName = kDefaultDeviceName, double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
         mSampleRate(tSampleRate),
         mBufferSize(tBufferSize),
-        mAudioClient(mSampleRate, mBufferSize),
+        mAudioClient(tIDevName, tODevName, mSampleRate, mBufferSize),
         mMixer(mSampleRate, mBufferSize),
         mFallback(mSampleRate),
         mSilenceDet(),
@@ -72,8 +72,8 @@ public:
         mMixer.setAPIClient(tAPIClient);
     }
 
-    void start(const std::string& tDeviceName = kDefaultDeviceName) {
-        mAudioClient.start(tDeviceName);
+    void start() {
+        mAudioClient.start();
         // try {
         //     mRecorder.start("/home/fro/code/lap/audio/test.mp3");
         // }

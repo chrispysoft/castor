@@ -50,6 +50,11 @@ std::string extractUrl(const std::string& annotation) {
     return "";
 }
 
+std::string getEnvar(const std::string& key) {
+    char* val = getenv(key.c_str());
+    return val == NULL ? std::string("") : std::string(val);
+}
+
 
 template <typename T>
 class RingBuffer {

@@ -5,6 +5,7 @@
 #include <string>
 #include <csignal>
 
+#include "Config.hpp"
 #include "AudioEngine.hpp"
 #include "SocketServer.hpp"
 #include "Controller.hpp"
@@ -14,11 +15,10 @@
 namespace lap {
 class LAP {
 
-    const std::string kSocketPath = "/tmp/lap_socket";
-    
     time_t mStartTime;
     std::atomic<bool> mRunning;
     std::unique_ptr<std::thread> mWorker = nullptr;
+    Config mConfig;
     AudioEngine mEngine;
     SocketServer mSocket;
     Controller mController;
@@ -29,8 +29,9 @@ public:
     LAP() :
         mStartTime(std::time(0)),
         mRunning(false),
-        mEngine(),
-        mSocket(kSocketPath),
+        mConfig(),
+        mEngine(mConfig.iDevName, mConfig.oDevName),
+        mSocket(mConfig.socketPath),
         mController(),
         mAPIClient()
     {
@@ -63,10 +64,10 @@ public:
         mSocket.start();
         mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
-            std::string testCmd = "mixer.select 0 true\n";
+            std::string testCmd = "mixer.select 2 true\n";
             this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
-            //testCmd = "in_stream_0.url https://stream.fro.at/fro128.mp3\n";
-            testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/test.m3u\n";
+            testCmd = "in_stream_0.url https://stream.fro.at/fro128.mp3\n";
+            //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/test.m3u\n";
             //for (int i = 0; i < 5; ++i) {
                 //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/A maj.mp3\n";
                 //this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});

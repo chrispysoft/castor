@@ -22,17 +22,21 @@ public:
 
     void parse(const char* tBuffer, size_t tSize, SendHandler tSendHandler) {
         auto input = std::string(tBuffer, tSize - 1);
-        auto cmdstr = std::regex_replace(input, std::regex("\n+"), "");
+        parse(input, tSendHandler);
+    }
+
+    void parse(const std::string& tInput, SendHandler tSendHandler) {
+        auto cmdstr = std::regex_replace(tInput, std::regex("\n+"), "");
         auto [cmd, args] = util::splitBy(cmdstr, ' ');
         auto it = commands.find(cmd);
         if (it != commands.end()) {
-            std::cout << "Controller: executing '" << input << "'" << std::endl;
+            std::cout << "Controller: executing '" << tInput << "'" << std::endl;
             it->second(args, [tSendHandler](auto response) {
                 static constexpr const char* endToken = "\nEND\r\n";
                 tSendHandler(response + endToken);
             });
         } else {
-            std::cout << "Controller: unknown command '" << input << "'" << std::endl;
+            std::cout << "Controller: unknown command '" << tInput << "'" << std::endl;
         }
     }
 

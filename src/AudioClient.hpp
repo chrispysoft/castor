@@ -1,10 +1,8 @@
 #pragma once
 
-#include <atomic>
-#include <vector>
 #include <iostream>
 #include <string>
-#include <bits/stdc++.h>
+#include <vector>
 #include <portaudio.h>
 
 namespace lap {
@@ -16,20 +14,19 @@ public:
 };
 
 class AudioClient {
-
-    static constexpr double kDefaultSampleRate = 44100;
-    static constexpr size_t kDefaultBufferSize = 512;
-
-    double mSampleRate;
-    size_t mBufferSize;
-
+    
+    const std::string mIDevName;
+    const std::string mODevName;
+    const double mSampleRate;
+    const size_t mBufferSize;
     PaStream* mStream;
     AudioClientRenderer* mRenderer;
-    
 
 public:
 
-    AudioClient(double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
+    AudioClient(const std::string& tIDevName, const std::string& tODevName, double tSampleRate, size_t tBufferSize) :
+        mIDevName(tIDevName),
+        mODevName(tODevName),
         mSampleRate(tSampleRate),
         mBufferSize(tBufferSize),
         mStream(nullptr),
@@ -43,15 +40,20 @@ public:
     }
 
 
-    void start(const std::string& tDeviceName) {
-        auto deviceID = getDeviceID(tDeviceName);
-        if (deviceID == -1) {
-            std::cout << "AudioClient device '" << tDeviceName << "' not found - using default" << std::endl;
-            deviceID = Pa_GetDefaultOutputDevice();
+    void start() {
+        auto iDevID = getDeviceID(mIDevName);
+        if (iDevID == -1) {
+            std::cout << "AudioClient in device '" << mIDevName << "' not found - using default" << std::endl;
+            iDevID = Pa_GetDefaultOutputDevice();
         }
-        std::cout << "AudioClient starting PortAudio stream with device id " << deviceID << ", sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
+        auto oDevID = getDeviceID(mODevName);
+        if (oDevID == -1) {
+            std::cout << "AudioClient out device '" << mODevName << "' not found - using default" << std::endl;
+            oDevID = Pa_GetDefaultOutputDevice();
+        }
+        std::cout << "AudioClient starting PortAudio stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
         
-        if (openStream(deviceID, deviceID)) {
+        if (openStream(iDevID, oDevID)) {
             startStream();
         }
     }
