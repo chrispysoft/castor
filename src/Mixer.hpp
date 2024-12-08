@@ -120,7 +120,6 @@ public:
             if (input != mInputs.back()) res += " ";
         }
         return res;
-        //return "in_queue_0.2 in_queue_1.2 in_stream_0.2 in_stream_1.2 aura_engine_line_in_0";
     }
 
     std::string getOutputs() {
