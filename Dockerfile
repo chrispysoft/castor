@@ -7,6 +7,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
+    curl \
+    libcurl4-openssl-dev \
     libasound2-dev \
     portaudio19-dev \
     ffmpeg \
@@ -22,13 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy project files into the image
-COPY . /app
+COPY src/ src/
+COPY CMakeLists.txt .
 
 # Use a temporary directory for building the project
 RUN mkdir /build && cd /build && \
     cmake /app && \
-    cmake --build . --target lap && \
-    mv lap /app/
+    cmake --build . --target lap
 
 # Create a minimal runtime image
 FROM debian:12-slim
@@ -38,6 +40,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies for FFmpeg and PortAudio
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     libasound2 \
     portaudio19-dev \
     ffmpeg \
@@ -50,7 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary from the builder stage
-COPY --from=builder /app/lap /usr/local/bin/lap
+COPY --from=builder /build/lap /usr/local/bin/lap
 
 # Set the default command to run the binary
 CMD ["lap"]

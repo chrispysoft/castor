@@ -1,13 +1,20 @@
 services:
   lap:
+    container_name: lap
+    image: crispybitsapp/lap:latest
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./src:/app
+      - socket:/srv/socket
     devices:
       - /dev/snd:/dev/snd
     environment:
-      - PA_ALSA_PLUG=1
+      SOCKET_PATH: "/srv/socket/engine.sock"
+      AURA_ENGINE_INPUT_DEVICE: "Soundcraft Signature 12 MTK: USB Audio (hw:0,0)"
+      AURA_ENGINE_OUTPUT_DEVICE: "Soundcraft Signature 12 MTK: USB Audio (hw:0,0)"
     working_dir: /app
     command: ["lap"]
+
+volumes:
+  socket:
