@@ -14,7 +14,7 @@ public:
         mOscR(tSampleRate)
     {
         mOscL.setFrequency(432);
-        mOscR.setFrequency(432 + (432.0/12.0*3));
+        mOscR.setFrequency(432 * (5.0 / 4.0));
     }
 
     void process(const float* in, float* out, size_t nframes) {
