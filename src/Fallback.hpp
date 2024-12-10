@@ -5,8 +5,9 @@
 
 namespace lap {
 class Fallback {
-    static constexpr double kGain = 0.125;
-    
+    static constexpr double kGain = 1 / 128.0;
+    static constexpr double kBaseFreq = 1000;
+
     SinOsc mOscL;
     SinOsc mOscR;
     StreamPlayer mStreamPlayer;
@@ -18,8 +19,8 @@ public:
         mOscR(tSampleRate),
         mStreamPlayer(tSampleRate)
     {
-        mOscL.setFrequency(1000);
-        mOscR.setFrequency(1000 * (5.0 / 4.0));
+        mOscL.setFrequency(kBaseFreq);
+        mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
     }
 
     void start() {
