@@ -7,7 +7,7 @@
 namespace lap {
 class SilenceDetector {
 
-    static constexpr float kDefaultThreshold = -90;
+    static constexpr float kDefaultThreshold = -80;
     static constexpr time_t kDefaultSilenceDuration = 5;
     static constexpr size_t kDefaultChannelCount = 2;
 

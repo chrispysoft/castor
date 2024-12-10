@@ -8,7 +8,7 @@ class Recorder {
 
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRingBufferSize = 16384;
-    static constexpr size_t kPipeBufferSize = 4096;
+    static constexpr size_t kPipeBufferSize = 512;
 
     const double mSampleRate;
     util::RingBuffer<float> mRingBuffer;

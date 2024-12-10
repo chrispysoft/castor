@@ -15,8 +15,8 @@ namespace lap {
 class StreamPlayer : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferSize = 1024 * 1024;
-    static constexpr size_t kPipeBufferSize = 4096;
+    static constexpr size_t kRingBufferSize = 1024 * 512;
+    static constexpr size_t kPipeBufferSize = 512;
 
     const double mSampleRate;
     util::RingBuffer<float> mRingBuffer;
