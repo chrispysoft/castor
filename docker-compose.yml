@@ -2,6 +2,7 @@ services:
   lap:
     container_name: lap
     image: crispybitsapp/lap:latest
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
