@@ -37,9 +37,6 @@ public:
     {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
-        std::signal(SIGQUIT, handlesig);
-        std::signal(SIGKILL, handlesig);
-        std::signal(SIGSYS, handlesig);
 
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
             this->mController.parse(buffer, size, txCallback);
