@@ -72,6 +72,7 @@ public:
             //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/Alternate Gate 6 Master.mp3\n";
             //this->mController.parse(testCmd, [](auto) {});
             while (this->mRunning.load()) {
+                this->mEngine.work();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });

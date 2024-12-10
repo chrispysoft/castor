@@ -89,6 +89,14 @@ public:
         mAudioClient.stop();
     }
 
+    void work() {
+        if (mSilenceDet.silenceDetected()) {
+            mFallback.start();
+        } else {
+            mFallback.stop();
+        }
+    }
+
 
 private:
 
@@ -97,7 +105,7 @@ private:
         mMixer.process(in, out, nframes);
         mSilenceDet.process(out, nframes);
 
-        if (mSilenceDet.silenceDetected()) {
+        if (mFallback.isActive()) {
             mFallback.process(in, out, nframes);
         }
 
