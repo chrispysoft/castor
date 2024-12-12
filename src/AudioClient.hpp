@@ -9,7 +9,7 @@ namespace lap {
 
 class AudioClientRenderer {
 public:
-    virtual void renderCallback(const float* in, float* out, size_t size) = 0;
+    virtual void renderCallback(const float* in, float* out, size_t nframes) = 0;
     virtual ~AudioClientRenderer() = default;
 };
 
