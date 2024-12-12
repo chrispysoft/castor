@@ -76,7 +76,7 @@ public:
         tController->registerCommand(mNamespace, "push", [this](auto args, auto callback) {
             const auto url = util::extractUrl(args);
             this->mQueuePlayer.push(url);
-            callback("OK");
+            callback("1");
         });
 
         tController->registerCommand(mNamespace, "roll", [this](auto args, auto callback) {
