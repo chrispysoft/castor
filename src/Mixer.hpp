@@ -67,38 +67,38 @@ public:
     }
 
     void registerControlCommands(Controller* tController) {
-        tController->registerCommand(mNamespace, "inputs", [&](auto args, auto callback) {
+        tController->registerCommand(mNamespace, "inputs", [this](auto args, auto callback) {
             const auto inputs = this->getInputs();
             callback(inputs);
         });
 
-        tController->registerCommand(mNamespace, "outputs", [&](auto args, auto callback) {
+        tController->registerCommand(mNamespace, "outputs", [this](auto args, auto callback) {
             const auto outputs = this->getOutputs();
             callback(outputs);
         });
 
-        tController->registerCommand(mNamespace, "select", [&](auto args, auto callback) {
+        tController->registerCommand(mNamespace, "select", [this](auto args, auto callback) {
             auto [chns, sels] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
             auto sel = util::strbool(sels);
-            mInputs[chn]->setSelected(sel);
-            auto status = mInputs[chn]->getStatusString();
+            this->mInputs[chn]->setSelected(sel);
+            auto status = this->mInputs[chn]->getStatusString();
             callback(status);
         });
 
-        tController->registerCommand(mNamespace, "volume", [&](auto args, auto callback) {
+        tController->registerCommand(mNamespace, "volume", [this](auto args, auto callback) {
             auto [chns, vols] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
             auto vol = std::stof(vols);
-            mInputs[chn]->setVolume(vol);
-            auto status = mInputs[chn]->getStatusString();
+            this->mInputs[chn]->setVolume(vol);
+            auto status = this->mInputs[chn]->getStatusString();
             callback(status);
         });
 
-        tController->registerCommand(mNamespace, "status", [&](auto args, auto callback) {
+        tController->registerCommand(mNamespace, "status", [this](auto args, auto callback) {
             auto [chns, nil] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
-            auto status = mInputs[chn]->getStatusString();
+            auto status = this->mInputs[chn]->getStatusString();
             // std::cout << status << std::endl;
             callback(status);
         });

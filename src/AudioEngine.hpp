@@ -63,7 +63,7 @@ public:
             callback(status);
         });
 
-        tController->registerCommand("aura_engine", "version", [&](auto args, auto callback) {
+        tController->registerCommand("aura_engine", "version", [this](auto, auto callback) {
             auto version = "{ \"core\": \"0.0.1\", \"liquidsoap\": \"-1\" }";
             callback(version);
         });
