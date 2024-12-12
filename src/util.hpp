@@ -6,6 +6,7 @@
 #include <map>
 #include <regex>
 #include <mutex>
+#include <ctime>
 
 namespace lap {
 namespace util {
@@ -16,6 +17,19 @@ std::string boolstr(const bool& flag) {
 
 bool strbool(const std::string& str) {
     return str == "true" || str == "True";
+}
+
+std::string timestr(std::time_t sec) {
+    using namespace std;
+    static constexpr time_t kSecMin = 60;
+    static constexpr time_t kSecHour = kSecMin * 60;
+    static constexpr time_t kSecDay = kSecHour * 24;
+    auto d = sec / kSecDay;
+    auto h = (sec / kSecHour) % kSecHour;
+    auto m = (sec / kSecMin) % kSecMin;
+    auto s = sec % kSecMin;
+    auto fmt = to_string(d) + "d " + to_string(h) + "h " + to_string(m) + "m " + to_string(s) + "s"; // "0d 00h 01m 11s";
+    return fmt;
 }
 
 std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
@@ -102,6 +116,21 @@ public:
         }
 
         return read;
+    }
+};
+
+
+class Timer {
+    time_t mStartTime;
+
+public:
+
+    Timer() :
+        mStartTime(std::time(0))
+    {}
+
+    time_t get() {
+        return std::time(0) - mStartTime;
     }
 };
 

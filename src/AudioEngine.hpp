@@ -13,6 +13,7 @@
 #include "SilenceDetector.hpp"
 #include "Recorder.hpp"
 #include "APIClient.hpp"
+#include "util.hpp"
 
 namespace lap {
 class AudioEngine : public AudioClientRenderer {
@@ -28,6 +29,7 @@ class AudioEngine : public AudioClientRenderer {
     Fallback mFallback;
     SilenceDetector mSilenceDet;
     Recorder mRecorder;
+    util::Timer mUptimer;
     
 public:
     AudioEngine(const std::string& tIDevName = kDefaultDeviceName, const std::string& tODevName = kDefaultDeviceName, double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
@@ -37,7 +39,8 @@ public:
         mMixer(mSampleRate, mBufferSize),
         mFallback(mSampleRate),
         mSilenceDet(),
-        mRecorder(mSampleRate)
+        mRecorder(mSampleRate),
+        mUptimer()
     {
         mAudioClient.setRenderer(this);
     }
@@ -48,15 +51,15 @@ public:
 
     void registerControlCommands(Controller* tController) {
 
-        tController->registerCommand("", "uptime", [&](auto args, auto callback) {
-            const std::string uptime = "0d 00h 01m 11s";
+        tController->registerCommand("", "uptime", [this](auto, auto callback) {
+            auto uptime = util::timestr(this->mUptimer.get());
             callback(uptime);
         });
 
-        tController->registerCommand("aura_engine", "status", [&](auto args, auto callback) {
-            const std::string uptime = "0d 00h 01m 11s";
-            const std::string isFallback = this->mSilenceDet.silenceDetected() ? "true" : "false";
-            const auto status = "{ \"uptime\": \"" + uptime + "\", \"is_fallback\": " + isFallback + " }";
+        tController->registerCommand("aura_engine", "status", [this](auto, auto callback) {
+            auto uptime = util::timestr(this->mUptimer.get());
+            auto fallback = util::boolstr(this->mSilenceDet.silenceDetected());
+            auto status = "{ \"uptime\": \"" + uptime + "\", \"is_fallback\": " + fallback + " }";
             callback(status);
         });
 
