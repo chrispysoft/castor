@@ -109,7 +109,9 @@ public:
     }
 
     void setAPIClient(APIClient* tAPIClient) {
-        tAPIClient->postPlaylog("");
+        for (auto input : mInputs) {
+            input->setAPIClient(tAPIClient);
+        }
     }
 
 

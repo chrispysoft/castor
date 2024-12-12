@@ -8,6 +8,7 @@
 #include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
+#include "APIClient.hpp"
 #include "util.hpp"
 
 namespace lap {
@@ -18,6 +19,7 @@ protected:
     std::atomic<bool> mSelected;
     std::atomic<bool> mReady;
     std::atomic<float> mVolume;
+    APIClient* mAPIClientPtr;
 
 public:
 
@@ -56,6 +58,14 @@ public:
         auto selStr = util::boolstr(mSelected);
         auto volStr = std::to_string(static_cast<int>(getVolume() * 100));
         return "ready="+readyStr+" selected="+selStr+" single=false volume="+volStr+"% remaining=inf";
+    }
+
+    void setAPIClient(APIClient* tAPIClient) {
+        mAPIClientPtr = tAPIClient;
+    }
+
+    void setTrackMetadata(std::string tMetadata) {
+        if (mAPIClientPtr) mAPIClientPtr->postPlaylog(tMetadata);
     }
 
     void process(const float* in, float* out, size_t nframes) const {
@@ -142,7 +152,8 @@ public:
     {}
 
     void registerControlCommands(Controller* tController) override {
-        tController->registerCommand(mNamespace, "set_track_metadata", [this](auto, auto callback) {
+        tController->registerCommand(mNamespace, "set_track_metadata", [this](auto metadata, auto callback) {
+            this->setTrackMetadata(metadata);
             callback("OK");
         });
     }
