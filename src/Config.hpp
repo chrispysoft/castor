@@ -56,8 +56,29 @@ public:
 
     }
 
-    Config(const std::string& tPath) : Config(parseConfigFile(tPath)) {
-        
+    Config(const std::string& tPath) {
+        try {
+            auto map = parseConfigFile(tPath);
+            socketPath = map.at("socket_path");
+            iDevName = map.at("in_device_name");
+            oDevName = map.at("out_device_name");
+        }
+        catch (const std::exception& e) {
+            std::cerr << e.what() << std::endl;
+        }
+
+        auto envSocketPath = util::getEnvar("SOCKET_PATH");
+        auto envIDevName = util::getEnvar("AURA_ENGINE_INPUT_DEVICE");
+        auto envODevName = util::getEnvar("AURA_ENGINE_OUTPUT_DEVICE");
+
+        if (envSocketPath != "") socketPath = envSocketPath;
+        if (envIDevName != "") iDevName = envIDevName;
+        if (envODevName != "") oDevName = envODevName;
+
+        if (socketPath == "") socketPath = kSocketPath;
+        if (iDevName == "") iDevName = kDeviceName;
+        if (oDevName == "") oDevName = kDeviceName;
+        std::cout << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << std::endl;
     }
 };
 }

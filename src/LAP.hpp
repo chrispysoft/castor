@@ -29,7 +29,7 @@ public:
     LAP() :
         mStartTime(std::time(0)),
         mRunning(false),
-        mConfig(),
+        mConfig("../config/config.txt"),
         mEngine(mConfig.iDevName, mConfig.oDevName),
         mSocket(mConfig.socketPath),
         mController(),
@@ -61,7 +61,9 @@ public:
         mSocket.start();
         mEngine.start();
         mWorker = std::make_unique<std::thread>([this] {
-            //std::string testCmd = "mixer.select 2 true\n";
+            //std::string testCmd = "mixer.select 0 true\n";
+            //this->mController.parse(testCmd, [](auto) {});
+            //testCmd = "aura_engine_line_in_0.set_track_metadata {\"show_name\": \"Arbeit Quo Vadis\", \"show_id\": 9, \"timeslot_id\": \"c2bf5e70-cf07-4176-a2e2-c81bef82fa0\", \"playlist_id\": 1865, \"playlist_item\": \"2.0\", \"track_type\": 2, \"track_start\": \"2024/12/11 19:00:10\", \"track_duration\": 3590, \"track_title\": \"\", \"track_album\": \"\", \"track_artist\": \"\"}\n";
             //this->mController.parse(testCmd, [](auto) {});
             //testCmd = "in_stream_0.url https://stream.fro.at/fro128.mp3\n";
             //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/test.m3u\n";
