@@ -10,6 +10,9 @@ extern "C" {
 #include "AudioProcessor.hpp"
 #include <iostream>
 #include <string>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 namespace lap {
 class MP3Player : public AudioProcessor {
@@ -21,6 +24,9 @@ class MP3Player : public AudioProcessor {
     std::vector<float> mSamples;
     std::string mCurrURL = "";
     double mDuration;
+    std::mutex mMutex;
+    std::condition_variable mCondition;
+    std::atomic<bool> mLoading = false;
     
 
 public:
@@ -41,6 +47,21 @@ public:
     }
 
     void load(const std::string& tURL) {
+        std::unique_lock<std::mutex> lock(mMutex);
+        mLoading = true;
+        try {
+            _load(tURL);
+            mLoading = false;
+            mCondition.notify_one();
+        }
+        catch (const std::exception& e) {
+            mLoading = false;
+            mCondition.notify_one();
+            throw e;
+        }
+    }
+
+    void _load(const std::string& tURL) {
         // open input file
         AVFormatContext* formatCtx = nullptr;
         if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, nullptr) < 0) {
@@ -182,7 +203,9 @@ public:
     }
 
     void roll(double pos) {
-        // std::cout << "MP3Player rolling to " << pos << std::endl;
+        std::unique_lock<std::mutex> lock(mMutex);
+        mCondition.wait(lock, [this] { return !this->mLoading; });
+        std::cout << "MP3Player rolling to " << pos << std::endl;
         size_t idx = round(pos * mSampleRate * kChannelCount);
         if (idx < mSamples.size()) {
             mReadPos = idx;
@@ -200,7 +223,7 @@ public:
         auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
         
-        if (mReadPos < mSamples.size()) {
+        if (!mLoading && mReadPos < mSamples.size()) {
             auto ncopyable = std::min(sampleCount, mSamples.size() - mReadPos);
             memcpy(tBuffer, mSamples.data() + mReadPos, ncopyable * sizeof(float));
             mReadPos += sampleCount;

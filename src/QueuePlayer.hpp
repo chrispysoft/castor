@@ -27,7 +27,7 @@ public:
     }
 
     void push(const std::string& tURL) {
-        std::cout << "PUSH " << tURL << std::endl;
+        std::cout << "QueuePlayer push " << tURL << std::endl;
         if (std::string_view(tURL).ends_with(".m3u")) {
             std::cout << "QueuePlayer opening m3u file " << tURL << std::endl;
             std::ifstream file(tURL);
