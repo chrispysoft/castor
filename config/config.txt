@@ -1,2 +1,3 @@
-socket_path=/tmp/lap.socket
-audio_device=Soundcraft Signature 12 MTK: USB Audio (hw:2,0)
+socket_path=../lap.socket
+in_device_name=Soundcraft Signature 12 MTK: USB Audio (hw:2,0)
+out_device_name=Soundcraft Signature 12 MTK: USB Audio (hw:2,0)
