@@ -7,21 +7,22 @@
 namespace lap {
 class SilenceDetector {
 
-    static constexpr float kDefaultThreshold = -80;
-    static constexpr time_t kDefaultSilenceDuration = 5;
-    static constexpr size_t kDefaultChannelCount = 2;
-
+    static constexpr size_t kChannelCount = 2;
+    static constexpr float kThreshold = -90;
+    static constexpr float kStartDuration = 10;
+    static constexpr float kStopDuration = 1;
+    
     const float mThreshold;
-    const size_t mChannelCount;
-    const time_t mSilenceDuration;
+    const time_t mStartDuration;
+    const time_t mStopDuration;
     std::atomic<time_t> mSilenceStart = 0;
+    std::atomic<time_t> mSilenceStop = 0;
     
 public:
-    SilenceDetector(float tThreshold = kDefaultThreshold, time_t tSilenceDuration = kDefaultSilenceDuration, size_t tChannelCount = kDefaultChannelCount) :
+    SilenceDetector(float tThreshold = kThreshold, time_t tStartDuration = kStartDuration, time_t tStopDuration = kStopDuration) :
         mThreshold(tThreshold),
-        mSilenceDuration(tSilenceDuration),
-        mChannelCount(tChannelCount),
-        mSilenceStart(0)
+        mStartDuration(tStartDuration),
+        mStopDuration(tStopDuration)
     {
         
     }
@@ -30,16 +31,17 @@ public:
         
     }
 
-    void process(const float* tSamples, size_t tSampleCount) {
+    void process(const float* in, size_t nframes) {
+        const auto nsamples = nframes * kChannelCount;
         float rms = 0;
-        for (auto i = 0; i < tSampleCount; ++i) {
-            rms += abs(tSamples[i]);
+        for (auto i = 0; i < nsamples; ++i) {
+            rms += abs(in[i]);
         }
-        rms /= tSampleCount;
+        rms /= nsamples;
         rms = 20 * log10(rms);
         // std::cout << rms << std::endl;
-        auto silent = rms <= mThreshold;
-        if (silent) {
+        bool silence = rms <= mThreshold;
+        if (silence) {
             if (mSilenceStart == 0) {
                 mSilenceStart = std::time(0);
             }
@@ -52,7 +54,7 @@ public:
         if (mSilenceStart == 0) return false;
         auto now = std::time(0);
         auto duration = now - mSilenceStart;
-        return duration > mSilenceDuration;
+        return duration > mStartDuration;
     }
 
 };
