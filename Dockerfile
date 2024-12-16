@@ -21,7 +21,8 @@ COPY src/ src/
 COPY CMakeLists.txt .
 RUN mkdir /build && cd /build && \
     cmake /app && \
-    cmake --build . --target lap
+    cmake --build . --target lap && \
+    strip lap
 
 # Runtime image
 FROM debian:12-slim
