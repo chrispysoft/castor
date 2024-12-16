@@ -12,10 +12,8 @@ services:
       - /dev/snd:/dev/snd
     environment:
       SOCKET_PATH: "/srv/socket/engine.sock"
-      AURA_ENGINE_INPUT_DEVICE: "Soundcraft Signature 12 MTK: USB Audio (hw:0,0)"
-      AURA_ENGINE_OUTPUT_DEVICE: "Soundcraft Signature 12 MTK: USB Audio (hw:0,0)"
-    working_dir: /app
-    command: ["lap"]
+      AURA_ENGINE_INPUT_DEVICE: ${AURA_ENGINE_INPUT_DEVICE}
+      AURA_ENGINE_OUTPUT_DEVICE: ${AURA_ENGINE_OUTPUT_DEVICE}
 
 volumes:
   socket:
