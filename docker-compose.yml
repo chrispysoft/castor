@@ -1,7 +1,7 @@
 services:
-  lap:
-    container_name: lap
-    image: crispybitsapp/lap:latest
+  castoria:
+    container_name: castoria
+    image: crispybitsapp/castoria:latest
     restart: always
     build:
       context: .

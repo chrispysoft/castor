@@ -1,3 +1,3 @@
-socket_path=../lap.socket
+socket_path=../castoria.socket
 in_device_name=Soundcraft Signature 12 MTK: USB Audio (hw:2,0)
 out_device_name=Soundcraft Signature 12 MTK: USB Audio (hw:2,0)
