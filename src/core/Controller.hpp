@@ -17,7 +17,7 @@ public:
     void registerCommand(const std::string& namespaze, const std::string& command, std::function<void(const std::string&, SendHandler)> callback) {
         auto key = (namespaze == "") ? command : namespaze+"."+command;
         commands[key] = callback;
-        std::cout << "Controller: registered '" << key << "'" << std::endl;
+        // std::cout << "Controller: registered '" << key << "'" << std::endl;
     }
 
     void parse(const char* tBuffer, size_t tSize, SendHandler tSendHandler) {
