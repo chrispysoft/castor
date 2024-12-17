@@ -11,6 +11,7 @@
 #include "Mixer.hpp"
 #include "Fallback.hpp"
 #include "SilenceDetector.hpp"
+#include "ShowManager.hpp"
 #include "Recorder.hpp"
 #include "APIClient.hpp"
 #include "util.hpp"
@@ -28,6 +29,7 @@ class AudioEngine : public AudioClientRenderer {
     Mixer mMixer;
     Fallback mFallback;
     SilenceDetector mSilenceDet;
+    ShowManager mShowManager;
     Recorder mRecorder;
     util::Timer mUptimer;
     
@@ -39,10 +41,12 @@ public:
         mMixer(mSampleRate, mBufferSize),
         mFallback(mSampleRate),
         mSilenceDet(),
+        mShowManager(),
         mRecorder(mSampleRate),
         mUptimer()
     {
         mAudioClient.setRenderer(this);
+        mMixer.setShowManager(&mShowManager);
     }
 
     ~AudioEngine() override {
@@ -72,7 +76,7 @@ public:
     }
 
     void setAPIClient(APIClient* tAPIClient) {
-        mMixer.setAPIClient(tAPIClient);
+        mShowManager.setAPIClient(tAPIClient);
     }
 
     void start() {

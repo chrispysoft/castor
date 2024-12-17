@@ -32,23 +32,8 @@ public:
         using namespace std;
         // cout << "postPlaylog " << mPlaylogURL << " " << tPlaylog << endl;
 
-        string playlog(tPlaylog);
-        playlog = regex_replace(playlog, regex("show_name"), "showName");
-        playlog = regex_replace(playlog, regex("show_id"), "showId");
-        playlog = regex_replace(playlog, regex("timeslot_id"), "timeslotId");
-        playlog = regex_replace(playlog, regex("playlist_id"), "playlistId");
-        playlog = regex_replace(playlog, regex("playlist_item"), "playlistItem");
-        playlog = regex_replace(playlog, regex("track_type"), "trackType");
-        playlog = regex_replace(playlog, regex("track_start"), "trackStart");
-        playlog = regex_replace(playlog, regex("track_duration"), "trackDuration");
-        playlog = regex_replace(playlog, regex("track_title"), "trackTitle");
-        playlog = regex_replace(playlog, regex("track_artist"), "trackArtist");
-        playlog = regex_replace(playlog, regex("track_album"), "trackAlbum");
-
-        // cout << "postPlaylog " << mPlaylogURL << " " << playlog << endl;
-        
         curl_easy_setopt(mCURL, CURLOPT_URL, mPlaylogURL.c_str());
-        curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, playlog.c_str());
+        curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tPlaylog.c_str());
 
         curl_slist* list = NULL;
         list = curl_slist_append(list, "Content-Type: application/json");

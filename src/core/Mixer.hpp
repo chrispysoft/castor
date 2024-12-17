@@ -7,7 +7,7 @@
 #include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
-#include "APIClient.hpp"
+#include "ShowManager.hpp"
 
 namespace cst {
 class Mixer {
@@ -108,9 +108,9 @@ public:
         }
     }
 
-    void setAPIClient(APIClient* tAPIClient) {
+    void setShowManager(ShowManager* tShowManager) {
         for (auto input : mInputs) {
-            input->setAPIClient(tAPIClient);
+            input->setShowManager(tShowManager);
         }
     }
 

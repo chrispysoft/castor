@@ -8,7 +8,7 @@
 #include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
-#include "APIClient.hpp"
+#include "ShowManager.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -19,7 +19,7 @@ protected:
     std::atomic<bool> mSelected;
     std::atomic<bool> mReady;
     std::atomic<float> mVolume;
-    APIClient* mAPIClientPtr;
+    ShowManager* mShowManagerPtr;
 
 public:
 
@@ -60,12 +60,8 @@ public:
         return "ready="+readyStr+" selected="+selStr+" single=false volume="+volStr+"% remaining=inf";
     }
 
-    void setAPIClient(APIClient* tAPIClient) {
-        mAPIClientPtr = tAPIClient;
-    }
-
-    void setTrackMetadata(std::string tMetadata) {
-        if (mAPIClientPtr) mAPIClientPtr->postPlaylog(tMetadata);
+    void setShowManager(ShowManager* tShowManager) {
+        mShowManagerPtr = tShowManager;
     }
 
     void process(const float* in, float* out, size_t nframes) const {
@@ -86,6 +82,8 @@ public:
         tController->registerCommand(mNamespace, "push", [this](auto args, auto callback) {
             const auto url = util::extractUrl(args);
             this->mQueuePlayer.push(url);
+            const auto metadata = util::extractMetadata(args);
+            if (this->mShowManagerPtr) this->mShowManagerPtr->setTrackMetadata(metadata);
             callback("1");
         });
 
@@ -153,7 +151,7 @@ public:
 
     void registerControlCommands(Controller* tController) override {
         tController->registerCommand(mNamespace, "set_track_metadata", [this](auto metadata, auto callback) {
-            this->setTrackMetadata(metadata);
+            if (this->mShowManagerPtr) this->mShowManagerPtr->setTrackMetadata(metadata);
             callback("OK");
         });
     }

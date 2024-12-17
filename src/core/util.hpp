@@ -40,9 +40,9 @@ std::pair<std::string, std::string> splitBy(const std::string& input, const char
     return {input.substr(0, pos), input.substr(pos + 1)};
 }
 
-std::map<std::string, std::string> extractMetadata(const std::string& annotation) {
+std::unordered_map<std::string, std::string> extractMetadata(const std::string& annotation) {
     using namespace std;
-    map<string, string> keyValuePairs;
+    unordered_map<string, string> keyValuePairs;
     
     regex kvRegex(R"((\w+)=["]?([^",]+)["]?)");
     smatch match;
