@@ -15,7 +15,7 @@
 #include "APIClient.hpp"
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class AudioEngine : public AudioClientRenderer {
     static constexpr const char* kDefaultDeviceName = "default";
     static constexpr double kDefaultSampleRate = 44100;
@@ -78,7 +78,7 @@ public:
     void start() {
         mAudioClient.start();
         // try {
-        //     mRecorder.start("/home/fro/code/lap/audio/test.mp3");
+        //     mRecorder.start("audio/test.mp3");
         // }
         // catch (const std::exception& e) {
         //     std::cout << "Start record failed: " << e.what() << std::endl;

@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace lap {
+namespace cst {
 
 class AudioProcessor {
 public:

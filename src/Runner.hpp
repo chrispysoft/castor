@@ -1,7 +1,7 @@
 #include <csignal>
 #include "core/CoreRunner.hpp"
 
-namespace lap {
+namespace cst {
 class Runner {
     CoreRunner mCoreRunner;
 public:

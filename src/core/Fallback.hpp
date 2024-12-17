@@ -3,7 +3,7 @@
 #include "SinOsc.hpp"
 #include "StreamPlayer.hpp"
 
-namespace lap {
+namespace cst {
 class Fallback {
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;

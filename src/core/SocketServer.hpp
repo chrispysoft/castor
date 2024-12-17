@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-namespace lap {
+namespace cst {
 class SocketServer {
 
     int mSocket;

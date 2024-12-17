@@ -9,7 +9,7 @@
 #include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
 
-namespace lap {
+namespace cst {
 class QueuePlayer : public AudioProcessor {
     std::unique_ptr<std::thread> mWorker;
     std::atomic<bool> mRunning;

@@ -11,7 +11,7 @@
 #include "APIClient.hpp"
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class CoreRunner {
 
     time_t mStartTime;
@@ -52,12 +52,12 @@ public:
             //testCmd = "aura_engine_line_in_0.set_track_metadata {\"show_name\": \"Arbeit Quo Vadis\", \"show_id\": 9, \"timeslot_id\": \"c2bf5e70-cf07-4176-a2e2-c81bef82fa0\", \"playlist_id\": 1865, \"playlist_item\": \"2.0\", \"track_type\": 2, \"track_start\": \"2024/12/11 19:00:10\", \"track_duration\": 3590, \"track_title\": \"\", \"track_album\": \"\", \"track_artist\": \"\"}\n";
             //this->mController.parse(testCmd, [](auto) {});
             //testCmd = "in_stream_0.url https://stream.fro.at/fro128.mp3\n";
-            //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/test.m3u\n";
+            //testCmd = "in_queue_0.push ::audio/test.m3u\n";
             //for (int i = 0; i < 5; ++i) {
-                //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/A maj.mp3\n";
+                //testCmd = "in_queue_0.push ::audio/A maj.mp3\n";
                 //this->mController.parse(testCmd.c_str(), testCmd.size(), [](auto response) {});
             //}
-            //testCmd = "in_queue_0.push ::/home/fro/code/lap/audio/Alternate Gate 6 Master.mp3\n";
+            //testCmd = "in_queue_0.push ::audio/Alternate Gate 6 Master.mp3\n";
             //this->mController.parse(testCmd, [](auto) {});
             while (this->mRunning.load()) {
                 this->mEngine.work();

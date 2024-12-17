@@ -14,7 +14,7 @@ extern "C" {
 #include <mutex>
 #include <condition_variable>
 
-namespace lap {
+namespace cst {
 class MP3Player : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;

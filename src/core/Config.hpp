@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class Config {
 
-    static constexpr const char* kSocketPath = "/tmp/lap_socket";
+    static constexpr const char* kSocketPath = "/tmp/cst_socket";
     static constexpr const char* kDeviceName = "default";
 
     static std::unordered_map<std::string, std::string> parseConfigFile(const std::string& tPath) {

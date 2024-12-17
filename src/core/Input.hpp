@@ -11,7 +11,7 @@
 #include "APIClient.hpp"
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class Input {
 protected:
     const std::string mNamespace;

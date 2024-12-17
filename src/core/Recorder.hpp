@@ -3,7 +3,7 @@
 #include <atomic>
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class Recorder {
 
     static constexpr size_t kChannelCount = 2;

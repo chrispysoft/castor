@@ -5,7 +5,7 @@
 #include <vector>
 #include <portaudio.h>
 
-namespace lap {
+namespace cst {
 
 class AudioClientRenderer {
 public:

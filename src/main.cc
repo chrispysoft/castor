@@ -1,6 +1,6 @@
 #include "Runner.hpp"
 
 int main() {
-    lap::Runner::instance().run();
+    cst::Runner::instance().run();
     return 0;
 }

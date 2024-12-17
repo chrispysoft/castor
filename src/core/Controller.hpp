@@ -7,7 +7,7 @@
 #include <ctime>
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class Controller {
     typedef std::function<void(const std::string& command)> SendHandler;
     std::unordered_map<std::string, std::function<void(const std::string&, SendHandler)>> commands;

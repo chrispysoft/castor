@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-namespace lap {
+namespace cst {
 class LinePlayer : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;

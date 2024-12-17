@@ -4,7 +4,7 @@
 #include <ctime>
 #include <atomic>
 
-namespace lap {
+namespace cst {
 class SilenceDetector {
 
     static constexpr size_t kChannelCount = 2;

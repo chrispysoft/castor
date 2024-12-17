@@ -11,7 +11,7 @@
 #include "AudioProcessor.hpp"
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class StreamPlayer : public AudioProcessor {
 
     static constexpr size_t kChannelCount = 2;

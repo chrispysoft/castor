@@ -9,7 +9,7 @@
 #include "LinePlayer.hpp"
 #include "APIClient.hpp"
 
-namespace lap {
+namespace cst {
 class Mixer {
 
     static constexpr size_t kChannelCount = 2;

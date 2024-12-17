@@ -5,7 +5,7 @@
 #include <string>
 #include "util.hpp"
 
-namespace lap {
+namespace cst {
 class APIClient {
     static constexpr const char* kPlaylogURL = "http://localhost:8008/api/v1/playlog";
     CURL* mCURL;
