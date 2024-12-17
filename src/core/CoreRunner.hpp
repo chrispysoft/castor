@@ -3,7 +3,6 @@
 #include <fstream>
 #include <thread>
 #include <string>
-#include <csignal>
 
 #include "Config.hpp"
 #include "AudioEngine.hpp"
@@ -13,7 +12,7 @@
 #include "util.hpp"
 
 namespace lap {
-class LAP {
+class CoreRunner {
 
     time_t mStartTime;
     std::atomic<bool> mRunning;
@@ -26,7 +25,7 @@ class LAP {
     
 
 public:
-    LAP() :
+    CoreRunner() :
         mStartTime(std::time(0)),
         mRunning(false),
         mConfig("../config/config.txt"),
@@ -35,27 +34,14 @@ public:
         mController(),
         mAPIClient()
     {
-        std::signal(SIGINT,  handlesig);
-        std::signal(SIGTERM, handlesig);
-
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
             this->mController.parse(buffer, size, txCallback);
         };
-
         mEngine.registerControlCommands(&mController);
         mEngine.setAPIClient(&mAPIClient);
     }
 
-    static LAP& instance() {
-        static LAP instance;
-        return instance;
-    }
-
-    static void handlesig(int sig) {
-        std::cout << "Received signal " << sig << std::endl;
-        instance().stop();
-    }
-
+    
     void run() {
         mRunning.store(true);
         mSocket.start();
@@ -81,12 +67,12 @@ public:
         mWorker->join();
     }
 
-    void stop() {
-        std::cout << "STOPPING..." << std::endl;
+    void terminate() {
+        std::cout << "CoreRunner terminating..." << std::endl;
         mSocket.stop();
         mEngine.stop();
-        mRunning.store(false);
-        std::cout << "STOPPED" << std::endl;
+        mRunning = false;
+        std::cout << "CoreRunner terminated" << std::endl;
     }
 
 };
