@@ -12,6 +12,7 @@ class Config {
 
     static constexpr const char* kSocketPath = "/tmp/cst_socket";
     static constexpr const char* kDeviceName = "default";
+    static constexpr const char* kPlaylogURL = "http://localhost/playlog";
 
     static std::unordered_map<std::string, std::string> parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -36,49 +37,35 @@ public:
     std::string socketPath;
     std::string iDevName;
     std::string oDevName;
-
-    Config() :
-        socketPath(util::getEnvar("SOCKET_PATH")),
-        iDevName(util::getEnvar("AURA_ENGINE_INPUT_DEVICE")),
-        oDevName(util::getEnvar("AURA_ENGINE_OUTPUT_DEVICE"))
-    {
-        if (socketPath == "") socketPath = kSocketPath;
-        if (iDevName == "") iDevName = kDeviceName;
-        if (oDevName == "") oDevName = kDeviceName;
-        std::cout << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << std::endl;
-    }
-
-    Config(const std::unordered_map<std::string, std::string> tMap) :
-        socketPath(tMap.at("socket_path")),
-        iDevName(tMap.at("in_device_name")),
-        oDevName(tMap.at("out_device_name"))
-    {
-
-    }
+    std::string playlogURL;
 
     Config(const std::string& tPath) {
         try {
             auto map = parseConfigFile(tPath);
-            socketPath = map.at("socket_path");
-            iDevName = map.at("in_device_name");
-            oDevName = map.at("out_device_name");
+            if (map.find("socket_path") != map.end()) socketPath = map.at("socket_path");
+            if (map.find("in_device_name") != map.end()) iDevName = map.at("in_device_name");
+            if (map.find("out_device_name") != map.end()) oDevName = map.at("out_device_name");
+            if (map.find("playlog_url") != map.end()) playlogURL = map.at("playlog_url");
         }
         catch (const std::exception& e) {
-            std::cerr << e.what() << std::endl;
+            std::cerr << "Config failed to parse file: " << e.what() << std::endl;
         }
 
         auto envSocketPath = util::getEnvar("SOCKET_PATH");
         auto envIDevName = util::getEnvar("AURA_ENGINE_INPUT_DEVICE");
         auto envODevName = util::getEnvar("AURA_ENGINE_OUTPUT_DEVICE");
+        auto envPlaylogURL = util::getEnvar("AURA_ENGINE_API_URL_PLAYLOG");
 
         if (envSocketPath != "") socketPath = envSocketPath;
         if (envIDevName != "") iDevName = envIDevName;
         if (envODevName != "") oDevName = envODevName;
+        if (envPlaylogURL != "") playlogURL = envPlaylogURL;
 
         if (socketPath == "") socketPath = kSocketPath;
         if (iDevName == "") iDevName = kDeviceName;
         if (oDevName == "") oDevName = kDeviceName;
-        std::cout << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << std::endl;
+        if (playlogURL == "") playlogURL = kPlaylogURL;
+        std::cout << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << ", playlogURL=" << playlogURL << std::endl;
     }
 };
 }

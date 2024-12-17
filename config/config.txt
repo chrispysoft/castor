@@ -1,3 +1,4 @@
 socket_path=../castoria.socket
 in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio
+playlog_url=http://localhost:8008/api/v1/playlog

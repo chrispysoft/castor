@@ -7,12 +7,14 @@
 
 namespace cst {
 class APIClient {
-    static constexpr const char* kPlaylogURL = "http://localhost:8008/api/v1/playlog";
+    const std::string mPlaylogURL;
     CURL* mCURL;
 
 public:
 
-    APIClient() {
+    APIClient(const std::string& tPlaylogURL) :
+        mPlaylogURL(tPlaylogURL)
+    {
         mCURL = curl_easy_init();
         if (!mCURL) {
             throw std::runtime_error("Failed to init curl");
@@ -28,7 +30,7 @@ public:
 
     void postPlaylog(const std::string tPlaylog) {
         
-        curl_easy_setopt(mCURL, CURLOPT_URL, kPlaylogURL);
+        curl_easy_setopt(mCURL, CURLOPT_URL, mPlaylogURL);
         curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tPlaylog.c_str());
 
         auto res = curl_easy_perform(mCURL);

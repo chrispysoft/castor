@@ -14,8 +14,7 @@
 namespace cst {
 class CoreRunner {
 
-    time_t mStartTime;
-    std::atomic<bool> mRunning;
+    std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
     Config mConfig;
     AudioEngine mEngine;
@@ -26,13 +25,11 @@ class CoreRunner {
 
 public:
     CoreRunner() :
-        mStartTime(std::time(0)),
-        mRunning(false),
         mConfig("../config/config.txt"),
         mEngine(mConfig.iDevName, mConfig.oDevName),
         mSocket(mConfig.socketPath),
         mController(),
-        mAPIClient()
+        mAPIClient(mConfig.playlogURL)
     {
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
             this->mController.parse(buffer, size, txCallback);
@@ -69,9 +66,9 @@ public:
 
     void terminate() {
         std::cout << "CoreRunner terminating..." << std::endl;
+        mRunning = false;
         mSocket.stop();
         mEngine.stop();
-        mRunning = false;
         std::cout << "CoreRunner terminated" << std::endl;
     }
 
