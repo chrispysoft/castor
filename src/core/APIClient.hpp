@@ -30,7 +30,7 @@ public:
 
     void postPlaylog(const std::string tPlaylog) {
         
-        curl_easy_setopt(mCURL, CURLOPT_URL, mPlaylogURL);
+        curl_easy_setopt(mCURL, CURLOPT_URL, mPlaylogURL.c_str());
         curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tPlaylog.c_str());
 
         auto res = curl_easy_perform(mCURL);
