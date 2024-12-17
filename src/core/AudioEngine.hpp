@@ -19,7 +19,7 @@ namespace cst {
 class AudioEngine : public AudioClientRenderer {
     static constexpr const char* kDefaultDeviceName = "default";
     static constexpr double kDefaultSampleRate = 44100;
-    static constexpr size_t kDefaultBufferSize = 512;
+    static constexpr size_t kDefaultBufferSize =  1024;
 
     double mSampleRate;
     size_t mBufferSize;
