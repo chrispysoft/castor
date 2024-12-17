@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <portaudio.h>
@@ -33,6 +34,7 @@ public:
         mRenderer(nullptr)
     {
         Pa_Initialize();
+        printDeviceNames();
     }
 
     ~AudioClient() {
@@ -41,120 +43,89 @@ public:
 
 
     void start() {
-        auto iDevID = getDeviceID(mIDevName);
-        if (iDevID == -1) {
-            std::cout << "AudioClient in device '" << mIDevName << "' not found - using default" << std::endl;
-            iDevID = Pa_GetDefaultOutputDevice();
+        auto numDevices = Pa_GetDeviceCount();
+        auto iDevID = paNoDevice;
+        auto oDevID = paNoDevice;
+        const PaDeviceInfo* info;
+        for (auto i = 0; i < numDevices; ++i) {
+            info = Pa_GetDeviceInfo(i);
+            std::string name(info->name);
+            if (iDevID == paNoDevice && info->maxInputChannels > 0 && name.starts_with(mIDevName)) {
+                iDevID = i;
+            }
+            if (oDevID == paNoDevice && info->maxOutputChannels > 0 && name.starts_with(mODevName)) {
+                oDevID = i;
+            }
         }
-        auto oDevID = getDeviceID(mODevName);
-        if (oDevID == -1) {
-            std::cout << "AudioClient out device '" << mODevName << "' not found - using default" << std::endl;
+
+        if (iDevID == paNoDevice) {
+            std::cout << "AudioClient input device '" << mIDevName << "' not found - using default" << std::endl;
+            iDevID = Pa_GetDefaultInputDevice();
+        }
+        if (oDevID == paNoDevice) {
+            std::cout << "AudioClient output device '" << mODevName << "' not found - using default" << std::endl;
             oDevID = Pa_GetDefaultOutputDevice();
         }
-        std::cout << "AudioClient starting PortAudio stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
-        
-        if (openStream(iDevID, oDevID)) {
-            startStream();
+
+        std::cout << "AudioClient opening stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
+
+        const PaDeviceInfo* iDevInfo = Pa_GetDeviceInfo(iDevID);
+        const PaDeviceInfo* oDevInfo = Pa_GetDeviceInfo(oDevID);
+        if (!iDevInfo) {
+            throw std::runtime_error("AudioClient failed to get input device info");
+        }
+        if (!oDevInfo) {
+            throw std::runtime_error("AudioClient failed to get output device info");
+        }
+
+        PaStreamParameters iParams(iDevID, 2, paFloat32, iDevInfo->defaultLowInputLatency, NULL);
+        PaStreamParameters oParams(oDevID, 2, paFloat32, oDevInfo->defaultLowOutputLatency, NULL);
+        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &AudioClient::paCallback, this);
+        if (res != paNoError) {
+            throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res));
+        }
+
+        res = Pa_SetStreamFinishedCallback(mStream, &AudioClient::paStreamFinished);
+        if (res != paNoError) {
+            stop();
+            throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
+        }
+
+        res = Pa_StartStream(mStream);
+        if (res != paNoError) {
+            stop();
+            throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
         }
     }
 
     void stop() {
-        stopStream();
-        closeStream();
+        if (!mStream) return;
+        auto res = Pa_StopStream(mStream);
+        if (res != paNoError) {
+            std::cout << "AudioClient failed to stop stream" << std::endl;
+        }
+        res = Pa_CloseStream(mStream);
+        if (res != paNoError) {
+            std::cout << "AudioClient failed to close stream" << std::endl;
+        }
+        mStream = nullptr;
     }
 
     void setRenderer(AudioClientRenderer* tRenderer) {
         mRenderer = tRenderer;
     }
 
-private:
-    
-    std::vector<std::string> getDeviceNames() {
-        
-        using namespace std;
+    void printDeviceNames() {
         auto numDevices = Pa_GetDeviceCount();
-        cout << "Found " << numDevices << " devices:" << endl;
-
-        vector<string> deviceNames(numDevices);
-
+        std::cout << "AudioClient found " << numDevices << " devices:" << std::endl;
         const PaDeviceInfo* info;
-        int deviceID = -1;
-        for (auto i = 0; i < numDevices; i++ ) {
+        for (auto i = 0; i < numDevices; ++i) {
             info = Pa_GetDeviceInfo(i);
-            deviceNames[i] = string(info->name);
-            cout << "#" << i << " " << info->maxInputChannels << " " << info->maxOutputChannels << " " << deviceNames[i] << endl;
+            std::cout << "#" << std::setfill(' ') << std::setw(2) << i << " " << std::setw(2) << info->maxInputChannels << " " << std::setw(2) << info->maxOutputChannels << " " << info->name << std::endl;
         }
-        return deviceNames;
     }
 
-    int getDeviceID(const std::string& tDeviceName) {
-        const auto names = getDeviceNames();
-        auto it = std::find(names.begin(), names.end(), tDeviceName);
-        int idx = it - names.begin();
-        if (idx >= names.size()) idx = -1;
-        return idx;
-    }
-
-    bool openStream(const PaDeviceIndex& inDeviceIdx, const PaDeviceIndex& outDeviceIdx) {
-        PaStreamParameters inputParameters;
-        PaStreamParameters outputParameters;
-
-        inputParameters.device = inDeviceIdx;
-        outputParameters.device = outDeviceIdx;
-
-        if (outputParameters.device == paNoDevice) {
-            return false;
-        }
-
-        const PaDeviceInfo* pInfo = Pa_GetDeviceInfo(inDeviceIdx);
-        if (!pInfo) {
-            return false;
-        }
-
-        inputParameters.channelCount = 2;
-        inputParameters.sampleFormat = paFloat32;
-        inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
-        inputParameters.hostApiSpecificStreamInfo = NULL;
-
-        outputParameters.channelCount = 2;
-        outputParameters.sampleFormat = paFloat32;
-        outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-        outputParameters.hostApiSpecificStreamInfo = NULL;
-
-        auto res = Pa_OpenStream(&mStream, &inputParameters, &outputParameters, mSampleRate, mBufferSize, paNoFlag, &AudioClient::paCallback, this);
-
-        if (res != paNoError) {
-            return false;
-        }
-
-        res = Pa_SetStreamFinishedCallback(mStream, &AudioClient::paStreamFinished);
-
-        if (res != paNoError) {
-            closeStream();
-            return false;
-        }
-
-        return true;
-    }
-
-    bool closeStream() {
-        if (!mStream) return false;
-        auto res = Pa_CloseStream(mStream);
-        mStream = nullptr;
-        return res == paNoError;
-    }
-
-    bool startStream() {
-        if (!mStream) return false;
-        auto res = Pa_StartStream(mStream);
-        return res == paNoError;
-    }
-
-    bool stopStream() {
-        if (!mStream) return false;
-        auto res = Pa_StopStream(mStream);
-        return res == paNoError;
-    }
+private:
 
     int paCallbackMethod(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags) {
         if (mRenderer) mRenderer->renderCallback(static_cast<const float*>(inputBuffer), static_cast<float*>(outputBuffer), framesPerBuffer);
@@ -162,7 +133,7 @@ private:
     }
 
     void paStreamFinishedMethod() {
-        std::cout << "AudioClient Portaudio stream finished" << std::endl;
+        std::cout << "AudioClient stream finished" << std::endl;
     }
 
     static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {
