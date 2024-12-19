@@ -4,6 +4,10 @@ project(castoria)
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+# homebrew
+# include_directories(/opt/homebrew/include)
+# link_directories(/opt/homebrew/lib)
+
 pkg_check_modules(CURL REQUIRED libcurl)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libavfilter libswscale libswresample)
