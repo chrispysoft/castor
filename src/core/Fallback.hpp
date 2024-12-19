@@ -28,7 +28,7 @@ public:
         if (mActive) return;
         log.warn() << "Fallback start";
         mActive = true;
-        mStreamPlayer.open("http://stream.fro.at/fro128.mp3");
+        mStreamPlayer.open("http://stream.fro.at/fro-128.ogg");
     }
 
     void stop() {
