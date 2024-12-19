@@ -27,7 +27,7 @@ public:
 
 private:
     static void handlesig(int sig) {
-        // std::cout << "Runner received signal " << sig << std::endl;
+        log.debug() << "Runner received signal " << sig;
         instance().terminate();
     }
 };

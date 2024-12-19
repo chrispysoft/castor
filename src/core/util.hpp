@@ -32,6 +32,16 @@ std::string timestr(std::time_t sec) {
     return fmt;
 }
 
+std::string timefmt() {
+    std::stringstream strstr;
+    auto now = std::chrono::system_clock::now();
+    auto tt = std::chrono::system_clock::to_time_t(now);
+    auto tm = *std::localtime(&tt);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+    strstr << std::put_time(&tm, "%Y-%m-%d %H:%M:%S.") << std::setw(3) << std::setfill('0') << ms.count();
+    return strstr.str();
+}
+
 std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
     size_t pos = input.find(delim);
     if (pos == std::string::npos) {

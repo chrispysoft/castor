@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <string>
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -30,7 +31,7 @@ public:
 
     void postPlaylog(const std::string tPlaylog) {
         using namespace std;
-        // cout << "postPlaylog " << mPlaylogURL << " " << tPlaylog << endl;
+        log.debug() << "APIClient postPlaylog " << mPlaylogURL << " " << tPlaylog;
 
         curl_easy_setopt(mCURL, CURLOPT_URL, mPlaylogURL.c_str());
         curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tPlaylog.c_str());
@@ -41,9 +42,9 @@ public:
 
         auto res = curl_easy_perform(mCURL);
         if (res == CURLE_OK) {
-            std::cout << "APIClient post success" << std::endl;
+            log.debug() << "APIClient post success";
         } else {
-            std::cerr << "APIClient post failed: " << curl_easy_strerror(res) << std::endl;
+            log.error() << "APIClient post failed: " << curl_easy_strerror(res);
         }
 
         curl_slist_free_all(list);

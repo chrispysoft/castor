@@ -11,6 +11,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "Log.hpp"
 
 namespace cst {
 class SocketServer {
@@ -33,7 +34,7 @@ public:
         mRunning(false)
     {
         if (mSocketPath.size() >= sizeof(sockaddr_un::sun_path)) {
-            throw std::runtime_error("Socket path too long");
+            throw std::runtime_error("socket path too long");
         }
     }
 
@@ -43,24 +44,25 @@ public:
 
     void start() {
         if (mRunning) {
-            std::cerr << "SocketServer already running" << std::endl;
+            log.debug() << "SocketServer already running";
             return;
         }
 
         // create UDS
         mSocket = socket(AF_UNIX, SOCK_STREAM, 0);
         if (mSocket < 0) {
-            throw std::runtime_error("Socket creation failed");
+            throw std::runtime_error("socket failed");
         }
 
         // non-blocking
         int flags = fcntl(mSocket, F_GETFL, 0);
         if (flags == -1 || fcntl(mSocket, F_SETFL, flags | O_NONBLOCK) == -1) {
             close(mSocket);
-            throw std::runtime_error("Failed to set socket non-blocking");
+            throw std::runtime_error("failed to set socket non-blocking");
         }
 
         if (fcntl(mSocket, F_SETFL, flags | O_NONBLOCK) == -1) {
+            close(mSocket);
             throw std::runtime_error("fcntl failed to set non-blocking");
         }
 
@@ -74,24 +76,24 @@ public:
 
         if (bind(mSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) < 0) {
             close(mSocket);
-            throw std::runtime_error("Bind failed");
+            throw std::runtime_error("bind failed");
         }
 
         // start listening for connections
         if (listen(mSocket, 5) < 0) {
             close(mSocket);
-            throw std::runtime_error("Listen failed");
+            throw std::runtime_error("listen failed");
         }
 
         mRunning = true;
         mListenerThread = std::thread(&SocketServer::run, this);
 
-        std::cout << "SocketServer started on socket '" << mSocketPath << "'" << std::endl;
+        log.info() << "SocketServer started on socket '" << mSocketPath << "'";
     }
 
     void stop() {
         if (!mRunning) {
-            std::cerr << "SocketServer not running" << std::endl;
+            log.debug() << "SocketServer not running";
             return;
         }
 
@@ -105,15 +107,15 @@ public:
             }
         }
 
-        // std::cout << "Waiting for listener to finish..." << std::endl;
+        log.debug() << "SocketServer waiting for listener to finish...";
         if (mListenerThread.joinable()) {
             mListenerThread.join();
         }
 
-        // std::cout << "Unlinking socket..." << std::endl;
+        log.debug() << "SocketServer unlinking socket...";
         unlink(mSocketPath.c_str());
         
-        std::cout << "SocketServer stopped" << std::endl;
+        log.debug() << "SocketServer stopped";
     }
 
 
@@ -132,7 +134,7 @@ private:
             int ret = poll(fds, 1, 100); // avoid busy-waiting
             if (ret < 0) {
                 if (errno == EINTR) continue;
-                std::cerr << "Poll failed: " << strerror(errno) << std::endl;
+                log.error() << "SocketServer poll failed: " << strerror(errno);
                 break;
             }
 
@@ -143,11 +145,11 @@ private:
                 int clientSocket = accept(mSocket, reinterpret_cast<struct sockaddr*>(&clientAddr), &clientLen);
                 if (clientSocket < 0) {
                     if (errno == EINTR) continue; // retry if interrupted
-                    std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+                    log.error() << "SocketServer accept failed: " << strerror(errno);
                     continue;
                 }
 
-                std::cout << "Client connected" << std::endl;
+                log.info() << "SocketServer client connected";
                 std::thread(&SocketServer::handleClient, this, clientSocket).detach();
             }
         }
@@ -163,7 +165,7 @@ private:
 
                 if (bytesRead <= 0) {
                     if (bytesRead < 0) {
-                        std::cerr << "Error reading from client: " << strerror(errno) << std::endl;
+                        log.error() << "SocketServer recv failed: " << strerror(errno);
                     }
                     break;
                 }
@@ -171,18 +173,18 @@ private:
                 if (rxHandler) {
                     rxHandler(buffer, static_cast<size_t>(bytesRead), [clientSocket](const std::string& response) {
                         if (send(clientSocket, response.c_str(), response.size(), 0) < 0) {
-                            std::cerr << "Error sending response: " << strerror(errno) << std::endl;
+                            log.error() << "SocketServer send failed: " << strerror(errno);
                         }
                     });
                 }
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Exception in client handler: " << e.what() << std::endl;
+            log.error() << "SocketServer exception in client handler: " << e.what();
         }
         
         close(clientSocket);
-        std::cout << "Client disconnected" << std::endl;
+        log.info() << "Client disconnected";
     }
 };
 

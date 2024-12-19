@@ -4,6 +4,7 @@
 #include <string>
 #include <regex>
 #include "APIClient.hpp"
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -32,7 +33,7 @@ public:
         playlog = regex_replace(playlog, regex("track_artist"), "trackArtist");
         playlog = regex_replace(playlog, regex("track_album"), "trackAlbum");
 
-        // cout << "setTrackMetadata " << playlog << endl;
+        // log.debug() << "setTrackMetadata " << playlog;
         if (mAPIClientPtr) mAPIClientPtr->postPlaylog(playlog);
     }
 

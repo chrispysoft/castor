@@ -9,6 +9,7 @@
 #include <thread>
 #include <condition_variable>
 #include "AudioProcessor.hpp"
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -39,14 +40,14 @@ public:
         using namespace std;
 
         if (mRunning) {
-            cout << "StreamPlayer already open" << endl;
+            log.debug() << "StreamPlayer already open";
             return;
         }
 
-        cout << "StreamPlayer open " << tURL << endl;
+        log.info() << "StreamPlayer open " << tURL;
         
         string command = "ffmpeg -i \"" + tURL + "\" -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -channel_layout stereo -f f32le - 2>/dev/null";
-        // cout << command << endl;
+        // log.debug() << command << endl;
         FILE* pipe = popen(command.c_str(), "r");
         if (!pipe) {
             throw runtime_error("Failed to open pipe");
@@ -61,11 +62,11 @@ public:
             size_t bytesRead;
             while (this->mRunning && (bytesRead = fread(rxBuf.data(), 1, kPipeBufferSize * sizeof(float), pipe)) > 0) {
                this->mRingBuffer.write(rxBuf.data(), bytesRead / sizeof(float));
-                // cout << "wrote " << bytesRead << " bytes" << endl;
+                // log.debug() << "wrote " << bytesRead << " bytes";
             }
             pclose(pipe);
             mRunning = false;
-            cout << "StreamPlayer finished" << endl;
+            log.info() << "StreamPlayer finished";
         });
     }
 
@@ -79,16 +80,16 @@ public:
             mReadThread->join();
         }
         mReadThread = nullptr;
-        std::cout << "StreamPlayer stopped" << std::endl;
+        log.info() << "StreamPlayer stopped";
     }
     
     void process(const float*, float* tBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
         auto samplesRead = mRingBuffer.read(tBuffer, sampleCount);
         if (samplesRead == sampleCount) {
-            // std::cout << "read " << samplesRead << " from ringbuffer" << std::endl;
+            // log.debug() << "read " << samplesRead << " from ringbuffer";
         } else {
-            // std::cout << "0 bytes read" << std::endl; 
+            // log.debug() << "0 bytes read"; 
             memset(tBuffer, 0, sampleCount * sizeof(float));
         }
     }

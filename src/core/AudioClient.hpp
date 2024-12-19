@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <portaudio.h>
+#include "Log.hpp"
 
 namespace cst {
 
@@ -59,15 +60,15 @@ public:
         }
 
         if (iDevID == paNoDevice) {
-            std::cout << "AudioClient input device '" << mIDevName << "' not found - using default" << std::endl;
+            log.warn() << "AudioClient input device '" << mIDevName << "' not found - using default";
             iDevID = Pa_GetDefaultInputDevice();
         }
         if (oDevID == paNoDevice) {
-            std::cout << "AudioClient output device '" << mODevName << "' not found - using default" << std::endl;
+            log.warn() << "AudioClient output device '" << mODevName << "' not found - using default";
             oDevID = Pa_GetDefaultOutputDevice();
         }
 
-        std::cout << "AudioClient opening stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize  << std::endl;
+        log.info() << "AudioClient opening stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize;
 
         const PaDeviceInfo* iDevInfo = Pa_GetDeviceInfo(iDevID);
         const PaDeviceInfo* oDevInfo = Pa_GetDeviceInfo(oDevID);
@@ -102,11 +103,11 @@ public:
         if (!mStream) return;
         auto res = Pa_StopStream(mStream);
         if (res != paNoError) {
-            std::cout << "AudioClient failed to stop stream" << std::endl;
+            log.debug() << "AudioClient failed to stop stream";
         }
         res = Pa_CloseStream(mStream);
         if (res != paNoError) {
-            std::cout << "AudioClient failed to close stream" << std::endl;
+            log.debug() << "AudioClient failed to close stream";
         }
         mStream = nullptr;
     }
@@ -117,11 +118,11 @@ public:
 
     void printDeviceNames() {
         auto numDevices = Pa_GetDeviceCount();
-        std::cout << "AudioClient found " << numDevices << " devices:" << std::endl;
+        log.info() << "AudioClient found " << numDevices << " devices:";
         const PaDeviceInfo* info;
         for (auto i = 0; i < numDevices; ++i) {
             info = Pa_GetDeviceInfo(i);
-            std::cout << "#" << std::setfill(' ') << std::setw(2) << i << " " << std::setw(2) << info->maxInputChannels << " " << std::setw(2) << info->maxOutputChannels << " " << info->name << std::endl;
+            log.info() << "#" << std::setfill(' ') << std::setw(2) << i << " " << std::setw(2) << info->maxInputChannels << " " << std::setw(2) << info->maxOutputChannels << " " << info->name;
         }
     }
 
@@ -133,7 +134,7 @@ private:
     }
 
     void paStreamFinishedMethod() {
-        std::cout << "AudioClient stream finished" << std::endl;
+        log.debug() << "AudioClient stream finished";
     }
 
     static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {

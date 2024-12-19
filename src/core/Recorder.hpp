@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -32,7 +33,7 @@ public:
         using namespace std;
 
         if (mRunning) {
-            cout << "Recorder already running" << endl;
+            log.debug() << "Recorder already running";
             return;
         }
 
@@ -42,7 +43,7 @@ public:
 
         mRunning = true;
 
-        cout << "Recorder open " << tURL << endl;
+        log.info() << "Recorder start " << tURL;
         
         string command = "ffmpeg -f f32le -channel_layout stereo -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -i - -codec:a libmp3lame -q:a 2 -f mp3 - >> " + tURL + " 2>&1";
 
@@ -65,10 +66,10 @@ public:
                 this->mRingBuffer.read(txBuf.data(), kPipeBufferSize);
 
                 bytesWritten = fwrite(txBuf.data(), 1, kPipeBufferSize * sizeof(float), pipe);
-                // cout << "wrote " << bytesWritten << " bytes" << endl;
+                // log.debug() << "wrote " << bytesWritten << " bytes";
 
                 if (bytesWritten != kPipeBufferSize * sizeof(float)) {
-                    cout << "Error writing to pipe" << endl;
+                    log.error() << "Error writing to pipe";
                     break;
                 }
 
@@ -76,7 +77,7 @@ public:
             }
             pclose(pipe);
             mRunning = false;
-            cout << "Recorder finished" << endl;
+            log.info() << "Recorder finished";
         });
     }
 
@@ -86,7 +87,7 @@ public:
             mWorker->join();
         }
         mWorker = nullptr;
-        std::cout << "Recorder stopped" << std::endl;
+        log.info() << "Recorder stopped";
     }
 
 

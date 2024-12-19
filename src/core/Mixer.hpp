@@ -8,6 +8,7 @@
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
 #include "ShowManager.hpp"
+#include "Log.hpp"
 
 namespace cst {
 class Mixer {
@@ -99,7 +100,7 @@ public:
             auto [chns, nil] = util::splitBy(args, ' ');
             auto chn = std::stoul(chns);
             auto status = this->mInputs[chn]->getStatusString();
-            // std::cout << status << std::endl;
+            // log.debug() << status;
             callback(status);
         });
 

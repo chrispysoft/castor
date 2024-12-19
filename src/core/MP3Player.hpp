@@ -13,6 +13,7 @@ extern "C" {
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include "Log.hpp"
 
 namespace cst {
 class MP3Player : public AudioProcessor {
@@ -193,7 +194,7 @@ public:
 
         mDuration = mSamples.size() / kChannelCount / mSampleRate;
         mCurrURL = tURL;
-        std::cout << "Read " << mSamples.size() << " samples" << " with duration " << mDuration << std::endl;
+        log.debug() << "Read " << mSamples.size() << " samples" << " with duration " << mDuration;
     }
 
     void eject() {
@@ -205,12 +206,12 @@ public:
     void roll(double pos) {
         std::unique_lock<std::mutex> lock(mMutex);
         mCondition.wait(lock, [this] { return !this->mLoading; });
-        std::cout << "MP3Player rolling to " << pos << std::endl;
+        log.debug() << "MP3Player rolling to " << pos;
         size_t idx = round(pos * mSampleRate * kChannelCount);
         if (idx < mSamples.size()) {
             mReadPos = idx;
         } else {
-            std::cout << "Roll position exceeds duration" << std::endl;
+            log.debug() << "Roll position exceeds duration";
         }
     }
 

@@ -2,6 +2,7 @@
 
 #include "SinOsc.hpp"
 #include "StreamPlayer.hpp"
+#include "Log.hpp"
 
 namespace cst {
 class Fallback {
@@ -25,14 +26,14 @@ public:
 
     void start() {
         if (mActive) return;
-        std::cout << "Fallback start" << std::endl;
+        log.warn() << "Fallback start";
         mActive = true;
         mStreamPlayer.open("http://stream.fro.at/fro128.mp3");
     }
 
     void stop() {
         if (!mActive) return;
-        std::cout << "Fallback stop" << std::endl;
+        log.info() << "Fallback stop";
         mActive = false;
         mStreamPlayer.stop();
     }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "AudioProcessor.hpp"
 #include <iostream>
 #include <string>
+#include "AudioProcessor.hpp"
 
 namespace cst {
 class LinePlayer : public AudioProcessor {

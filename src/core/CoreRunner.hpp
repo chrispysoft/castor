@@ -9,6 +9,7 @@
 #include "SocketServer.hpp"
 #include "Controller.hpp"
 #include "APIClient.hpp"
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -66,11 +67,11 @@ public:
     }
 
     void terminate() {
-        std::cout << "CoreRunner terminating..." << std::endl;
+        log.debug() << "CoreRunner terminating...";
         mRunning = false;
         mSocket.stop();
         mEngine.stop();
-        std::cout << "CoreRunner terminated" << std::endl;
+        log.debug() << "CoreRunner terminated";
     }
 
 };

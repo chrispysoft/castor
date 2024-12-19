@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -48,7 +49,7 @@ public:
             if (map.find("playlog_url") != map.end()) playlogURL = map.at("playlog_url");
         }
         catch (const std::exception& e) {
-            std::cerr << "Config failed to parse file: " << e.what() << std::endl;
+            log.error() << "Config failed to parse file: " << e.what();
         }
 
         auto envSocketPath = util::getEnvar("SOCKET_PATH");
@@ -65,7 +66,7 @@ public:
         if (iDevName == "") iDevName = kDeviceName;
         if (oDevName == "") oDevName = kDeviceName;
         if (playlogURL == "") playlogURL = kPlaylogURL;
-        std::cout << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << ", playlogURL=" << playlogURL << std::endl;
+        log.info() << "Config: socketPath=" << socketPath << ", iDevName=" << iDevName << ", oDevName=" << oDevName << ", playlogURL=" << playlogURL;
     }
 };
 }

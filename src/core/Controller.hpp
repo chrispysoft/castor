@@ -5,6 +5,7 @@
 #include <functional>
 #include <regex>
 #include <ctime>
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -17,7 +18,7 @@ public:
     void registerCommand(const std::string& namespaze, const std::string& command, std::function<void(const std::string&, SendHandler)> callback) {
         auto key = (namespaze == "") ? command : namespaze+"."+command;
         commands[key] = callback;
-        // std::cout << "Controller: registered '" << key << "'" << std::endl;
+        log.debug() << "Controller registered '" << key << "'";
     }
 
     void parse(const char* tBuffer, size_t tSize, SendHandler tSendHandler) {
@@ -30,13 +31,13 @@ public:
         auto [cmd, args] = util::splitBy(cmdstr, ' ');
         auto it = commands.find(cmd);
         if (it != commands.end()) {
-            std::cout << "Controller: executing '" << tInput << "'" << std::endl;
+            log.debug() << "Controller executing '" << tInput << "'";
             it->second(args, [tSendHandler](auto response) {
                 static constexpr const char* endToken = "\nEND\r\n";
                 tSendHandler(response + endToken);
             });
         } else {
-            std::cout << "Controller: unknown command '" << tInput << "'" << std::endl;
+            log.debug() << "Controller unknown command '" << tInput << "'";
         }
     }
 

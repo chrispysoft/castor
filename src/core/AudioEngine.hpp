@@ -14,6 +14,7 @@
 #include "ShowManager.hpp"
 #include "Recorder.hpp"
 #include "APIClient.hpp"
+#include "Log.hpp"
 #include "util.hpp"
 
 namespace cst {
@@ -85,10 +86,10 @@ public:
         //     mRecorder.start("audio/test.mp3");
         // }
         // catch (const std::exception& e) {
-        //     std::cout << "Start record failed: " << e.what() << std::endl;
+        //     log.debug() << "Start record failed: " << e.what();
         // }
         // catch (...) {
-        //     std::cout << "Start record failed due to other error" << std::endl;
+        //     log.debug() << "Start record failed due to other error";
         // }
     }
 

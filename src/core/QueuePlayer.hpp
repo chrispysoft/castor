@@ -8,6 +8,7 @@
 #include <iostream>
 #include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
+#include "Log.hpp"
 
 namespace cst {
 class QueuePlayer : public AudioProcessor {
@@ -27,13 +28,13 @@ public:
     }
 
     void push(const std::string& tURL) {
-        std::cout << "QueuePlayer push " << tURL << std::endl;
+        log.debug() << "QueuePlayer push " << tURL;
         if (std::string_view(tURL).ends_with(".m3u")) {
-            std::cout << "QueuePlayer opening m3u file " << tURL << std::endl;
+            log.debug() << "QueuePlayer opening m3u file " << tURL;
             std::ifstream file(tURL);
             std::string line;
             while (getline(file, line)) {
-                std::cout << "QueuePlayer pushing " << line << std::endl;
+                log.debug() << "QueuePlayer pushing " << line;
                 mQueue.push(line);
             }
             file.close();
@@ -79,10 +80,10 @@ private:
                 if (url != mPlayer.currentURL()) {
                     try {
                         mPlayer.load(url);
-                        std::cout << "Loaded " << url << std::endl;
+                        log.info() << "QueuePlayer loaded " << url;
                     }
                     catch (const std::exception& e) {
-                        std::cerr << "Failed to load " << url << " " << e.what() << std::endl;
+                        log.error() << "QueuePlayer failed to load " << url << " " << e.what();
                     }
                     mQueue.pop();
                 }

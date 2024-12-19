@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ctime>
 #include <atomic>
+#include "Log.hpp"
 
 namespace cst {
 class SilenceDetector {
@@ -39,7 +40,7 @@ public:
         }
         rms /= nsamples;
         rms = 20 * log10(rms);
-        // std::cout << rms << std::endl;
+        // log.debug() << rms;
         bool silence = rms <= mThreshold;
         if (silence) {
             if (mSilenceStart == 0) {
