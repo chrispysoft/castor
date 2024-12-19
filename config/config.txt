@@ -1,3 +1,4 @@
+log_path=../logs/castoria.log
 socket_path=../castoria.socket
 in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio

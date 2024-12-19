@@ -44,6 +44,7 @@ public:
 
 
     void start() {
+        log.debug() << "AudioClient start";
         auto numDevices = Pa_GetDeviceCount();
         auto iDevID = paNoDevice;
         auto oDevID = paNoDevice;
@@ -67,8 +68,6 @@ public:
             log.warn() << "AudioClient output device '" << mODevName << "' not found - using default";
             oDevID = Pa_GetDefaultOutputDevice();
         }
-
-        log.info() << "AudioClient opening stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize;
 
         const PaDeviceInfo* iDevInfo = Pa_GetDeviceInfo(iDevID);
         const PaDeviceInfo* oDevInfo = Pa_GetDeviceInfo(oDevID);
@@ -97,6 +96,8 @@ public:
             stop();
             throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
         }
+
+        log.info() << "AudioClient opened stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize;
     }
 
     void stop() {

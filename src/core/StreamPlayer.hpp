@@ -44,6 +44,11 @@ public:
             return;
         }
 
+        mRunning = true;
+        if (mReadThread && mReadThread->joinable()) {
+            mReadThread->join();
+        }
+
         log.info() << "StreamPlayer open " << tURL;
         
         string command = "ffmpeg -i \"" + tURL + "\" -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -channel_layout stereo -f f32le - 2>/dev/null";
@@ -53,10 +58,6 @@ public:
             throw runtime_error("Failed to open pipe");
         }
 
-        mRunning = true;
-        if (mReadThread && mReadThread->joinable()) {
-            mReadThread->join();
-        }
         mReadThread = make_unique<thread>([this, pipe] {
             vector<float> rxBuf(kPipeBufferSize);
             size_t bytesRead;

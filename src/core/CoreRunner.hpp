@@ -71,7 +71,7 @@ public:
         mRunning = false;
         mSocket.stop();
         mEngine.stop();
-        log.debug() << "CoreRunner terminated";
+        log.info() << "CoreRunner terminated";
     }
 
 };
