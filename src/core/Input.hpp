@@ -99,7 +99,7 @@ public:
         });
 
         tController->registerCommand(mNamespace, "status", [this](auto, auto callback) {
-            callback("OK");
+            callback("ready");
         });
     }
 };
