@@ -32,6 +32,7 @@ public:
         mController(),
         mAPIClient(mConfig.playlogURL)
     {
+        log = Log(mConfig.logPath);
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {
             this->mController.parse(buffer, size, txCallback);
         };
