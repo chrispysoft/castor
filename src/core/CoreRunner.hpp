@@ -27,7 +27,7 @@ class CoreRunner {
 public:
     CoreRunner() :
         mConfig("../config/config.txt"),
-        mEngine(mConfig.iDevName, mConfig.oDevName),
+        mEngine(mConfig),
         mSocket(mConfig.socketPath),
         mController(),
         mAPIClient(mConfig.playlogURL)

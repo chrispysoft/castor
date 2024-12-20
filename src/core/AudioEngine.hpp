@@ -6,6 +6,7 @@
 #include <string>
 #include <cmath>
 
+#include "Config.hpp"
 #include "Controller.hpp"
 #include "AudioClient.hpp"
 #include "Mixer.hpp"
@@ -13,6 +14,7 @@
 #include "SilenceDetector.hpp"
 #include "ShowManager.hpp"
 #include "Recorder.hpp"
+#include "StreamOutput.hpp"
 #include "APIClient.hpp"
 #include "Log.hpp"
 #include "util.hpp"
@@ -26,24 +28,28 @@ class AudioEngine : public AudioClientRenderer {
     double mSampleRate;
     size_t mBufferSize;
 
+    const Config& mConfig;
     AudioClient mAudioClient;
     Mixer mMixer;
     Fallback mFallback;
     SilenceDetector mSilenceDet;
     ShowManager mShowManager;
     Recorder mRecorder;
+    StreamOutput mStreamOutput;
     util::Timer mUptimer;
     
 public:
-    AudioEngine(const std::string& tIDevName = kDefaultDeviceName, const std::string& tODevName = kDefaultDeviceName, double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
+    AudioEngine(const Config& tConfig, double tSampleRate = kDefaultSampleRate, size_t tBufferSize = kDefaultBufferSize) :
+        mConfig(tConfig),
         mSampleRate(tSampleRate),
         mBufferSize(tBufferSize),
-        mAudioClient(tIDevName, tODevName, mSampleRate, mBufferSize),
+        mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mMixer(mSampleRate, mBufferSize),
         mFallback(mSampleRate),
         mSilenceDet(),
         mShowManager(),
         mRecorder(mSampleRate),
+        mStreamOutput(mSampleRate),
         mUptimer()
     {
         mAudioClient.setRenderer(this);
@@ -82,6 +88,11 @@ public:
 
     void start() {
         mAudioClient.start();
+
+        if (mConfig.streamOutURL != "") {
+            std::string icecastURL = "icecast://source:stroemer1@" + mConfig.streamOutURL + ":8000/castoria.ogg";
+            mStreamOutput.start(icecastURL);
+        }
         // try {
         //     mRecorder.start("audio/test.mp3");
         // }
@@ -119,6 +130,10 @@ private:
 
         if (mRecorder.isRunning()) {
             mRecorder.process(out, nframes);
+        }
+
+        if (mStreamOutput.isRunning()) {
+            mStreamOutput.process(out, nframes);
         }
     }
 };

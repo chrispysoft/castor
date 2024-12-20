@@ -41,6 +41,7 @@ public:
     std::string iDevName;
     std::string oDevName;
     std::string playlogURL;
+    std::string streamOutURL;
 
     Config(const std::string& tPath) {
         try {
@@ -50,6 +51,7 @@ public:
             if (map.find("in_device_name") != map.end()) iDevName = map.at("in_device_name");
             if (map.find("out_device_name") != map.end()) oDevName = map.at("out_device_name");
             if (map.find("playlog_url") != map.end()) playlogURL = map.at("playlog_url");
+            if (map.find("stream_out_url") != map.end()) streamOutURL = map.at("stream_out_url");
         }
         catch (const std::exception& e) {
             log.error() << "Config failed to parse file: " << e.what();
@@ -60,19 +62,21 @@ public:
         auto envIDevName = util::getEnvar("AURA_ENGINE_INPUT_DEVICE");
         auto envODevName = util::getEnvar("AURA_ENGINE_OUTPUT_DEVICE");
         auto envPlaylogURL = util::getEnvar("AURA_ENGINE_API_URL_PLAYLOG");
+        auto envStreamOutURL = util::getEnvar("AURA_ENGINE_STREAM_OUTPUT_URL");
 
         if (envLogPath != "") logPath = envLogPath;
         if (envSocketPath != "") socketPath = envSocketPath;
         if (envIDevName != "") iDevName = envIDevName;
         if (envODevName != "") oDevName = envODevName;
         if (envPlaylogURL != "") playlogURL = envPlaylogURL;
+        if (envStreamOutURL != "") streamOutURL = envStreamOutURL;
 
         if (logPath == "") logPath = kLogPath;
         if (socketPath == "") socketPath = kSocketPath;
         if (iDevName == "") iDevName = kDeviceName;
         if (oDevName == "") oDevName = kDeviceName;
         if (playlogURL == "") playlogURL = kPlaylogURL;
-        log.info() << "Config:\n\tlogPath=" << logPath << "\n\tsocketPath=" << socketPath << "\n\tiDevName=" << iDevName << "\n\toDevName=" << oDevName << "\n\tplaylogURL=" << playlogURL;
+        log.info() << "Config:\n\tlogPath=" << logPath << "\n\tsocketPath=" << socketPath << "\n\tiDevName=" << iDevName << "\n\toDevName=" << oDevName << "\n\tplaylogURL=" << playlogURL << "\n\tstreamOutURL=" << streamOutURL;
     }
 };
 }
