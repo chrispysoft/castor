@@ -6,6 +6,7 @@
 #include <string_view>
 #include <queue>
 #include <iostream>
+#include <mutex>
 #include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
 #include "Log.hpp"
@@ -15,6 +16,7 @@ class QueuePlayer : public AudioProcessor {
     std::unique_ptr<std::thread> mWorker;
     std::atomic<bool> mRunning;
     std::queue<std::string> mQueue;
+    std::mutex mMutex;
     MP3Player mPlayer;
     
 public:
@@ -27,14 +29,19 @@ public:
         
     }
 
+    ~QueuePlayer() override {
+        clear();
+    }
+
     void push(const std::string& tURL) {
+        std::lock_guard lock(mMutex);
         log.debug() << "QueuePlayer push " << tURL;
         if (std::string_view(tURL).ends_with(".m3u")) {
             log.debug() << "QueuePlayer opening m3u file " << tURL;
             std::ifstream file(tURL);
             std::string line;
             while (getline(file, line)) {
-                log.debug() << "QueuePlayer pushing " << line;
+                log.debug() << "QueuePlayer pushing m3u entry " << line;
                 mQueue.push(line);
             }
             file.close();
@@ -59,12 +66,14 @@ public:
     }
 
     void clear() {
+        std::lock_guard lock(mMutex);
         mRunning = false;
         if (mWorker) {
             if (mWorker->joinable()) mWorker->join();
             mWorker = nullptr;
         }
         mQueue = {};
+        mPlayer.eject();
     }
 
     
@@ -83,7 +92,7 @@ private:
                         log.info() << "QueuePlayer loaded " << url;
                     }
                     catch (const std::exception& e) {
-                        log.error() << "QueuePlayer failed to load " << url << " " << e.what();
+                        log.error() << "QueuePlayer failed to load '" << url << "': " << e.what();
                     }
                     mQueue.pop();
                 }

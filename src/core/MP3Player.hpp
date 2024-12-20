@@ -48,14 +48,15 @@ public:
     }
 
     void load(const std::string& tURL) {
-        std::unique_lock<std::mutex> lock(mMutex);
+        log.info() << "MP3Player load " << tURL;
+        eject();
         mLoading = true;
         try {
             _load(tURL);
             mLoading = false;
             mCondition.notify_one();
         }
-        catch (const std::exception& e) {
+        catch (const std::runtime_error& e) {
             mLoading = false;
             mCondition.notify_one();
             throw e;
@@ -129,7 +130,8 @@ public:
         }
 
         av_opt_set(swrCtx, "in_chlayout", inChLayoutDesc, 0);
-        av_opt_set_int(swrCtx, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+        av_opt_set(swrCtx, "out_chlayout", "stereo", 0);
+        //av_opt_set_int(swrCtx, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
         av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
         av_opt_set_int(swrCtx, "out_sample_rate", mSampleRate, 0);
         av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
@@ -194,13 +196,15 @@ public:
 
         mDuration = mSamples.size() / kChannelCount / mSampleRate;
         mCurrURL = tURL;
-        log.debug() << "Read " << mSamples.size() << " samples" << " with duration " << mDuration;
+        log.debug() << "MP3Player loaded " << mSamples.size() << " samples" << " with duration " << mDuration;
     }
 
     void eject() {
+        std::lock_guard lock(mMutex);
         mSamples.clear();
         mReadPos = 0;
         mCurrURL = "";
+        log.info() << "MP3Player ejected";
     }
 
     void roll(double pos) {
@@ -211,7 +215,7 @@ public:
         if (idx < mSamples.size()) {
             mReadPos = idx;
         } else {
-            log.debug() << "Roll position exceeds duration";
+            log.error() << "MP3Player roll position exceeds duration";
         }
     }
 
