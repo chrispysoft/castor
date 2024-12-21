@@ -6,7 +6,7 @@
 #include <string>
 #include <cmath>
 
-#include "Config.hpp"
+#include "../common/Config.hpp"
 #include "Controller.hpp"
 #include "AudioClient.hpp"
 #include "Mixer.hpp"
@@ -15,9 +15,9 @@
 #include "ShowManager.hpp"
 #include "Recorder.hpp"
 #include "StreamOutput.hpp"
-#include "APIClient.hpp"
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/APIClient.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class AudioEngine : public AudioClientRenderer {

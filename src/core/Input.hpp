@@ -9,7 +9,7 @@
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
 #include "ShowManager.hpp"
-#include "util.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class Input {

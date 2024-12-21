@@ -79,6 +79,18 @@ std::string getEnvar(const std::string& key) {
     return val == NULL ? std::string("") : std::string(val);
 }
 
+std::time_t parseDatetime(const std::string& datetime) {
+    std::tm t{};
+    std::istringstream ss(datetime);
+    ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
+    if (ss.fail()) {
+        throw std::runtime_error("Failed to parse datetime: " + datetime);
+    }
+    std::time_t ts = mktime(&t);
+    return ts;
+}
+
+
 
 template <typename T>
 class RingBuffer {

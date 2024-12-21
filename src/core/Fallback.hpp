@@ -2,7 +2,7 @@
 
 #include "SinOsc.hpp"
 #include "StreamPlayer.hpp"
-#include "Log.hpp"
+#include "../common/Log.hpp"
 
 namespace cst {
 class Fallback {

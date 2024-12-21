@@ -8,7 +8,7 @@
 #include "StreamPlayer.hpp"
 #include "LinePlayer.hpp"
 #include "ShowManager.hpp"
-#include "Log.hpp"
+#include "../common/Log.hpp"
 
 namespace cst {
 class Mixer {

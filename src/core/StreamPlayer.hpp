@@ -9,8 +9,8 @@
 #include <thread>
 #include <condition_variable>
 #include "AudioProcessor.hpp"
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class StreamPlayer : public AudioProcessor {

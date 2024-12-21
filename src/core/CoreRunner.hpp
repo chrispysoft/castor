@@ -4,13 +4,13 @@
 #include <thread>
 #include <string>
 
-#include "Config.hpp"
+#include "../common/Config.hpp"
 #include "AudioEngine.hpp"
 #include "SocketServer.hpp"
 #include "Controller.hpp"
-#include "APIClient.hpp"
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/APIClient.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class CoreRunner {
@@ -30,7 +30,7 @@ public:
         mEngine(mConfig),
         mSocket(mConfig.socketPath),
         mController(),
-        mAPIClient(mConfig.playlogURL)
+        mAPIClient(mConfig)
     {
         log = Log(mConfig.logPath);
         mSocket.rxHandler = [this](const char* buffer, size_t size, auto txCallback) {

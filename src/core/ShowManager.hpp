@@ -3,9 +3,9 @@
 #include <iostream>
 #include <string>
 #include <regex>
-#include "APIClient.hpp"
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/APIClient.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class ShowManager {

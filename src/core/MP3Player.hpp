@@ -13,7 +13,7 @@ extern "C" {
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-#include "Log.hpp"
+#include "../common/Log.hpp"
 
 namespace cst {
 class MP3Player : public AudioProcessor {

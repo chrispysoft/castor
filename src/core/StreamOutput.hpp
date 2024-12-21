@@ -1,8 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class StreamOutput {

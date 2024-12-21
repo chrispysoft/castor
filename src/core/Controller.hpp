@@ -5,8 +5,8 @@
 #include <functional>
 #include <regex>
 #include <ctime>
-#include "Log.hpp"
-#include "util.hpp"
+#include "../common/Log.hpp"
+#include "../common/util.hpp"
 
 namespace cst {
 class Controller {

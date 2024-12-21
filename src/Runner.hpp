@@ -1,12 +1,21 @@
 #include <csignal>
+
+#ifdef CST_ENGINE
+#include "engine/EngineRunner.hpp"
+#else
 #include "core/CoreRunner.hpp"
+#endif
 
 namespace cst {
 class Runner {
-    CoreRunner mCoreRunner;
+    #ifdef CST_ENGINE
+    EngineRunner mRunner;
+    #else
+    CoreRunner mRunner;
+    #endif
 public:
     Runner() :
-        mCoreRunner()
+        mRunner()
     {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
@@ -14,11 +23,11 @@ public:
     }
 
     void run() {
-        mCoreRunner.run();
+        mRunner.run();
     }
 
     void terminate() {
-        mCoreRunner.terminate();
+        mRunner.terminate();
     }
 
     static Runner& instance() {
