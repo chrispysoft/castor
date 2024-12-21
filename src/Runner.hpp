@@ -10,6 +10,7 @@ public:
     {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
+        std::signal(SIGPIPE, handlesig);
     }
 
     void run() {
@@ -28,7 +29,11 @@ public:
 private:
     static void handlesig(int sig) {
         log.debug() << "Runner received signal " << sig;
-        instance().terminate();
+        if (sig == SIGPIPE) {
+            log.error() << "Broken pipe";
+        } else {
+            instance().terminate();
+        }
     }
 };
 }
