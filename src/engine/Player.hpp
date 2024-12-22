@@ -13,10 +13,11 @@ class Player {
 
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
+    const Config& mConfig;
     
 public:
-    Player()
-        
+    Player(const Config& tConfig) :
+        mConfig(tConfig)
     {
 
     }
@@ -36,6 +37,10 @@ public:
         log.debug() << "Player terminating...";
         mRunning = false;
         log.debug() << "Player terminated";
+    }
+
+    void play(const PlayItem& item) {
+        log.info() << "Player play " << item.uri;
     }
 
 };

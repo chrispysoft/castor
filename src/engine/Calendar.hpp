@@ -115,9 +115,9 @@ public:
     std::function<void(const PlayItem& item)> activeItemChangeHandler;
     
     void setActiveItem(const PlayItem& item) {
+        log.debug() << "Calendar setActiveItem " << item.uri;
         mActiveItem = item;
         if (activeItemChangeHandler) activeItemChangeHandler(item);
-        std::cout << "Active item: " << item.uri << std::endl;
     }
 
     void refresh() {
