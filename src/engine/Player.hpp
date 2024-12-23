@@ -58,6 +58,15 @@ public:
     std::vector<PlayItem> mScheduleItems = {};
 
     void schedule(const PlayItem& item) {
+        try {
+            _schedule(item);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Player failed to schedule item: " << e.what();
+        }
+    }
+
+    void _schedule(const PlayItem& item) {
         if (std::find(mScheduleItems.begin(), mScheduleItems.end(), item) != mScheduleItems.end()) {
             return;
         }

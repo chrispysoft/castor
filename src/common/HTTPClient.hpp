@@ -29,7 +29,7 @@ public:
         if (mCURL) curl_easy_cleanup(mCURL);
     }
 
-    Result get(std::string tURL, std::vector<std::string> tHeaders = {}) {
+    Result get(const std::string& tURL, const std::vector<std::string>& tHeaders = {}) {
         using namespace std;
         using json = nlohmann::json;
 
@@ -60,6 +60,33 @@ public:
         } else {
             log.error() << "HTTPClient get failed: " << curl_easy_strerror(res) << " " << tURL;
             rResult.response = string(curl_easy_strerror(res));
+            rResult.code = -1;
+        }
+
+        return rResult;
+    }
+
+    Result post(const std::string& tURL, const std::string& tJSON) {
+        using namespace std;
+        using json = nlohmann::json;
+
+        Result rResult;
+
+        curl_easy_setopt(mCURL, CURLOPT_URL, tURL.c_str());
+        curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tJSON.c_str());
+
+        curl_slist* list = NULL;
+        list = curl_slist_append(list, "Content-Type: application/json");
+        curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, list);
+
+        auto res = curl_easy_perform(mCURL);
+        curl_slist_free_all(list);
+
+        if (res == CURLE_OK) {
+            log.debug() << "HTTPClient post success";
+            rResult.code = 0;
+        } else {
+            log.error() << "HTTPClient post failed: " << curl_easy_strerror(res) << " " << tURL;
             rResult.code = -1;
         }
 

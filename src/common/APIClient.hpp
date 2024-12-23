@@ -40,8 +40,17 @@ public:
         // curl_global_cleanup();
     }
 
-    std::vector<api::Program> getProgram() {
+    std::vector<api::Program> getProgram(time_t duration = 3600) {
         auto url = std::string(kProgramURL);
+        if (duration > 0) {
+            auto now = std::time(nullptr);
+            auto end = now + duration;
+            auto endfmt = util::utcFmt(end);
+            url += "?end="+endfmt;
+        }
+
+        log.debug() << "APIClient getProgram " << url;
+        
         auto res = HTTPClient().get(url);
         if (res.code == 0) {
             std::stringstream ss(res.response);
@@ -68,26 +77,16 @@ public:
         }
     }
 
-    void postPlaylog(const std::string tPlaylog) {
-        using namespace std;
+    void postPlaylog(const std::string& tPlaylog) {
         const auto& url = mConfig.playlogURL;
         log.debug() << "APIClient postPlaylog " << url << " " << tPlaylog;
 
-        curl_easy_setopt(mCURL, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tPlaylog.c_str());
-
-        curl_slist* list = NULL;
-        list = curl_slist_append(list, "Content-Type: application/json");
-        curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, list);
-
-        auto res = curl_easy_perform(mCURL);
-        if (res == CURLE_OK) {
-            log.debug() << "APIClient post success";
+        auto res = HTTPClient().post(url, tPlaylog);
+        if (res.code == 0) {
+            
         } else {
-            log.error() << "APIClient post failed: " << curl_easy_strerror(res);
+            
         }
-
-        curl_slist_free_all(list);
     }
 };
 }

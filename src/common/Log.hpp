@@ -40,7 +40,7 @@ public:
         std::lock_guard<std::mutex> guard(mMutex);
         const auto& str = mBuf.str();
         if (!str.empty()) {
-            auto timefmt = util::timefmt();
+            auto timefmt = util::currTimeFmtMs();
             mOut << mPrefix << timefmt << " " << mLabel << str << mSuffix << std::endl;
             mFile << timefmt << " " << mLabel << str << std::endl;
         }

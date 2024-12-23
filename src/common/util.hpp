@@ -32,13 +32,20 @@ std::string timestr(std::time_t sec) {
     return fmt;
 }
 
-std::string timefmt() {
+std::string currTimeFmtMs() {
     std::stringstream strstr;
     auto now = std::chrono::system_clock::now();
     auto tt = std::chrono::system_clock::to_time_t(now);
     auto tm = *std::localtime(&tt);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
     strstr << std::put_time(&tm, "%Y-%m-%d %H:%M:%S.") << std::setw(3) << std::setfill('0') << ms.count();
+    return strstr.str();
+}
+
+std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
+    std::stringstream strstr;
+    auto tm = *std::localtime(&tTime);
+    strstr << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
     return strstr.str();
 }
 

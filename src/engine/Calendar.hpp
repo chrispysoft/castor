@@ -60,6 +60,9 @@ public:
                 auto metadata = util::splitBy(line, ':').second;
                 auto metainfo = util::splitBy(metadata, ',');
                 int duration = stoi(metainfo.first);
+                if (duration <= 0) {
+                    throw runtime_error("Invalid duration " + to_string(duration));
+                }
                 auto artist = metainfo.second;
                 string path;
                 if (getline(file, path)) {
@@ -87,8 +90,8 @@ class Calendar {
     std::vector<PlayItem> mActiveItems;
     M3UParser m3uParser;
 
-    const std::string mPlaylistURI = "/Volumes/Playlists/aura";
-    const std::string mStoreURI = "/Volumes/Sendungsarch/aura";
+    const std::string mPlaylistURI = "/opt/aura/audio/playlist";
+    const std::string mStoreURI = "/opt/MP3/Sendungsarch/aura";
     const std::string m3uPrefix = "m3u://";
     const std::string filePrefix = "file://";
 
@@ -111,54 +114,61 @@ public:
 
         std::vector<PlayItem> activeItems(0);
         for (const auto& item : mItems) {
-            if (now >= item.start && now <= item.end) {
+            if (now >= item.scheduleStart() && now <= item.scheduleEnd()) {
                 activeItems.push_back(item);
             }
         }
 
         if (mActiveItems != activeItems) {
+            log.info() << "Calendar active items changed";
             mActiveItems.assign(activeItems.begin(), activeItems.end());
-            log.debug() << "Calendar active items changed";
             if (activeItemChangeHandler) activeItemChangeHandler(mActiveItems);
         }
     }
     
 
     void refresh() {
+        log.info() << "Calendar refresh";
         std::vector<PlayItem> items;
         m3uParser.reset();
         const auto program = mAPIClient.getProgram();
         for (const auto& pr : program) {
-            // std::cout << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle << std::endl;
-            const auto startTS = util::parseDatetime(pr.start);
-            const auto endTS = util::parseDatetime(pr.end);
+            // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
             const auto playlist = mAPIClient.getPlaylist(pr.playlistId);
-            auto tmpStartTS = startTS;
+            const auto prStart = util::parseDatetime(pr.start);
+            const auto prEnd = util::parseDatetime(pr.end);
+            auto itemStart = prStart;
 
             for (const auto& entry : playlist.entries) {
-                const auto itmStart = tmpStartTS;
-                const auto itemEnd = itmStart + entry.duration;
+                // log.debug() << entry.uri;
+                const auto itemEnd = itemStart + entry.duration;
                 
                 if (entry.uri.starts_with(m3uPrefix)) {
+                    auto uri = mPlaylistURI + entry.uri.substr(m3uPrefix.size());
                     try {
-                        auto uri = mPlaylistURI + entry.uri.substr(m3uPrefix.size());
                         auto m3u = m3uParser.parse(uri);
+                        if (m3u.empty()) {
+                            throw std::runtime_error("Empty");
+                        }
                         for (auto& m : m3u) {
-                            m.start += tmpStartTS;
-                            m.end += tmpStartTS;
-                            tmpStartTS = m.end;
+                            m.start += itemStart;
+                            m.end += itemStart;
+                            itemStart = m.end;
                         }
                         items.insert(items.end(), m3u.begin(), m3u.end());
+                        itemStart = itemEnd;
                     }
                     catch (const std::exception& e) {
-                        std::cerr << "Failed read m3u file: " << e.what() << std::endl;
+                        log.warn() << "Failed to parse m3u " << uri << " " << e.what();
+                        PlayItem itm = { itemStart, itemEnd, entry.uri };
+                        items.push_back(itm);
                     }
                 } else {
                     auto uri = (entry.uri.starts_with(filePrefix)) ? mStoreURI + entry.uri.substr(filePrefix.size()) : entry.uri;
-                    PlayItem itm = { itmStart, itemEnd, entry.uri };
+                    PlayItem itm = { itemStart, itemEnd, entry.uri };
+                    itemStart = itemEnd;
                     items.push_back(itm);
                 }
-                tmpStartTS = itemEnd;
             }
         }
 
@@ -171,15 +181,17 @@ public:
         }
 
         for (const auto& itm : items) {
-            std::cout << itm.start << " - " << itm.end << " " << itm.uri << std::endl;
+            auto tm1 = *std::localtime(&itm.start);
+            auto tm2 = *std::localtime(&itm.end);
+            static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
+            log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.uri;
         }
 
         if (mItems != items) {
-            mItems.assign(items.begin(), items.end());
-            // this->notifyChange();
-            // std::cout << "Items changed" << std::endl;
+            mItems = items;
+            log.info() << "Calendar changed";
         } else {
-            // std::cout << "Items not changed" << std::endl;
+            log.info() << "Calendar not changed";
         }
     }
 
