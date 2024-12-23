@@ -18,6 +18,9 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
 
+    std::time_t scheduleStart() const { return start - 5; }
+    std::time_t scheduleEnd() const { return end - 5; }
+
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
     }
@@ -80,7 +83,8 @@ class Calendar {
     APIClient mAPIClient;
     time_t mLastRefreshTime = 0;
     time_t mRefreshInterval = 60;
-    PlayItem mActiveItem;
+    std::vector<PlayItem> mItems;
+    std::vector<PlayItem> mActiveItems;
     M3UParser m3uParser;
 
     const std::string mPlaylistURI = "/Volumes/Playlists/aura";
@@ -89,6 +93,8 @@ class Calendar {
     const std::string filePrefix = "file://";
 
 public:
+
+    std::function<void(const std::vector<PlayItem>& items)> activeItemChangeHandler;
 
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
@@ -103,22 +109,20 @@ public:
             refresh();
         }
 
-        for (const auto& itm : items) {
-            if (now >= itm.start && now <= itm.end) {
-                if (itm != mActiveItem) setActiveItem(itm);
-                break;
+        std::vector<PlayItem> activeItems(0);
+        for (const auto& item : mItems) {
+            if (now >= item.start && now <= item.end) {
+                activeItems.push_back(item);
             }
         }
-    }
 
-    std::vector<PlayItem> items;
-    std::function<void(const PlayItem& item)> activeItemChangeHandler;
-    
-    void setActiveItem(const PlayItem& item) {
-        log.debug() << "Calendar setActiveItem " << item.uri;
-        mActiveItem = item;
-        if (activeItemChangeHandler) activeItemChangeHandler(item);
+        if (mActiveItems != activeItems) {
+            mActiveItems.assign(activeItems.begin(), activeItems.end());
+            log.debug() << "Calendar active items changed";
+            if (activeItemChangeHandler) activeItemChangeHandler(mActiveItems);
+        }
     }
+    
 
     void refresh() {
         std::vector<PlayItem> items;
@@ -160,17 +164,18 @@ public:
 
         if (items.empty()) {
             auto now = std::time(nullptr);
-            items.push_back({ now +  3, now + 10, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
-            items.push_back({ now + 10, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/D maj.mp3" });
-            items.push_back({ now + 20, now + 30, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
+            items.push_back({ now +  1, now + 5, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
+            items.push_back({ now +  5, now + 10, "/Users/chris/Music/Audio-Test-Files/Key/D maj.mp3" });
+            items.push_back({ now + 10, now + 30, "http://stream.fro.at/fro-128.ogg" });
+            items.push_back({ now + 30, now + 40, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
         }
 
         for (const auto& itm : items) {
             std::cout << itm.start << " - " << itm.end << " " << itm.uri << std::endl;
         }
 
-        if (this->items != items) {
-            this->items = items;
+        if (mItems != items) {
+            mItems.assign(items.begin(), items.end());
             // this->notifyChange();
             // std::cout << "Items changed" << std::endl;
         } else {

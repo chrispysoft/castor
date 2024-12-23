@@ -26,9 +26,11 @@ public:
         mCalendar(mConfig),
         mPlayer(mConfig)
     {
-        mCalendar.activeItemChangeHandler = [this](const PlayItem& item) {
-            log.debug() << "EngineRunner activeItemChangeHandler " << item.uri;
-            this->mPlayer.play(item);
+        mCalendar.activeItemChangeHandler = [this](const std::vector<PlayItem>& items) {
+            log.debug() << "EngineRunner activeItemChangeHandler";
+            for (const auto& item : items) {
+                this->mPlayer.schedule(item);
+            }
         };
     }
 

@@ -1,5 +1,7 @@
 #include <csignal>
 
+#define CST_ENGINE true
+
 #ifdef CST_ENGINE
 #include "engine/EngineRunner.hpp"
 #else
