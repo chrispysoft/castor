@@ -18,7 +18,7 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
 
-    std::time_t scheduleStart() const { return start - 5; }
+    std::time_t scheduleStart() const { return start - 30; }
     std::time_t scheduleEnd() const { return end - 5; }
 
     bool operator==(const PlayItem& item) const {

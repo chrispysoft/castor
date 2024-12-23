@@ -90,6 +90,11 @@ public:
             source->load(item.uri);
             source->tsStart = item.start;
             source->tsEnd = item.end;
+            auto now = std::time(nullptr);
+            auto pos = now - item.start;
+            if (pos > 0) {
+                source->roll(pos);
+            }
             mSources.push_back(source);
         }
     }
