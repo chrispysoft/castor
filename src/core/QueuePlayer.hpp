@@ -33,26 +33,35 @@ public:
         clear();
     }
 
-    void push(const std::string& tURL) {
-        log.debug() << "QueuePlayer push " << tURL;
-        if (std::string_view(tURL).ends_with(".m3u")) {
+    void open(const std::string& tURL, double seek = 0) {
+        log.info() << "QueuePlayer open " << tURL;
+        if (tURL.ends_with(".m3u")) {
             log.debug() << "QueuePlayer opening m3u file " << tURL;
             std::ifstream file(tURL);
             std::string line;
             while (getline(file, line)) {
                 if (line.starts_with("#")) continue;
                 //line.pop_back();
-                log.debug() << "QueuePlayer pushing m3u entry " << line;
-                std::lock_guard lock(mMutex);
-                mQueue.push(line);
+                log.debug() << "QueuePlayer adding m3u entry " << line;
+                mQueue.push(tURL);
             }
             file.close();
         } else {
-            std::lock_guard lock(mMutex);
             mQueue.push(tURL);
         }
-        
-        if (mWorker == nullptr) {
+
+        if (mQueue.size() == 1 && !mRunning) {
+            auto url = mQueue.back();
+            mQueue.pop();
+            try {
+                mPlayer.load(url, seek);
+                log.debug() << "QueuePlayer loaded " << url;
+            }
+            catch (const std::runtime_error& e) {
+                log.error() << "QueuePlayer failed to load " << url << "': " << e.what();
+            }
+        }
+        else {
             mRunning = true;
             mWorker = std::make_unique<std::thread>([this] {
                 while (this->mRunning) {
@@ -63,20 +72,17 @@ public:
         }
     }
 
-
     void roll(double pos) {
         mPlayer.roll(pos);
     }
 
     void clear() {
-        std::unique_lock lock(mMutex);
-        mQueue = {};
-        lock.unlock();
         mRunning = false;
         if (mWorker) {
             if (mWorker->joinable()) mWorker->join();
             mWorker = nullptr;
         }
+        mQueue = {};
         mPlayer.eject();
     }
 
@@ -88,14 +94,9 @@ public:
 private:
     void work() {
         if (mPlayer.isIdle()) {
-            std::unique_lock lock(mMutex);
-            auto qsize = mQueue.size();
-            lock.unlock();
-            if (qsize > 0) {
-                lock.lock();
+            if (mQueue.size() > 0) {
                 auto url = mQueue.back();
                 mQueue.pop();
-                lock.unlock();
                 if (url != mPlayer.currentURL()) {
                     try {
                         mPlayer.load(url);

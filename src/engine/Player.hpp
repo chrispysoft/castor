@@ -125,20 +125,12 @@ public:
             mSources.push_back(source);
         }
         else if (item.uri.starts_with("/")) {
-            if (item.uri.ends_with(".m3u")) {
-                auto source = std::make_shared<QueuePlayer>(mSampleRate);
-                source->push(item.uri);
-                source->tsStart = item.start;
-                source->tsEnd = item.end;
-                mSources.push_back(source);
-            } else {
-                auto source = std::make_shared<MP3Player>(mSampleRate);
-                auto pos = std::time(0) - item.start;
-                source->load(item.uri, pos);
-                source->tsStart = item.start;
-                source->tsEnd = item.end;
-                mSources.push_back(source);
-            }
+            auto source = std::make_shared<QueuePlayer>(mSampleRate);
+            auto pos = std::time(0) - item.start;
+            source->open(item.uri, pos);
+            source->tsStart = item.start;
+            source->tsEnd = item.end;
+            mSources.push_back(source);
         }
     }
 
