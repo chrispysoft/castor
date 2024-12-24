@@ -133,6 +133,7 @@ public:
         log.info() << "Calendar refresh";
         std::vector<PlayItem> items;
         m3uParser.reset();
+        const auto now = std::time(0);
         const auto program = mAPIClient.getProgram();
         for (const auto& pr : program) {
             // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
@@ -143,8 +144,14 @@ public:
 
             for (const auto& entry : playlist.entries) {
                 // log.debug() << entry.uri;
-                const auto itemEnd = itemStart + entry.duration;
-                if (std::time(0) > itemEnd) continue;
+                auto itemEnd = itemStart + entry.duration;
+                if (itemEnd == itemStart) {
+                    itemEnd = prEnd;
+                }
+                if (itemEnd < now) {
+                    itemStart = itemEnd;
+                    continue;
+                }
                 
                 if (entry.uri.starts_with(m3uPrefix)) {
                     auto uri = mPlaylistURI + entry.uri.substr(m3uPrefix.size());
@@ -159,20 +166,19 @@ public:
                             itemStart = m.end;
                         }
                         items.insert(items.end(), m3u.begin(), m3u.end());
-                        itemStart = itemEnd;
                     }
                     catch (const std::exception& e) {
-                        log.warn() << "No M3U metadata found - adding as item" << uri << " " << e.what();
+                        log.info() << "No M3U metadata found - adding file" << uri << " " << e.what();
                         PlayItem itm = { itemStart, itemEnd, uri };
                         items.push_back(itm);
-                        itemStart = itemEnd;
                     }
-                } else {
+                }
+                else {
                     auto uri = (entry.uri.starts_with(filePrefix)) ? mStoreURI + entry.uri.substr(filePrefix.size()) : entry.uri;
                     PlayItem itm = { itemStart, itemEnd, entry.uri };
                     items.push_back(itm);
-                    itemStart = itemEnd;
                 }
+                itemStart = itemEnd;
             }
         }
 
