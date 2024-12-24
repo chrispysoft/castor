@@ -43,7 +43,7 @@ public:
                 if (line.starts_with("#")) continue;
                 //line.pop_back();
                 log.debug() << "QueuePlayer adding m3u entry " << line;
-                mQueue.push(tURL);
+                mQueue.push(line);
             }
             file.close();
         } else {
@@ -58,7 +58,7 @@ public:
                 log.debug() << "QueuePlayer loaded " << url;
             }
             catch (const std::runtime_error& e) {
-                log.error() << "QueuePlayer failed to load " << url << "': " << e.what();
+                log.error() << "QueuePlayer failed to load " << url << ": " << e.what();
             }
         }
         else {
