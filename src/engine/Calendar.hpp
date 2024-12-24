@@ -144,6 +144,7 @@ public:
             for (const auto& entry : playlist.entries) {
                 // log.debug() << entry.uri;
                 const auto itemEnd = itemStart + entry.duration;
+                if (std::time(0) > itemEnd) continue;
                 
                 if (entry.uri.starts_with(m3uPrefix)) {
                     auto uri = mPlaylistURI + entry.uri.substr(m3uPrefix.size());
@@ -161,7 +162,7 @@ public:
                         itemStart = itemEnd;
                     }
                     catch (const std::exception& e) {
-                        log.warn() << "Failed to parse m3u " << uri << " " << e.what();
+                        log.warn() << "No M3U metadata found - adding as item" << uri << " " << e.what();
                         PlayItem itm = { itemStart, itemEnd, uri };
                         items.push_back(itm);
                         itemStart = itemEnd;
