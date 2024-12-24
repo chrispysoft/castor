@@ -34,7 +34,6 @@ public:
     }
 
     void push(const std::string& tURL) {
-        std::lock_guard lock(mMutex);
         log.debug() << "QueuePlayer push " << tURL;
         if (std::string_view(tURL).ends_with(".m3u")) {
             log.debug() << "QueuePlayer opening m3u file " << tURL;
@@ -42,12 +41,14 @@ public:
             std::string line;
             while (getline(file, line)) {
                 if (line.starts_with("#")) continue;
-                line.pop_back();
+                //line.pop_back();
                 log.debug() << "QueuePlayer pushing m3u entry " << line;
+                std::lock_guard lock(mMutex);
                 mQueue.push(line);
             }
             file.close();
         } else {
+            std::lock_guard lock(mMutex);
             mQueue.push(tURL);
         }
         
@@ -68,13 +69,14 @@ public:
     }
 
     void clear() {
-        std::lock_guard lock(mMutex);
+        std::unique_lock lock(mMutex);
+        mQueue = {};
+        lock.unlock();
         mRunning = false;
         if (mWorker) {
             if (mWorker->joinable()) mWorker->join();
             mWorker = nullptr;
         }
-        mQueue = {};
         mPlayer.eject();
     }
 
@@ -85,9 +87,15 @@ public:
 
 private:
     void work() {
-        if (mQueue.size() > 0) {
-            if (mPlayer.isIdle()) {
-                auto url = mQueue.front();
+        if (mPlayer.isIdle()) {
+            std::unique_lock lock(mMutex);
+            auto qsize = mQueue.size();
+            lock.unlock();
+            if (qsize > 0) {
+                lock.lock();
+                auto url = mQueue.back();
+                mQueue.pop();
+                lock.unlock();
                 if (url != mPlayer.currentURL()) {
                     try {
                         mPlayer.load(url);
@@ -96,7 +104,6 @@ private:
                     catch (const std::runtime_error& e) {
                         log.error() << "QueuePlayer failed to load " << url << "': " << e.what();
                     }
-                    mQueue.pop();
                 }
             }
         }
