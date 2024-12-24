@@ -47,12 +47,12 @@ public:
         return mCurrURL;
     }
 
-    void load(const std::string& tURL) {
-        log.info() << "MP3Player load " << tURL;
+    void load(const std::string& tURL, double seek = 0) {
+        log.info() << "MP3Player loading... " << tURL;
         eject();
         mLoading = true;
         try {
-            _load(tURL);
+            _load(tURL, seek);
             mLoading = false;
             mCondition.notify_one();
         }
@@ -156,6 +156,11 @@ public:
             throw std::runtime_error("Could not allocate packet or frame.");
         }
 
+        if (seek > 0) {
+            auto ts = seek * AV_TIME_BASE;
+            av_seek_frame(formatCtx, -1, ts, 0);
+        }
+
         while (av_read_frame(formatCtx, packet) >= 0) {
             if (packet->stream_index == streamIndex) {
                 if (avcodec_send_packet(codecCtx, packet) >= 0) {
@@ -204,7 +209,7 @@ public:
         mSamples.clear();
         mReadPos = 0;
         mCurrURL = "";
-        log.info() << "MP3Player ejected";
+        // log.info() << "MP3Player ejected";
     }
 
     void roll(double pos) {
