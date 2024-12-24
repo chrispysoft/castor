@@ -160,25 +160,27 @@ public:
                     }
                     catch (const std::exception& e) {
                         log.warn() << "Failed to parse m3u " << uri << " " << e.what();
-                        PlayItem itm = { itemStart, itemEnd, entry.uri };
+                        PlayItem itm = { itemStart, itemEnd, uri };
                         items.push_back(itm);
+                        itemStart = itemEnd;
                     }
                 } else {
                     auto uri = (entry.uri.starts_with(filePrefix)) ? mStoreURI + entry.uri.substr(filePrefix.size()) : entry.uri;
                     PlayItem itm = { itemStart, itemEnd, entry.uri };
-                    itemStart = itemEnd;
                     items.push_back(itm);
+                    itemStart = itemEnd;
                 }
             }
         }
 
-        if (items.empty()) {
-            auto now = std::time(nullptr);
-            items.push_back({ now +  1, now + 5, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
-            items.push_back({ now +  5, now + 10, "/Users/chris/Music/Audio-Test-Files/Key/D maj.mp3" });
-            items.push_back({ now + 10, now + 30, "http://stream.fro.at/fro-128.ogg" });
-            items.push_back({ now + 30, now + 40, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-        }
+        // items.clear();
+        // if (items.empty()) {
+        //     auto now = std::time(nullptr);
+        //     items.push_back({ now +  1, now + 15, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
+        //     items.push_back({ now +  15, now + 30, "/Users/chris/Music/Audio-Test-Files/Key/D maj.mp3" });
+        //     // items.push_back({ now + 10, now + 30, "http://stream.fro.at/fro-128.ogg" });
+        //     items.push_back({ now + 30, now + 40, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
+        // }
 
         for (const auto& itm : items) {
             auto tm1 = *std::localtime(&itm.start);
