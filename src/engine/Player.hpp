@@ -12,38 +12,50 @@
 #include "../core/MP3Player.hpp"
 #include "../core/QueuePlayer.hpp"
 #include "../core/StreamPlayer.hpp"
-#include "../core/AudioClient.hpp"
-#include "../core/SinOsc.hpp"
+#include "../core/Fallback.hpp"
+#include "../core/SilenceDetector.hpp"
+#include "../core/Recorder.hpp"
+#include "../core/StreamOutput.hpp"
 
 namespace cst {
 class Player : public AudioClientRenderer {
 
+    std::string mRecordURL = "";//../audio/test_recording.mp3";
+
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
-    double mSampleRate = 44100;
-    size_t mBufferSize = 1024;
-    const Config& mConfig;
-    AudioClient mAudioClient;
-    SinOsc mOsc;
     std::vector<std::shared_ptr<AudioProcessor>> mSources = {};
-
-    std::mutex mMutex;
     std::deque<PlayItem> mItemsToSchedule = {};
     std::deque<PlayItem> mScheduleItems = {};
+    std::mutex mMutex;
+
+    double mSampleRate = 44100;
+    size_t mBufferSize = 1024;
+
+    const Config& mConfig;
+    AudioClient mAudioClient;
+    SilenceDetector mSilenceDet;
+    Fallback mFallback;
+    Recorder mRecorder;
+    StreamOutput mStreamOutput;
     
 public:
     Player(const Config& tConfig) :
         mConfig(tConfig),
-        mOsc(mSampleRate),
-        mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize)
+        mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
+        mSilenceDet(),
+        mFallback(mSampleRate),
+        mRecorder(mSampleRate),
+        mStreamOutput(mSampleRate)
     {
         mAudioClient.setRenderer(this);
-        mOsc.setFrequency(400);
     }
 
     void run() {
         mRunning = true;
         mAudioClient.start();
+        if (!mRecordURL.empty()) mRecorder.start(mRecordURL);
+        if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning) {
                 this->work();
@@ -55,12 +67,19 @@ public:
 
     void terminate() {
         log.debug() << "Player terminating...";
+        mRecorder.stop();
+        mStreamOutput.stop();
         mAudioClient.stop();
         mRunning = false;
         log.debug() << "Player terminated";
     }
 
     void work() {
+        if (mSilenceDet.silenceDetected()) {
+            mFallback.start();
+        } else {
+            mFallback.stop();
+        }
         std::lock_guard lock(mMutex);
         if (mItemsToSchedule.size() > 0) {
             auto item = mItemsToSchedule.back();
@@ -131,11 +150,18 @@ public:
             if (source->isActive(now)) source->process(in, out, nframes);
         }
 
-        // for (auto i = 0; i < nframes; ++i) {
-        //     auto s = mOsc.process() * 0.25;
-        //     out[i*2]   += s;
-        //     out[i*2+1] += s;
-        // }
+        mSilenceDet.process(out, nframes);
+        if (mFallback.isActive()) {
+            mFallback.process(in, out, nframes);
+        }
+
+        if (mRecorder.isRunning()) {
+            mRecorder.process(out, nframes);
+        }
+
+        if (mStreamOutput.isRunning()) {
+            mStreamOutput.process(out, nframes);
+        }
     }
 
 };
