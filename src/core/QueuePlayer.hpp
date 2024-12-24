@@ -41,6 +41,8 @@ public:
             std::ifstream file(tURL);
             std::string line;
             while (getline(file, line)) {
+                if (line.starts_with("#")) continue;
+                line.pop_back();
                 log.debug() << "QueuePlayer pushing m3u entry " << line;
                 mQueue.push(line);
             }
@@ -91,8 +93,8 @@ private:
                         mPlayer.load(url);
                         log.info() << "QueuePlayer loaded " << url;
                     }
-                    catch (const std::exception& e) {
-                        log.error() << "QueuePlayer failed to load '" << url << "': " << e.what();
+                    catch (const std::runtime_error& e) {
+                        log.error() << "QueuePlayer failed to load " << url << "': " << e.what();
                     }
                     mQueue.pop();
                 }
