@@ -61,13 +61,18 @@ struct Playlist {
 };
 
 void from_json(const json& j, Playlist::Entry& e) {
-    j["uri"].get_to(e.uri);
-    j["duration"].get_to(e.duration);
+    j.at("uri").get_to(e.uri);
+    try {
+        j.at("duration").get_to(e.duration);
+    }
+    catch (...) {
+        e.duration = 0;
+    }
 }
 
 void from_json(const json& j, Playlist& p) {
-    j["id"].get_to(p.id);
-    j["entries"].get_to(p.entries);
+    j.at("id").get_to(p.id);
+    j.at("entries").get_to(p.entries);
 }
 
 }
