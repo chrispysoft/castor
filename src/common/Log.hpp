@@ -69,10 +69,10 @@ public:
         return *this;
     }
 
-    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "DEBUG ", color, Reset, mMutex); }
-    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "INFO  ", color, Reset, mMutex); }
-    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "WARN  ", color, Reset, mMutex); }
-    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "ERROR ", color, Reset, mMutex); }
+    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex); }
+    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "[INFO ] ", color, Reset, mMutex); }
+    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "[WARN ] ", color, Reset, mMutex); }
+    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex); }
 };
 
 Log log("../castoria.log");
