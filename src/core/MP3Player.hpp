@@ -36,7 +36,7 @@ public:
         mReadPos(0),
         mSamples(0)
     {
-        
+        av_log_set_level(AV_LOG_ERROR);
     }
 
     ~MP3Player() override {
@@ -48,7 +48,7 @@ public:
     }
 
     void load(const std::string& tURL, double seek = 0) {
-        log.info() << "MP3Player loading... " << tURL;
+        log.info() << "MP3Player load " << tURL << " position " << seek;
         eject();
         mLoading = true;
         try {
@@ -63,10 +63,19 @@ public:
         }
     }
 
-    void _load(const std::string& tURL) {
+    void _load(const std::string& tURL, double seek = 0) {
+        AVDictionary *options = NULL;
+        av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
+        av_dict_set(&options, "buffer_size", "65536", 0); // 64KB buffer
+        av_dict_set(&options, "reconnect", "1", 0); // Enable reconnection
+        av_dict_set(&options, "reconnect_at_eof", "1", 0); // Reconnect at EOF
+        //av_dict_set(&options, "reconnect_streamed", "1", 0); // For live streams
+        av_dict_set(&options, "reconnect_delay_max", "2", 0); // Max delay 2s
+        av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
+
         // open input file
         AVFormatContext* formatCtx = nullptr;
-        if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, nullptr) < 0) {
+        if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, &options) < 0) {
             throw std::runtime_error("Could not open input file.");
         }
 
@@ -201,7 +210,7 @@ public:
 
         mDuration = mSamples.size() / kChannelCount / mSampleRate;
         mCurrURL = tURL;
-        log.debug() << "MP3Player loaded " << mSamples.size() << " samples" << " with duration " << mDuration;
+        log.debug() << "MP3Player loaded " << mSamples.size() << " samples " << mDuration << " sec.";
     }
 
     void eject() {
