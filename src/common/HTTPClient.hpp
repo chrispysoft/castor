@@ -49,14 +49,14 @@ public:
 
         auto res = curl_easy_perform(mCURL);
 
-        if (list) {
-            curl_slist_free_all(list);
-        }
+        curl_slist_free_all(list);
 
         if (res == CURLE_OK) {
-            log.debug() << "HTTPClient get success " << tURL;
+            long statusCode = 0;
+            curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &statusCode);
             rResult.response = string(rxBuf.begin(), rxBuf.end());
-            rResult.code = 0;
+            rResult.code = statusCode;
+            // log.debug() << "HTTPClient get status " << httpStatusCode << " " << tURL;
         } else {
             log.error() << "HTTPClient get failed: " << curl_easy_strerror(res) << " " << tURL;
             rResult.response = string(curl_easy_strerror(res));

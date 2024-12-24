@@ -1,7 +1,5 @@
 #pragma once
 
-#include <curl/curl.h>
-#include <iostream>
 #include <string>
 #include "API.hpp"
 #include "HTTPClient.hpp"
@@ -20,24 +18,16 @@ class APIClient {
     };
 
     const Config& mConfig;
-    HTTPClient mHTTPClient = HTTPClient();
-    CURL* mCURL;
 
 public:
 
     APIClient(const Config& tConfig) :
         mConfig(tConfig)
     {
-        mCURL = curl_easy_init();
-        if (!mCURL) {
-            throw std::runtime_error("Failed to init curl");
-        }
-        // curl_global_init(CURL_GLOBAL_ALL); // init Winsock
+        
     }
 
     ~APIClient() {
-        if (mCURL) curl_easy_cleanup(mCURL);
-        // curl_global_cleanup();
     }
 
     std::vector<api::Program> getProgram(time_t duration = 3600) {
@@ -52,7 +42,7 @@ public:
         log.debug() << "APIClient getProgram " << url;
         
         auto res = HTTPClient().get(url);
-        if (res.code == 0) {
+        if (res.code == 200) {
             std::stringstream ss(res.response);
             nlohmann::json j;
             ss >> j;
@@ -66,7 +56,8 @@ public:
     api::Playlist getPlaylist(int showID) {
         auto url = kPlaylistURL + std::to_string(showID);
         auto res = HTTPClient().get(url, mAuthHeaders);
-        if (res.code == 0) {
+        log.debug() << "APIClient getPlaylist " << url;
+        if (res.code == 200) {
             std::stringstream ss(res.response);
             nlohmann::json j;
             ss >> j;
