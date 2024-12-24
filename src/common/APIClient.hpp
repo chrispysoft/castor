@@ -36,7 +36,7 @@ public:
             auto now = std::time(nullptr);
             auto end = now + duration;
             auto endfmt = util::utcFmt(end);
-            url += "?end="+endfmt;
+            url += "?includeVirtual=true&end="+endfmt;
         }
 
         log.debug() << "APIClient getProgram " << url;
