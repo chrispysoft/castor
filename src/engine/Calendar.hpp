@@ -17,6 +17,8 @@ struct PlayItem {
     std::time_t start;
     std::time_t end;
     std::string uri;
+    std::time_t lastTry = 0;
+    std::time_t retryInterval = 5;
 
     std::time_t scheduleStart() const { return start - 30; }
     std::time_t scheduleEnd() const { return end - 5; }
