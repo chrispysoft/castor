@@ -6,4 +6,5 @@ cd build
 cmake ..
 cmake --build ..
 make
-./castoria
+cd ..
+build/castoria

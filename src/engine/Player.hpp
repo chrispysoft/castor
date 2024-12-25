@@ -21,7 +21,7 @@
 namespace cst {
 class Player : public AudioClientRenderer {
 
-    std::string mRecordURL = "";//../audio/test_recording.mp3";
+    std::string mRecordURL = "./audio/test_recording.mp3";
 
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
