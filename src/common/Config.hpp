@@ -11,7 +11,7 @@
 namespace cst {
 class Config {
 
-    static constexpr const char* kLogPath = "../logs/cst.log";
+    static constexpr const char* kLogPath = "./logs/cst.log";
     static constexpr const char* kSocketPath = "/tmp/cst_socket";
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";

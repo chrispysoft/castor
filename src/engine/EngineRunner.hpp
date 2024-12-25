@@ -22,7 +22,7 @@ class EngineRunner {
     
 public:
     EngineRunner() :
-        mConfig("../config/config.txt"),
+        mConfig("./config/config.txt"),
         mCalendar(mConfig),
         mPlayer(mConfig)
     {
