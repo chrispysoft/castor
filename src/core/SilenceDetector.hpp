@@ -36,9 +36,9 @@ public:
         const auto nsamples = nframes * kChannelCount;
         float rms = 0;
         for (auto i = 0; i < nsamples; ++i) {
-            rms += abs(in[i]);
+            rms += in[i] * in[i];
         }
-        rms /= nsamples;
+        rms = sqrt(rms / nsamples);
         rms = 20 * log10(rms);
         // log.debug() << rms;
         bool silence = rms <= mThreshold;
