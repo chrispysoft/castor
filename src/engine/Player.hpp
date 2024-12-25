@@ -4,6 +4,7 @@
 #include <thread>
 #include <string>
 #include <csignal>
+#include <mutex>
 #include "../common/Config.hpp"
 #include "../common/Log.hpp"
 #include "../common/util.hpp"
@@ -25,6 +26,7 @@ class Player : public AudioClientRenderer {
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
     std::vector<std::shared_ptr<AudioProcessor>> mSources = {};
+    std::vector<std::shared_ptr<AudioProcessor>> mActiveSources = {};
     std::deque<PlayItem> mItemsToSchedule = {};
     std::deque<PlayItem> mScheduleItems = {};
     std::mutex mMutex;
@@ -38,6 +40,7 @@ class Player : public AudioClientRenderer {
     Fallback mFallback;
     Recorder mRecorder;
     StreamOutput mStreamOutput;
+    std::vector<float> mMixBuffer;
     
 public:
     Player(const Config& tConfig) :
@@ -46,7 +49,8 @@ public:
         mSilenceDet(),
         mFallback(mSampleRate),
         mRecorder(mSampleRate),
-        mStreamOutput(mSampleRate)
+        mStreamOutput(mSampleRate),
+        mMixBuffer(mBufferSize * 2)
     {
         mAudioClient.setRenderer(this);
     }
@@ -80,6 +84,26 @@ public:
         } else {
             mFallback.stop();
         }
+
+        std::vector<std::shared_ptr<AudioProcessor>> activeSources = {};
+        time_t now = std::time(0);
+        for (const auto& source : mSources) {
+            auto state = source->getState(now);
+            switch (state) {
+                case AudioProcessor::State::QUEUED:
+                case AudioProcessor::State::PLAYING: {
+                    activeSources.push_back(source);
+                    break;
+                }
+                default: break;
+            }
+        }
+
+        if (mActiveSources != activeSources) {
+            mActiveSources = activeSources;
+            log.debug() << "Player active sources changed (" << mActiveSources.size() << ")";
+        }
+
         std::lock_guard lock(mMutex);
         if (mItemsToSchedule.size() > 0) {
             auto item = mItemsToSchedule.back();
@@ -135,11 +159,19 @@ public:
     }
 
     void renderCallback(const float* in, float* out, size_t nframes) override {
-        memset(out, 0, nframes * 2 * sizeof(float));
+        auto nsamples = nframes * 2;
+        memset(out, 0, nsamples * sizeof(float));
 
-        time_t now = std::time(nullptr);
-        for (const auto& source : mSources) {
-            if (source->isActive(now)) source->process(in, out, nframes);
+        const auto activeSources = mActiveSources;
+        if (activeSources.size() == 1) {
+            activeSources.front()->process(in, out, nframes);
+        } else {
+            for (auto source : activeSources) {
+                source->process(in, mMixBuffer.data(), nframes);
+                for (auto i = 0; i < mMixBuffer.size(); ++i) {
+                    out[i] += mMixBuffer[i];
+                }
+            }
         }
 
         mSilenceDet.process(out, nframes);
