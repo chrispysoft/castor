@@ -60,13 +60,18 @@ class Log {
     std::mutex mMutex;
 
 public:
-    Log(const std::string tFilePath) :
-        mFile(tFilePath, std::ios::app)
-    {}
 
-    Log& operator=(Log other) {
-        std::swap(mFile, other.mFile);
-        return *this;
+    void setFilePath(const std::string tFilePath) {
+        mFile.open(tFilePath, std::ios::app);
+        if (mFile.is_open()) {
+            info() << "Log logging to " << tFilePath;
+        } else {
+            error() << "Log failed to open file " << tFilePath;
+        }
+    }
+
+    ~Log() {
+        mFile.close();
     }
 
     LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex); }
@@ -75,6 +80,6 @@ public:
     LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex); }
 };
 
-Log log("../castoria.log");
+Log log;
 
 }

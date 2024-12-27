@@ -26,6 +26,7 @@ public:
         mCalendar(mConfig),
         mPlayer(mConfig)
     {
+        log.setFilePath(mConfig.logPath);
         mCalendar.activeItemChangeHandler = [this](const std::vector<PlayItem>& items) {
             log.debug() << "EngineRunner activeItemChangeHandler";
             for (const auto& item : items) {
