@@ -177,7 +177,7 @@ public:
         }
 
         size_t requiredSamples = formatCtx->duration / AV_TIME_BASE * codecCtx->sample_rate * kChannelCount;
-        mSamples.resize(requiredSamples, 0.0f);
+        mSamples.resize(requiredSamples + 16384, 0.0f);
         auto insertPos = 0;
         
         while (av_read_frame(formatCtx, packet) >= 0) {
