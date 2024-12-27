@@ -147,7 +147,6 @@ public:
 
         av_opt_set(swrCtx, "in_chlayout", inChLayoutDesc, 0);
         av_opt_set(swrCtx, "out_chlayout", "stereo", 0);
-        //av_opt_set_int(swrCtx, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
         av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
         av_opt_set_int(swrCtx, "out_sample_rate", mSampleRate, 0);
         av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
@@ -177,38 +176,29 @@ public:
             av_seek_frame(formatCtx, -1, ts, 0);
         }
 
+        size_t requiredSamples = formatCtx->duration / AV_TIME_BASE * codecCtx->sample_rate * kChannelCount;
+        mSamples.resize(requiredSamples, 0.0f);
+        auto insertPos = 0;
+        
         while (av_read_frame(formatCtx, packet) >= 0) {
             if (packet->stream_index == streamIndex) {
                 if (avcodec_send_packet(codecCtx, packet) >= 0) {
                     while (avcodec_receive_frame(codecCtx, frame) >= 0) {
-                        // Resample frame data to float format
-                        int nbChannels = codecCtx->ch_layout.nb_channels; //av_get_channel_layout_nb_channels(codecCtx->channel_layout);
                         int outSamples = swr_get_out_samples(swrCtx, frame->nb_samples);
-                        std::vector<float> resampledData(outSamples * nbChannels);
-
-                        uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(resampledData.data()) };
-                        int convertedSamples = swr_convert(
-                            swrCtx,
-                            outData,                // Output buffer
-                            outSamples,             // Max output samples
-                            (const uint8_t**)frame->data, // Input buffer
-                            frame->nb_samples       // Number of input samples
-                        );
-
-                        if (convertedSamples < 0) {
+                        uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mSamples.data() + insertPos) };
+                        int convertedFrames = swr_convert(swrCtx, outData, outSamples, const_cast<uint8_t**>(frame->data), frame->nb_samples);
+                        if (convertedFrames < 0) {
                             av_packet_unref(packet);
                             av_frame_unref(frame);
                             throw std::runtime_error("Error during resampling.");
                         }
-                        
-                        mSamples.insert(mSamples.end(), resampledData.begin(), resampledData.begin() + convertedSamples * nbChannels);
+                        insertPos += convertedFrames * kChannelCount;
                     }
                 }
             }
             av_packet_unref(packet);
         }
 
-        // Clean up
         av_packet_free(&packet);
         av_frame_free(&frame);
         swr_free(&swrCtx);
