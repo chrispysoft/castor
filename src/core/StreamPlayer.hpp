@@ -79,7 +79,7 @@ public:
         
     }
 
-    void stop() {
+    void stop() override {
         mRunning = false;
         if (mReadThread && mReadThread->joinable()) {
             mReadThread->join();

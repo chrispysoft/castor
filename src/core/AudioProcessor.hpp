@@ -8,7 +8,7 @@ class AudioProcessor {
 public:
     virtual ~AudioProcessor() = default;
     virtual void process(const float* in, float* out, size_t nframes) = 0;
-    bool isActive(const time_t& now = time(0)) { return now >= tsStart && now <= tsEnd; };
+    bool isActive(const time_t& now = time(0)) { return state == PLAY; } // now >= tsStart && now <= tsEnd; };
 
     bool accepts(const PlayItem& item) {
         return canPlay(item) && getState() == IDLE;
@@ -39,7 +39,9 @@ public:
         tsEnd = item.end;
         auto pos = std::time(0) - tsStart;
         if (pos < 0) pos = 0;
+        state = LOAD;
         load(item.uri, pos);
+        state = CUE;
     }
 };
 }

@@ -99,26 +99,23 @@ public:
             mFallback.stop();
         }
 
-        // time_t now = std::time(0);
-        // for (const auto& source : mProcessors) {
-        //     auto state = source->getState(now);
-        //     switch (state) {
-        //         case AudioProcessor::State::CUE: {
-        //             if (now >= source->tsStart && now <= ) {
-        //                 source->play();
-        //             }
-        //         }
-        //         case AudioProcessor::State::PLAY: {
-        //             break;
-        //         }
-        //         default: break;
-        //     }
-        // }
+        time_t now = std::time(0);
+        for (const auto& source : mProcessors) {
+            if (now >= source->tsStart && now <= source->tsEnd && source->state != AudioProcessor::State::PLAY) {
+                log.warn() << "Player setting state to PLAY";
+                source->state = AudioProcessor::State::PLAY;
+            }
+            else if (now >= source->tsEnd + 1 && source->state != AudioProcessor::State::IDLE) {
+                log.warn() << "Player setting state to IDLE";
+                source->stop();
+                source->state = AudioProcessor::State::IDLE;
+            }
+        }
 
         std::lock_guard lock(mMutex);
         if (mItemsToSchedule.size() > 0) {
-            auto item = mItemsToSchedule.back();
-            mItemsToSchedule.pop_back();
+            auto item = mItemsToSchedule.front();
+            mItemsToSchedule.pop_front();
 
             if (std::find(mScheduleItems.begin(), mScheduleItems.end(), item) != mScheduleItems.end()) {
                 return;

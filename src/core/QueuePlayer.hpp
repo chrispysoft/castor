@@ -100,6 +100,7 @@ public:
 
     void stop() override {
         clear();
+        state = IDLE;
         log.info() << "QueuePlayer stopped";
     }
 

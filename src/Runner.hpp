@@ -39,7 +39,7 @@ public:
 
 private:
     static void handlesig(int sig) {
-        log.debug() << "Runner received signal " << sig;
+        log.warn() << "Runner received signal " << sig;
         if (sig == SIGPIPE) {
             log.error() << "Broken pipe";
         } else {
