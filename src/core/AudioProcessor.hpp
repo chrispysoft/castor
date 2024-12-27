@@ -14,6 +14,8 @@ public:
         return canPlay(item) && getState() == IDLE;
     }
 
+    virtual void stop() {}
+
     enum State {
         IDLE, LOAD, CUE, PLAY
     };

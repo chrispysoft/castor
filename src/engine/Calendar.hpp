@@ -57,6 +57,7 @@ public:
         if (!file.is_open()) {
             throw runtime_error("Failed to open file " + uri);
         }
+        // log.debug() << "M3UParser opened " + uri;
         string line;
         while (getline(file, line)) {
             if (line.starts_with("#EXTINF:")) {
@@ -161,6 +162,7 @@ public:
                 if (entry.uri.starts_with(m3uPrefix)) {
                     auto uri = mConfig.audioPlaylistPath + entry.uri.substr(m3uPrefix.size());
                     try {
+                        // log.debug() << "Calendar parsing m3u " << uri;
                         auto m3u = m3uParser.parse(uri);
                         if (!m3u.empty()) {
                             for (auto& m : m3u) {

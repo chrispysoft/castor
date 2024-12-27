@@ -28,6 +28,7 @@ class MP3Player : public AudioProcessor {
     std::mutex mMutex;
     std::condition_variable mCondition;
     std::atomic<bool> mLoading = false;
+    std::atomic<bool> mCancelled = false;
     
 
 public:
@@ -71,6 +72,7 @@ public:
     }
 
     void _load(const std::string& tURL, double seek = 0) {
+        mCancelled = false;
         AVDictionary *options = NULL;
         av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
         av_dict_set(&options, "buffer_size", "65536", 0); // 64KB buffer
@@ -81,17 +83,20 @@ public:
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
         // open input file
+        log.debug() << "MP3Player open file...";
         AVFormatContext* formatCtx = nullptr;
         if (avformat_open_input(&formatCtx, tURL.c_str(), nullptr, &options) < 0) {
             throw std::runtime_error("Could not open input file.");
         }
 
         // find the best stream
+        log.debug() << "MP3Player find stream info...";
         if (avformat_find_stream_info(formatCtx, nullptr) < 0) {
             avformat_close_input(&formatCtx);
             throw std::runtime_error("Could not find stream information.");
         }
 
+        log.debug() << "MP3Player find best stream...";
         int streamIndex = av_find_best_stream(formatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
         if (streamIndex < 0) {
             avformat_close_input(&formatCtx);
@@ -102,6 +107,7 @@ public:
         AVCodecParameters* codecParams = audioStream->codecpar;
 
         // find decoder
+        log.debug() << "MP3Player find decoder...";
         const AVCodec* codec = avcodec_find_decoder(codecParams->codec_id);
         if (!codec) {
             avformat_close_input(&formatCtx);
@@ -109,6 +115,7 @@ public:
         }
 
         // allocate codec context
+        log.debug() << "MP3Player alloc codec context...";
         AVCodecContext* codecCtx = avcodec_alloc_context3(codec);
         if (!codecCtx) {
             avformat_close_input(&formatCtx);
@@ -122,6 +129,7 @@ public:
         }
 
         // open codec
+        log.debug() << "MP3Player open codec...";
         if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
             avcodec_free_context(&codecCtx);
             avformat_close_input(&formatCtx);
@@ -129,6 +137,7 @@ public:
         }
 
         // convert
+        log.debug() << "MP3Player alloc resampler...";
         SwrContext* swrCtx = swr_alloc();
         if (!swrCtx) {
             avcodec_free_context(&codecCtx);
@@ -136,6 +145,7 @@ public:
             throw std::runtime_error("Could not allocate resampler context.");
         }
 
+        log.debug() << "MP3Player get channel layout...";
         char inChLayoutDesc[128];
         int sts = av_channel_layout_describe(&codecCtx->ch_layout, inChLayoutDesc, sizeof(inChLayoutDesc));
         if (sts < 0) {
@@ -145,6 +155,7 @@ public:
             throw std::runtime_error("Could not load input channel layout description");
         }
 
+        log.debug() << "MP3Player set av options...";
         av_opt_set(swrCtx, "in_chlayout", inChLayoutDesc, 0);
         av_opt_set(swrCtx, "out_chlayout", "stereo", 0);
         av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
@@ -152,14 +163,16 @@ public:
         av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
         av_opt_set_sample_fmt(swrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
 
+        log.debug() << "MP3Player init resampler...";
         if (swr_init(swrCtx) < 0) {
             swr_free(&swrCtx);
             avcodec_free_context(&codecCtx);
             avformat_close_input(&formatCtx);
-            throw std::runtime_error("Could not initialize resampler.");
+            throw std::runtime_error("Could not init resampler.");
         }
 
         // prepare to read packets and decode
+        log.debug() << "MP3Player alloc packet and frame...";
         AVPacket* packet = av_packet_alloc();
         AVFrame* frame = av_frame_alloc();
         if (!packet || !frame) {
@@ -171,19 +184,27 @@ public:
             throw std::runtime_error("Could not allocate packet or frame.");
         }
 
+        if (mCancelled) return;
+
         if (seek > 0) {
             auto ts = seek * AV_TIME_BASE;
+            log.debug() << "MP3Player seek frame " << std::to_string(ts);
             av_seek_frame(formatCtx, -1, ts, 0);
         }
 
+        if (mCancelled) return;
+
         size_t requiredSamples = formatCtx->duration / AV_TIME_BASE * codecCtx->sample_rate * kChannelCount;
+        log.debug() << "MP3Player alloc playback buffer size " << std::to_string(requiredSamples);
         mSamples.resize(requiredSamples + 16384, 0.0f);
         auto insertPos = 0;
+
+        log.debug() << "MP3Player enter read loop...";
         
-        while (av_read_frame(formatCtx, packet) >= 0) {
+        while (!mCancelled && av_read_frame(formatCtx, packet) >= 0) {
             if (packet->stream_index == streamIndex) {
                 if (avcodec_send_packet(codecCtx, packet) >= 0) {
-                    while (avcodec_receive_frame(codecCtx, frame) >= 0) {
+                    while (!mCancelled && avcodec_receive_frame(codecCtx, frame) >= 0) {
                         int outSamples = swr_get_out_samples(swrCtx, frame->nb_samples);
                         uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mSamples.data() + insertPos) };
                         int convertedFrames = swr_convert(swrCtx, outData, outSamples, const_cast<const uint8_t**>(frame->data), frame->nb_samples);
@@ -207,16 +228,22 @@ public:
 
         mDuration = mSamples.size() / kChannelCount / mSampleRate;
         mCurrURL = tURL;
-        log.debug() << "MP3Player loaded " << mSamples.size() << " samples " << mDuration << " sec.";
+        log.info() << "MP3Player loaded " << mSamples.size() << " samples " << mDuration << " sec.";
+    }
+
+    void stop() override {
+        eject();
     }
 
     void eject() {
-        std::lock_guard lock(mMutex);
+        log.debug() << "MP3Player eject...";
+        mCancelled = true;
+        //std::lock_guard lock(mMutex);
         mSamples.clear();
         mReadPos = 0;
         mCurrURL = "";
         state = IDLE;
-        // log.info() << "MP3Player ejected";
+        log.info() << "MP3Player ejected";
     }
 
     void roll(double pos) {

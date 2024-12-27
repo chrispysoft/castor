@@ -87,13 +87,20 @@ public:
     }
 
     void clear() {
+        log.debug() << "QueuePlayer clear...";
         mRunning = false;
+        mQueue = {};
+        mPlayer.eject();
         if (mWorker) {
             if (mWorker->joinable()) mWorker->join();
             mWorker = nullptr;
         }
-        mQueue = {};
-        mPlayer.eject();
+        log.info() << "QueuePlayer cleared";
+    }
+
+    void stop() override {
+        clear();
+        log.info() << "QueuePlayer stopped";
     }
 
     
