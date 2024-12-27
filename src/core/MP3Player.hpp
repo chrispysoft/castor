@@ -186,7 +186,7 @@ public:
                     while (avcodec_receive_frame(codecCtx, frame) >= 0) {
                         int outSamples = swr_get_out_samples(swrCtx, frame->nb_samples);
                         uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mSamples.data() + insertPos) };
-                        int convertedFrames = swr_convert(swrCtx, outData, outSamples, const_cast<uint8_t**>(frame->data), frame->nb_samples);
+                        int convertedFrames = swr_convert(swrCtx, outData, outSamples, const_cast<const uint8_t**>(frame->data), frame->nb_samples);
                         if (convertedFrames < 0) {
                             av_packet_unref(packet);
                             av_frame_unref(frame);
