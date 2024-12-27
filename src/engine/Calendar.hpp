@@ -157,21 +157,22 @@ public:
                     auto uri = mConfig.audioPlaylistPath + entry.uri.substr(m3uPrefix.size());
                     try {
                         auto m3u = m3uParser.parse(uri);
-                        if (m3u.empty()) {
-                            throw std::runtime_error("Empty");
+                        if (!m3u.empty()) {
+                            for (auto& m : m3u) {
+                                m.start += itemStart;
+                                m.end += itemStart;
+                                m.program = pr;
+                                itemStart = m.end;
+                            }
+                            items.insert(items.end(), m3u.begin(), m3u.end());
+                        } else {
+                            log.warn() << "Calendar found no M3U metadata - adding file as item";
+                            PlayItem itm = { itemStart, itemEnd, uri, pr };
+                            items.push_back(itm);
                         }
-                        for (auto& m : m3u) {
-                            m.start += itemStart;
-                            m.end += itemStart;
-                            m.program = pr;
-                            itemStart = m.end;
-                        }
-                        items.insert(items.end(), m3u.begin(), m3u.end());
                     }
                     catch (const std::exception& e) {
-                        log.info() << "No M3U metadata found: " << e.what() << " adding file as item";
-                        PlayItem itm = { itemStart, itemEnd, uri, pr };
-                        items.push_back(itm);
+                        log.error() << "Calendar error reading M3U: " << e.what();
                     }
                 }
                 else {
