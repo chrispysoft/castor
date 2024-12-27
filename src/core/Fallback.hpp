@@ -33,19 +33,19 @@ public:
         if (mActive) return;
         log.warn() << "Fallback start";
         mActive = true;
-        if (mFallbackURL.starts_with("http")) {
-            mStreamPlayer.load(mFallbackURL);
-        } else {
-            mQueuePlayer.load(mFallbackURL);
-        }
+        // if (mFallbackURL.starts_with("http")) {
+        //     mStreamPlayer.load(mFallbackURL);
+        // } else {
+        //     mQueuePlayer.load(mFallbackURL);
+        // }
     }
 
     void stop() {
         if (!mActive) return;
         log.warn() << "Fallback stop";
         mActive = false;
-        mStreamPlayer.stop();
-        mQueuePlayer.clear();
+        // mStreamPlayer.stop();
+        // mQueuePlayer.clear();
     }
 
     bool isActive() {
@@ -53,8 +53,8 @@ public:
     }
 
     void process(const float* in, float* out, size_t nframes) {
-        mStreamPlayer.process(in, out, nframes);
-        mQueuePlayer.process(in, out, nframes);
+        // mStreamPlayer.process(in, out, nframes);
+        // mQueuePlayer.process(in, out, nframes);
         
         for (auto i = 0; i < nframes; ++i) {
             out[i*2]   += mOscL.process() * kGain;
