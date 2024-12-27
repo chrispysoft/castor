@@ -84,6 +84,7 @@ public:
     void terminate() {
         log.debug() << "Player terminating...";
         mRecorder.stop();
+        for (const auto& source : mProcessors) source->stop();
         mStreamOutput.stop();
         mAudioClient.stop();
         mRunning = false;
