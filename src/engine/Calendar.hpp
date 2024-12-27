@@ -111,7 +111,12 @@ public:
         auto now = std::time(0);
         if (now - mLastRefreshTime > mRefreshInterval) {
             mLastRefreshTime = now;
-            refresh();
+            try {
+                refresh();
+            }
+            catch (const std::runtime_error& e) {
+                log.error() << "Calendar refresh failed: " << e.what();
+            }
         }
 
         std::vector<PlayItem> activeItems(0);

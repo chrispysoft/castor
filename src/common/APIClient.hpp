@@ -46,7 +46,7 @@ public:
             auto p = j.template get<std::vector<api::Program>>();
             return p;
         } else {
-            return {};
+            throw std::runtime_error("APIClient getProgram status code "+std::to_string(res.code));
         }
     }
 
@@ -61,19 +61,16 @@ public:
             auto p = j.template get<api::Playlist>();
             return p;
         } else {
-            return {};
+            throw std::runtime_error("APIClient getPlaylist status code "+std::to_string(res.code));
         }
     }
 
     void postPlaylog(const std::string& tPlaylog) {
         const auto& url = mConfig.playlogURL;
         log.debug() << "APIClient postPlaylog " << url << " " << tPlaylog;
-
         auto res = HTTPClient().post(url, tPlaylog);
-        if (res.code == 0) {
-            
-        } else {
-            
+        if (res.code != 210) {
+            throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
         }
     }
 };
