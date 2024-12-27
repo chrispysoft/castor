@@ -47,16 +47,23 @@ public:
         return mCurrURL;
     }
 
-    void load(const std::string& tURL, double seek = 0) {
+    bool canPlay(const PlayItem& item) override {
+        return item.uri.starts_with("/");
+    }
+
+    void load(const std::string& tURL, double seek = 0) override {
         log.info() << "MP3Player load " << tURL << " position " << seek;
         eject();
+        state = LOAD;
         mLoading = true;
         try {
             _load(tURL, seek);
+            state = CUE;
             mLoading = false;
             mCondition.notify_one();
         }
         catch (const std::runtime_error& e) {
+            eject();
             mLoading = false;
             mCondition.notify_one();
             throw e;
@@ -218,6 +225,7 @@ public:
         mSamples.clear();
         mReadPos = 0;
         mCurrURL = "";
+        state = IDLE;
         // log.info() << "MP3Player ejected";
     }
 

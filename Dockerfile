@@ -4,16 +4,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
-    curl \
     libcurl4-openssl-dev \
     libasound2-dev \
     portaudio19-dev \
-    ffmpeg \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
-    libavfilter-dev \
-    libswscale-dev \
     libswresample-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
@@ -29,6 +25,7 @@ FROM debian:12-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    ca-certificates \
     libasound2 \
     libportaudio2 \
     ffmpeg \

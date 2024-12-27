@@ -4,7 +4,7 @@
 #include <atomic>
 #include <string>
 #include <string_view>
-#include <queue>
+#include <deque>
 #include <iostream>
 #include <mutex>
 #include "AudioProcessor.hpp"
@@ -15,7 +15,7 @@ namespace cst {
 class QueuePlayer : public AudioProcessor {
     std::unique_ptr<std::thread> mWorker;
     std::atomic<bool> mRunning;
-    std::queue<std::string> mQueue;
+    std::deque<std::string> mQueue;
     std::mutex mMutex;
     MP3Player mPlayer;
     
@@ -33,7 +33,11 @@ public:
         clear();
     }
 
-    void open(const std::string& tURL, double seek = 0) {
+    bool canPlay(const PlayItem& item) override {
+        return mPlayer.canPlay(item);
+    }
+
+    void load(const std::string& tURL, double seek = 0) override {
         log.info() << "QueuePlayer open " << tURL;
         if (tURL.ends_with(".m3u")) {
             log.debug() << "QueuePlayer opening m3u file " << tURL;
@@ -41,18 +45,24 @@ public:
             std::string line;
             while (getline(file, line)) {
                 if (line.starts_with("#")) continue;
-                //line.pop_back();
-                log.debug() << "QueuePlayer adding m3u entry " << line;
-                mQueue.push(line);
+                util::stripM3ULine(line);
+                mQueue.push_back(line);
+                // log.debug() << "QueuePlayer added m3u entry " << line;
             }
             file.close();
+            log.debug() << "QueuePlayer added " << mQueue.size() << " m3u entries";
         } else {
-            mQueue.push(tURL);
+            mQueue.push_back(tURL);
+        }
+
+        if (mQueue.empty()) {
+            log.error() << "QueuePlayer is empty";
+            return;
         }
 
         if (mQueue.size() == 1 && !mRunning) {
-            auto url = mQueue.back();
-            mQueue.pop();
+            auto url = mQueue.front();
+            mQueue.pop_front();
             try {
                 mPlayer.load(url, seek);
                 log.debug() << "QueuePlayer loaded " << url;
@@ -95,8 +105,8 @@ private:
     void work() {
         if (mPlayer.isIdle()) {
             if (mQueue.size() > 0) {
-                auto url = mQueue.back();
-                mQueue.pop();
+                auto url = mQueue.front();
+                mQueue.pop_front();
                 if (url != mPlayer.currentURL()) {
                     try {
                         mPlayer.load(url);

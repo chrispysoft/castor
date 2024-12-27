@@ -11,17 +11,27 @@
 namespace cst {
 class Config {
 
+    typedef std::unordered_map<std::string, std::string> Map;
+
     static constexpr const char* kLogPath = "./logs/cst.log";
     static constexpr const char* kSocketPath = "/tmp/cst_socket";
+    static constexpr const char* kAudioSourcePath = "./audio/source";
+    static constexpr const char* kAudioPlaylistPath = "./audio/playlist";
+    static constexpr const char* kAudioFallbackPath = "./audio/fallback.m3u";
+    static constexpr const char* kAudioRecordPath = "";
     static constexpr const char* kDeviceName = "default";
+    static constexpr const char* kStreamOutURL = "";
+    static constexpr const char* kProgramURL = "http://localhost/program";
+    static constexpr const char* kPlaylistURL = "http://localhost/playlist";
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";
+    static constexpr const char* kPlaylistToken = "castoria:id";
 
-    static std::unordered_map<std::string, std::string> parseConfigFile(const std::string& tPath) {
+    static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
         if (!cfgfile) {
             throw std::runtime_error("Failed to open config file");
         }
-        std::unordered_map<std::string, std::string> cfgmap;
+        Map cfgmap;
         std::string line;
         while (std::getline(cfgfile, line)) {
             std::istringstream iss(line);
@@ -38,45 +48,64 @@ public:
 
     std::string logPath;
     std::string socketPath;
+    std::string audioSourcePath;
+    std::string audioPlaylistPath;
+    std::string audioFallbackPath;
+    std::string audioRecordPath;
     std::string iDevName;
     std::string oDevName;
-    std::string playlogURL;
     std::string streamOutURL;
+    std::string programURL;
+    std::string playlistURL;
+    std::string playlogURL;
+    std::string playlistToken;
+
+    static std::string get(Map& map, std::string mapKey, std::string envKey, std::string defaultValue) {
+        std::string value;
+        if (map.find(mapKey) != map.end()) value = map.at(mapKey);
+        auto envVal = util::getEnvar(envKey);
+        if (!envVal.empty()) value = envVal;
+        if (value.empty()) value = defaultValue;
+        return value;
+    }
 
     Config(const std::string& tPath) {
+        Map map = {};
         try {
-            auto map = parseConfigFile(tPath);
-            if (map.find("log_path") != map.end()) logPath = map.at("log_path");
-            if (map.find("socket_path") != map.end()) socketPath = map.at("socket_path");
-            if (map.find("in_device_name") != map.end()) iDevName = map.at("in_device_name");
-            if (map.find("out_device_name") != map.end()) oDevName = map.at("out_device_name");
-            if (map.find("playlog_url") != map.end()) playlogURL = map.at("playlog_url");
-            if (map.find("stream_out_url") != map.end()) streamOutURL = map.at("stream_out_url");
+            map = parseConfigFile(tPath);
         }
         catch (const std::exception& e) {
             log.error() << "Config failed to parse file: " << e.what();
         }
 
-        auto envLogPath = util::getEnvar("LOG_PATH");
-        auto envSocketPath = util::getEnvar("SOCKET_PATH");
-        auto envIDevName = util::getEnvar("AURA_ENGINE_INPUT_DEVICE");
-        auto envODevName = util::getEnvar("AURA_ENGINE_OUTPUT_DEVICE");
-        auto envPlaylogURL = util::getEnvar("AURA_ENGINE_API_URL_PLAYLOG");
-        auto envStreamOutURL = util::getEnvar("AURA_ENGINE_STREAM_OUTPUT_URL");
+        logPath = get(map, "log_path", "LOG_PATH", kLogPath);
+        socketPath = get(map, "socket_path", "SOCKET_PATH", kSocketPath);
+        audioSourcePath = get(map, "audio_source_path", "AUDIO_SOURCE_PATH", kAudioSourcePath);
+        audioPlaylistPath = get(map, "audio_playlist_path", "AUDIO_PLAYLIST_PATH", kAudioPlaylistPath);
+        audioRecordPath = get(map, "audio_record_path", "AUDIO_RECORD_PATH", kAudioRecordPath);
+        audioFallbackPath = get(map, "audio_fallback_path", "AUDIO_FALLBACK_PATH", kAudioFallbackPath);
+        iDevName = get(map, "in_device_name", "INPUT_DEVICE", kDeviceName);
+        oDevName = get(map, "out_device_name", "OUTPUT_DEVICE", kDeviceName);
+        streamOutURL = get(map, "stream_out_url", "STREAM_OUTPUT_URL", kStreamOutURL);
+        programURL = get(map, "program_url", "PROGRAM_URL", kProgramURL);
+        playlistURL = get(map, "playlist_url", "PLAYLIST_URL", kPlaylistURL);
+        playlogURL = get(map, "playlog_url", "PLAYLOG_URL", kPlaylogURL);
+        playlistToken = get(map, "playlist_token", "PLAYLIST_TOKEN", kPlaylistToken);
 
-        if (envLogPath != "") logPath = envLogPath;
-        if (envSocketPath != "") socketPath = envSocketPath;
-        if (envIDevName != "") iDevName = envIDevName;
-        if (envODevName != "") oDevName = envODevName;
-        if (envPlaylogURL != "") playlogURL = envPlaylogURL;
-        if (envStreamOutURL != "") streamOutURL = envStreamOutURL;
-
-        if (logPath == "") logPath = kLogPath;
-        if (socketPath == "") socketPath = kSocketPath;
-        if (iDevName == "") iDevName = kDeviceName;
-        if (oDevName == "") oDevName = kDeviceName;
-        if (playlogURL == "") playlogURL = kPlaylogURL;
-        log.info() << "Config:\n\tlogPath=" << logPath << "\n\tsocketPath=" << socketPath << "\n\tiDevName=" << iDevName << "\n\toDevName=" << oDevName << "\n\tplaylogURL=" << playlogURL << "\n\tstreamOutURL=" << streamOutURL;
+        log.info() << "Config:"
+        << "\n\t logPath=" << logPath 
+        << "\n\t socketPath=" << socketPath 
+        << "\n\t audioSourcePath=" << audioSourcePath
+        << "\n\t audioPlaylistPath=" << audioPlaylistPath
+        << "\n\t audioFallbackPath=" << audioFallbackPath
+        << "\n\t audioRecordPath=" << audioRecordPath
+        << "\n\t iDevName=" << iDevName 
+        << "\n\t oDevName=" << oDevName 
+        << "\n\t streamOutURL=" << streamOutURL 
+        << "\n\t programURL=" << programURL
+        << "\n\t playlistURL=" << playlistURL
+        << "\n\t playlogURL=" << playlogURL
+        << "\n\t playlistToken=<hidden>";
     }
 };
 }

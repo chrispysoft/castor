@@ -36,7 +36,11 @@ public:
         stop();
     }
 
-    void open(const std::string& tURL) {
+    bool canPlay(const PlayItem& item) override {
+        return item.uri.starts_with("http");
+    }
+
+    void load(const std::string& tURL, double seek = 0) override {
         using namespace std;
 
         if (mRunning) {

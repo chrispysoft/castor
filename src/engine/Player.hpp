@@ -21,12 +21,8 @@
 namespace cst {
 class Player : public AudioClientRenderer {
 
-    std::string mRecordURL = "./audio/test_recording.mp3";
-
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
-    std::vector<std::shared_ptr<AudioProcessor>> mSources = {};
-    std::vector<std::shared_ptr<AudioProcessor>> mActiveSources = {};
     std::deque<PlayItem> mItemsToSchedule = {};
     std::deque<PlayItem> mScheduleItems = {};
     std::mutex mMutex;
@@ -41,25 +37,41 @@ class Player : public AudioClientRenderer {
     Recorder mRecorder;
     StreamOutput mStreamOutput;
     std::vector<float> mMixBuffer;
+    std::vector<std::shared_ptr<AudioProcessor>> mProcessors = {};
     
 public:
     Player(const Config& tConfig) :
         mConfig(tConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(),
-        mFallback(mSampleRate),
+        mFallback(mSampleRate, mConfig.audioFallbackPath),
         mRecorder(mSampleRate),
         mStreamOutput(mSampleRate),
         mMixBuffer(mBufferSize * 2)
     {
+        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate));
+        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate));
+        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate));
+        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate));
+        mProcessors.push_back(std::make_shared<LinePlayer>(mSampleRate));
         mAudioClient.setRenderer(this);
     }
 
     void run() {
         mRunning = true;
         mAudioClient.start();
-        if (!mRecordURL.empty()) mRecorder.start(mRecordURL);
-        if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
+        try {
+            if (!mConfig.audioRecordPath.empty()) mRecorder.start(mConfig.audioRecordPath + "/test.mp3");
+        }
+        catch (const std::runtime_error& e) {
+            log.error() << "Failed to start recorder: " << e.what();
+        }
+        try {
+            if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Failed to start output stream: " << e.what();
+        }
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning) {
                 this->work();
@@ -85,24 +97,21 @@ public:
             mFallback.stop();
         }
 
-        std::vector<std::shared_ptr<AudioProcessor>> activeSources = {};
-        time_t now = std::time(0);
-        for (const auto& source : mSources) {
-            auto state = source->getState(now);
-            switch (state) {
-                case AudioProcessor::State::QUEUED:
-                case AudioProcessor::State::PLAYING: {
-                    activeSources.push_back(source);
-                    break;
-                }
-                default: break;
-            }
-        }
-
-        if (mActiveSources != activeSources) {
-            mActiveSources = activeSources;
-            log.debug() << "Player active sources changed (" << mActiveSources.size() << ")";
-        }
+        // time_t now = std::time(0);
+        // for (const auto& source : mProcessors) {
+        //     auto state = source->getState(now);
+        //     switch (state) {
+        //         case AudioProcessor::State::CUE: {
+        //             if (now >= source->tsStart && now <= ) {
+        //                 source->play();
+        //             }
+        //         }
+        //         case AudioProcessor::State::PLAY: {
+        //             break;
+        //         }
+        //         default: break;
+        //     }
+        // }
 
         std::lock_guard lock(mMutex);
         if (mItemsToSchedule.size() > 0) {
@@ -135,42 +144,24 @@ public:
 
     void load(const PlayItem& item) {
         log.warn() << "Player load " << item.uri;
-        if (item.uri.starts_with("line")) {
-            auto source = std::make_shared<LinePlayer>(mSampleRate);
-            source->tsStart = item.start;
-            source->tsEnd = item.end;
-            mSources.push_back(source);
+        auto it = std::find_if(mProcessors.begin(), mProcessors.end(), [&](std::shared_ptr<AudioProcessor>& p) { return p->accepts(item); });
+        if (it == mProcessors.end()) {
+            log.error() << "Could not find available player for item " << item.uri;
+            return;
         }
-        else if (item.uri.starts_with("http")) {
-            auto source = std::make_shared<StreamPlayer>(mSampleRate);
-            source->open(item.uri);
-            source->tsStart = item.start;
-            source->tsEnd = item.end;
-            mSources.push_back(source);
-        }
-        else if (item.uri.starts_with("/")) {
-            auto source = std::make_shared<QueuePlayer>(mSampleRate);
-            auto pos = std::time(0) - item.start;
-            source->open(item.uri, pos);
-            source->tsStart = item.start;
-            source->tsEnd = item.end;
-            mSources.push_back(source);
-        }
+        auto source = *it;
+        source->schedule(item);
     }
 
     void renderCallback(const float* in, float* out, size_t nframes) override {
         auto nsamples = nframes * 2;
         memset(out, 0, nsamples * sizeof(float));
 
-        const auto activeSources = mActiveSources;
-        if (activeSources.size() == 1) {
-            activeSources.front()->process(in, out, nframes);
-        } else {
-            for (auto source : activeSources) {
-                source->process(in, mMixBuffer.data(), nframes);
-                for (auto i = 0; i < mMixBuffer.size(); ++i) {
-                    out[i] += mMixBuffer[i];
-                }
+        for (auto source : mProcessors) {
+            if (!source->isActive()) continue;
+            source->process(in, mMixBuffer.data(), nframes);
+            for (auto i = 0; i < mMixBuffer.size(); ++i) {
+                out[i] += mMixBuffer[i];
             }
         }
 

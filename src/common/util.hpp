@@ -97,6 +97,11 @@ std::time_t parseDatetime(const std::string& datetime) {
     return ts;
 }
 
+void stripM3ULine(std::string& line) {
+    std::regex removeRgx("[\\r]");
+    line = std::regex_replace(line, removeRgx, "");
+}
+
 
 
 template <typename T>

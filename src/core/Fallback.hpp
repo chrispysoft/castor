@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SinOsc.hpp"
+#include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
 #include "../common/Log.hpp"
 
@@ -11,14 +12,18 @@ class Fallback {
 
     SinOsc mOscL;
     SinOsc mOscR;
+    QueuePlayer mQueuePlayer;
     StreamPlayer mStreamPlayer;
+    std::string mFallbackURL;
     bool mActive;
 
 public:
-    Fallback(double tSampleRate) :
+    Fallback(double tSampleRate, const std::string tFallbackURL) :
         mOscL(tSampleRate),
         mOscR(tSampleRate),
-        mStreamPlayer(tSampleRate)
+        mQueuePlayer(tSampleRate),
+        mStreamPlayer(tSampleRate),
+        mFallbackURL(tFallbackURL)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
@@ -28,14 +33,19 @@ public:
         if (mActive) return;
         log.warn() << "Fallback start";
         mActive = true;
-        mStreamPlayer.open("http://stream.fro.at/fro-128.ogg");
+        if (mFallbackURL.starts_with("http")) {
+            mStreamPlayer.load(mFallbackURL);
+        } else {
+            mQueuePlayer.load(mFallbackURL);
+        }
     }
 
     void stop() {
         if (!mActive) return;
-        log.info() << "Fallback stop";
+        log.warn() << "Fallback stop";
         mActive = false;
         mStreamPlayer.stop();
+        mQueuePlayer.clear();
     }
 
     bool isActive() {
@@ -44,6 +54,7 @@ public:
 
     void process(const float* in, float* out, size_t nframes) {
         mStreamPlayer.process(in, out, nframes);
+        mQueuePlayer.process(in, out, nframes);
         
         for (auto i = 0; i < nframes; ++i) {
             out[i*2]   += mOscL.process() * kGain;

@@ -8,21 +8,18 @@
 
 namespace cst {
 class APIClient {
-    static constexpr const char* kProgramURL = "http://localhost/steering/api/v1/program/playout/";
-    static constexpr const char* kPlaylistURL = "http://localhost/tank/api/v1/playlists/";
-    static constexpr const char* kPlaylistToken = "engine:1234";
-
-    const std::vector<std::string> mAuthHeaders = {
-        "Authorization: Bearer " + std::string(kPlaylistToken),
-        "content-type: application/json"
-    };
 
     const Config& mConfig;
+    const std::vector<std::string> mAuthHeaders;
 
 public:
 
     APIClient(const Config& tConfig) :
-        mConfig(tConfig)
+        mConfig(tConfig),
+        mAuthHeaders {
+            "Authorization: Bearer " + mConfig.playlistToken,
+            "content-type: application/json"
+        }
     {
         
     }
@@ -31,7 +28,7 @@ public:
     }
 
     std::vector<api::Program> getProgram(time_t duration = 3600) {
-        auto url = std::string(kProgramURL);
+        auto url = std::string(mConfig.programURL);
         if (duration > 0) {
             auto now = std::time(nullptr);
             auto end = now + duration;
@@ -54,7 +51,7 @@ public:
     }
 
     api::Playlist getPlaylist(int showID) {
-        auto url = kPlaylistURL + std::to_string(showID);
+        auto url = mConfig.playlistURL + std::to_string(showID);
         auto res = HTTPClient().get(url, mAuthHeaders);
         log.debug() << "APIClient getPlaylist " << url;
         if (res.code == 200) {

@@ -17,6 +17,7 @@ struct PlayItem {
     std::time_t start;
     std::time_t end;
     std::string uri;
+    api::Program program = {};
     std::time_t lastTry = 0;
     std::time_t retryInterval = 5;
 
@@ -68,6 +69,7 @@ public:
                 auto artist = metainfo.second;
                 string path;
                 if (getline(file, path)) {
+                    util::stripM3ULine(path);
                     items.push_back({0, duration, path});
                 }
             }
@@ -92,8 +94,6 @@ class Calendar {
     std::vector<PlayItem> mActiveItems;
     M3UParser m3uParser;
 
-    const std::string mPlaylistURI = "/opt/aura/audio/playlist";
-    const std::string mStoreURI = "/opt/MP3/Sendungsarch/aura";
     const std::string m3uPrefix = "m3u://";
     const std::string filePrefix = "file://";
 
@@ -154,7 +154,7 @@ public:
                 }
                 
                 if (entry.uri.starts_with(m3uPrefix)) {
-                    auto uri = mPlaylistURI + entry.uri.substr(m3uPrefix.size());
+                    auto uri = mConfig.audioPlaylistPath + entry.uri.substr(m3uPrefix.size());
                     try {
                         auto m3u = m3uParser.parse(uri);
                         if (m3u.empty()) {
@@ -163,19 +163,20 @@ public:
                         for (auto& m : m3u) {
                             m.start += itemStart;
                             m.end += itemStart;
+                            m.program = pr;
                             itemStart = m.end;
                         }
                         items.insert(items.end(), m3u.begin(), m3u.end());
                     }
                     catch (const std::exception& e) {
-                        log.info() << "No M3U metadata found - adding file" << uri << " " << e.what();
-                        PlayItem itm = { itemStart, itemEnd, uri };
+                        log.info() << "No M3U metadata found: " << e.what() << " adding file as item";
+                        PlayItem itm = { itemStart, itemEnd, uri, pr };
                         items.push_back(itm);
                     }
                 }
                 else {
-                    auto uri = (entry.uri.starts_with(filePrefix)) ? mStoreURI + entry.uri.substr(filePrefix.size()) : entry.uri;
-                    PlayItem itm = { itemStart, itemEnd, entry.uri };
+                    auto uri = (entry.uri.starts_with(filePrefix)) ? mConfig.audioSourcePath + entry.uri.substr(filePrefix.size()) : entry.uri;
+                    PlayItem itm = { itemStart, itemEnd, entry.uri, pr };
                     items.push_back(itm);
                 }
                 itemStart = itemEnd;
@@ -195,7 +196,7 @@ public:
             auto tm1 = *std::localtime(&itm.start);
             auto tm2 = *std::localtime(&itm.end);
             static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
-            log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.uri;
+            log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.program.showName << " " << itm.uri;
         }
 
         if (mItems != items) {

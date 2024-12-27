@@ -1,2 +1,4 @@
+audio/*
 build
 logs/*
+.vscode

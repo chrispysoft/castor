@@ -1,19 +1,35 @@
 services:
   castoria:
     container_name: castoria
-    image: crispybitsapp/castoria:latest
+    image: crispybitsapp/castoria:alpha6
     restart: always
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - socket:/srv/socket
+      - ./audio:/srv/audio
+      - ./logs:/srv/logs
+      - ./socket:/srv/socket
+      - /opt/aura/audio:/opt/aura/audio
+      - /opt/MP3:/opt/MP3
     devices:
       - /dev/snd:/dev/snd
     environment:
-      SOCKET_PATH: "/srv/socket/engine.sock"
-      AURA_ENGINE_INPUT_DEVICE: ${AURA_ENGINE_INPUT_DEVICE}
-      AURA_ENGINE_OUTPUT_DEVICE: ${AURA_ENGINE_OUTPUT_DEVICE}
+      LOG_PATH: "/srv/logs/castoria.log"
+      SOCKET_PATH: "/srv/socket/castoria.sock"
+      AUDIO_SOURCE_PATH: ${AUDIO_SOURCE_PATH}
+      AUDIO_PLAYLIST_PATH: ${AUDIO_PLAYLIST_PATH}
+      AUDIO_RECORD_PATH: ${AUDIO_RECORD_PATH}
+      AUDIO_FALLBACK_PATH: ${AUDIO_FALLBACK_PATH}
+      INPUT_DEVICE: ${INPUT_DEVICE}
+      OUTPUT_DEVICE: ${OUTPUT_DEVICE}
+      STREAM_OUTPUT_URL: ${STREAM_OUTPUT_URL}
+      PROGRAM_URL: ${PROGRAM_URL}
+      PLAYLIST_URL: ${PLAYLIST_URL}
+      PLAYLOG_URL: ${PLAYLOG_URL}
+      PLAYLIST_TOKEN: ${PLAYLIST_TOKEN}
 
 volumes:
+  audio:
+  logs:
   socket:
