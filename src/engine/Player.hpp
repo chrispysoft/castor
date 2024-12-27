@@ -112,7 +112,7 @@ public:
             }
         }
 
-        std::lock_guard lock(mMutex);
+        // std::lock_guard lock(mMutex);
         if (mItemsToSchedule.size() > 0) {
             auto item = mItemsToSchedule.front();
             mItemsToSchedule.pop_front();
@@ -137,7 +137,7 @@ public:
     }
 
     void schedule(const PlayItem& item) {
-        std::lock_guard lock(mMutex);
+        // std::lock_guard lock(mMutex);
         mItemsToSchedule.push_back(item);
     }
 
