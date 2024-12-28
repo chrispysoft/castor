@@ -103,7 +103,7 @@ public:
 
         time_t now = std::time(0);
         for (const auto& source : mProcessors) {
-            if (now >= source->tsStart && now <= source->tsEnd && source->state != AudioProcessor::State::PLAY) {
+            if (now >= source->tsStart && now <= source->tsEnd && source->state == AudioProcessor::State::CUE) {
                 log.warn() << "Engine setting state to PLAY";
                 source->state = AudioProcessor::State::PLAY;
             }
