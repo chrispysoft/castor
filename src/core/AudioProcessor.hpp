@@ -22,6 +22,11 @@ public:
 
     virtual void stop() {}
 
+
+    void play() {
+        state = PLAY;
+    }
+
     enum State {
         IDLE, LOAD, CUE, PLAY
     };
@@ -48,6 +53,42 @@ public:
         state = LOAD;
         load(item.uri, pos);
         state = CUE;
+    }
+
+    time_t fadeInTime = 1;
+    time_t fadeOutTime = 3;
+    std::atomic<bool> _isFading = false;
+    float volume = 0;
+
+    void fadeIn() {
+        fade(true, fadeInTime);
+    }
+
+    void fadeOut() {
+        fade(false, fadeOutTime);
+    }
+
+    void fade(bool increase, time_t duration) {
+        _isFading = true;
+        log.info() << "AudioProcessor " << name << " fading ...";
+        std::thread([increase, duration, this] {
+            if (increase) this->volume = 0;
+            else this->volume = 1;
+            auto niters = duration * 100;
+            float incr = 1.0 / 100.0 / duration;
+            if (!increase) incr *= -1;
+            for (auto i = 0; i < niters; ++i) {
+                this->volume += incr;
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
+            }
+            _isFading = false;
+            log.info() << "AudioProcessor " << name << " fade done";
+        }).detach();
+    }
+
+    bool isFading() {
+        return _isFading;
     }
 };
 }

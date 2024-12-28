@@ -105,9 +105,14 @@ public:
         for (const auto& source : mProcessors) {
             if (now >= source->tsStart && now <= source->tsEnd && source->state == AudioProcessor::State::CUE) {
                 log.info(Log::Magenta) << "Engine setting " << source->name << " to PLAY";
-                source->state = AudioProcessor::State::PLAY;
+                source->play();
+                source->fadeIn();
             }
-            else if (now >= source->tsEnd + 1 && source->state != AudioProcessor::State::IDLE) {
+            else if (now >= source->tsEnd - source->fadeOutTime && now < source->tsEnd && source->state == AudioProcessor::State::PLAY && !source->isFading()) {
+                log.info(Log::Magenta) << "Engine fading out " << source->name;
+                source->fadeOut();
+            }
+            else if (now >= source->tsEnd + 3 && source->state != AudioProcessor::State::IDLE) {
                 log.info(Log::Magenta) << "Engine setting " << source->name << " to IDLE";
                 source->stop();
                 source->state = AudioProcessor::State::IDLE;
@@ -162,7 +167,7 @@ public:
             if (!source->isActive()) continue;
             source->process(in, mMixBuffer.data(), nframes);
             for (auto i = 0; i < mMixBuffer.size(); ++i) {
-                out[i] += mMixBuffer[i];
+                out[i] += mMixBuffer[i] * source->volume;
             }
         }
 
