@@ -19,7 +19,7 @@
 #include "../core/StreamOutput.hpp"
 
 namespace cst {
-class Player : public AudioClientRenderer {
+class Engine : public AudioClientRenderer {
 
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
@@ -40,7 +40,7 @@ class Player : public AudioClientRenderer {
     std::vector<std::shared_ptr<AudioProcessor>> mProcessors = {};
     
 public:
-    Player(const Config& tConfig) :
+    Engine(const Config& tConfig) :
         mConfig(tConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(),
@@ -57,20 +57,21 @@ public:
         mAudioClient.setRenderer(this);
     }
 
-    void run() {
+    void start() {
+        log.debug() << "Engine starting...";
         mRunning = true;
         mAudioClient.start();
         try {
             if (!mConfig.audioRecordPath.empty()) mRecorder.start(mConfig.audioRecordPath + "/test.mp3");
         }
         catch (const std::runtime_error& e) {
-            log.error() << "Failed to start recorder: " << e.what();
+            log.error() << "Engine failed to start recorder: " << e.what();
         }
         try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
         }
         catch (const std::exception& e) {
-            log.error() << "Failed to start output stream: " << e.what();
+            log.error() << "Engine failed to start output stream: " << e.what();
         }
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning) {
@@ -78,18 +79,19 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });
-        mWorker->join();
+        log.info() << "Engine started";
     }
 
-    void terminate() {
-        log.debug() << "Player terminating...";
+    void stop() {
+        log.debug() << "Engine stopping...";
+        mRunning = false;
         mRecorder.stop();
         for (const auto& source : mProcessors) source->stop();
         mFallback.stop();
         mStreamOutput.stop();
         mAudioClient.stop();
-        mRunning = false;
-        log.debug() << "Player terminated";
+        if (mWorker && mWorker->joinable()) mWorker->join();
+        log.info() << "Engine stopped";
     }
 
     void work() {
@@ -102,11 +104,11 @@ public:
         time_t now = std::time(0);
         for (const auto& source : mProcessors) {
             if (now >= source->tsStart && now <= source->tsEnd && source->state != AudioProcessor::State::PLAY) {
-                log.warn() << "Player setting state to PLAY";
+                log.warn() << "Engine setting state to PLAY";
                 source->state = AudioProcessor::State::PLAY;
             }
             else if (now >= source->tsEnd + 1 && source->state != AudioProcessor::State::IDLE) {
-                log.warn() << "Player setting state to IDLE";
+                log.warn() << "Engine setting state to IDLE";
                 source->stop();
                 source->state = AudioProcessor::State::IDLE;
             }
@@ -128,7 +130,7 @@ public:
                     mScheduleItems.push_back(item);
                 }
                 catch (const std::exception& e) {
-                    log.error() << "Player failed to load item";
+                    log.error() << "Engine failed to load item";
                     item.lastTry = now;
                     // mItemsToSchedule.push_front(item);
                 }
@@ -142,7 +144,7 @@ public:
     }
 
     void load(const PlayItem& item) {
-        log.warn() << "Player load " << item.uri;
+        log.warn() << "Engine load " << item.uri;
         auto it = std::find_if(mProcessors.begin(), mProcessors.end(), [&](std::shared_ptr<AudioProcessor>& p) { return p->accepts(item); });
         if (it == mProcessors.end()) {
             log.error() << "Could not find available player for item " << item.uri;

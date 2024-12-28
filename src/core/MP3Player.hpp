@@ -39,9 +39,9 @@ public:
     {
         av_log_set_level(AV_LOG_ERROR);
     }
-
+    
     ~MP3Player() override {
-        
+        if (state != IDLE) stop();
     }
     
     std::string currentURL() {

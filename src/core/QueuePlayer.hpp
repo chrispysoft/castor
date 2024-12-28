@@ -30,7 +30,7 @@ public:
     }
 
     ~QueuePlayer() override {
-        clear();
+        if (mRunning) stop();
     }
 
     bool canPlay(const PlayItem& item) override {
@@ -86,8 +86,8 @@ public:
         mPlayer.roll(pos);
     }
 
-    void clear() {
-        log.debug() << "QueuePlayer clear...";
+    void stop() override {
+        log.debug() << "QueuePlayer stopping...";
         mRunning = false;
         mQueue = {};
         mPlayer.eject();
@@ -95,11 +95,6 @@ public:
             if (mWorker->joinable()) mWorker->join();
             mWorker = nullptr;
         }
-        log.info() << "QueuePlayer cleared";
-    }
-
-    void stop() override {
-        clear();
         state = IDLE;
         log.info() << "QueuePlayer stopped";
     }

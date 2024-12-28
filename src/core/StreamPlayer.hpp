@@ -33,7 +33,7 @@ public:
     }
 
     ~StreamPlayer() override {
-        stop();
+        if (mRunning) stop();
     }
 
     bool canPlay(const PlayItem& item) override {

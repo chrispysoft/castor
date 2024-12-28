@@ -1,6 +1,6 @@
-#include "Runner.hpp"
+#include "Castoria.hpp"
 
 int main() {
-    cst::Runner::instance().run();
+    cst::Castoria::instance().run();
     return 0;
 }
