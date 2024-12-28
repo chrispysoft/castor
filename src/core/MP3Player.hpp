@@ -49,7 +49,7 @@ public:
     }
 
     bool canPlay(const PlayItem& item) override {
-        return item.uri.starts_with("/");
+        return item.uri.starts_with("/") || item.uri.starts_with("./");
     }
 
     void load(const std::string& tURL, double seek = 0) override {
