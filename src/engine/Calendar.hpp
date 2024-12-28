@@ -115,7 +115,7 @@ public:
             try {
                 refresh();
             }
-            catch (const std::runtime_error& e) {
+            catch (const std::exception& e) {
                 log.error() << "Calendar refresh failed: " << e.what();
             }
         }
@@ -153,6 +153,10 @@ public:
         const auto program = mAPIClient.getProgram();
         for (const auto& pr : program) {
             // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
+            if (pr.playlistId <= 0) {
+                log.error() << "Calendar item '" << pr.showName << "' has no playlist id";
+                continue;
+            }
             const auto playlist = mAPIClient.getPlaylist(pr.playlistId);
             const auto prStart = util::parseDatetime(pr.start);
             const auto prEnd = util::parseDatetime(pr.end);
