@@ -15,9 +15,9 @@ class Config {
 
     static constexpr const char* kLogPath = "./logs/cst.log";
     static constexpr const char* kSocketPath = "/tmp/cst_socket";
-    static constexpr const char* kAudioSourcePath = "./audio/source";
-    static constexpr const char* kAudioPlaylistPath = "./audio/playlist";
-    static constexpr const char* kAudioFallbackPath = "./audio/fallback.m3u";
+    static constexpr const char* kAudioSourcePath = "";
+    static constexpr const char* kAudioPlaylistPath = "";
+    static constexpr const char* kAudioFallbackPath = "";
     static constexpr const char* kAudioRecordPath = "";
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kStreamOutURL = "";
