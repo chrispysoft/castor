@@ -48,6 +48,13 @@ public:
 };
 
 class Log {
+    
+
+    std::ofstream mFile;
+    std::mutex mMutex;
+
+public:
+
     static constexpr const char* Red = "\033[0;31m";
     static constexpr const char* Green = "\033[0;32m";
     static constexpr const char* Yellow = "\033[0;33m";
@@ -55,11 +62,6 @@ class Log {
     static constexpr const char* Magenta = "\033[0;35m";
     static constexpr const char* Cyan = "\033[0;36m";
     static constexpr const char* Reset = "\033[0m";
-
-    std::ofstream mFile;
-    std::mutex mMutex;
-
-public:
 
     void setFilePath(const std::string tFilePath) {
         mFile.open(tFilePath, std::ios::app);

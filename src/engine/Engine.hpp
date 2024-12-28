@@ -104,11 +104,11 @@ public:
         time_t now = std::time(0);
         for (const auto& source : mProcessors) {
             if (now >= source->tsStart && now <= source->tsEnd && source->state == AudioProcessor::State::CUE) {
-                log.warn() << "Engine setting state to PLAY";
+                log.info(Log::Magenta) << "Engine setting " << source->name << " to PLAY";
                 source->state = AudioProcessor::State::PLAY;
             }
             else if (now >= source->tsEnd + 1 && source->state != AudioProcessor::State::IDLE) {
-                log.warn() << "Engine setting state to IDLE";
+                log.info(Log::Magenta) << "Engine setting " << source->name << " to IDLE";
                 source->stop();
                 source->state = AudioProcessor::State::IDLE;
             }
@@ -144,7 +144,7 @@ public:
     }
 
     void load(const PlayItem& item) {
-        log.warn() << "Engine load " << item.uri;
+        log.info(Log::Magenta) << "Engine load " << item.uri;
         auto it = std::find_if(mProcessors.begin(), mProcessors.end(), [&](std::shared_ptr<AudioProcessor>& p) { return p->accepts(item); });
         if (it == mProcessors.end()) {
             log.error() << "Could not find available player for item " << item.uri;

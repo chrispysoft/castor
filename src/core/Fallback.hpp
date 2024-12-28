@@ -31,7 +31,7 @@ public:
 
     void start() {
         if (mActive) return;
-        log.warn() << "Fallback start";
+        log.info(Log::Yellow) << "Fallback start";
         mActive = true;
         // if (mFallbackURL.starts_with("http")) {
         //     mStreamPlayer.load(mFallbackURL);
@@ -42,7 +42,7 @@ public:
 
     void stop() {
         if (!mActive) return;
-        log.warn() << "Fallback stop";
+        log.info(Log::Yellow) << "Fallback stop";
         mActive = false;
         // mStreamPlayer.stop();
         // mQueuePlayer.clear();

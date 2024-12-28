@@ -119,11 +119,11 @@ public:
 
     void printDeviceNames() {
         auto numDevices = Pa_GetDeviceCount();
-        log.info() << "AudioClient found " << numDevices << " devices:";
+        log.info(Log::Magenta) << "AudioClient found " << numDevices << " devices:";
         const PaDeviceInfo* info;
         for (auto i = 0; i < numDevices; ++i) {
             info = Pa_GetDeviceInfo(i);
-            log.info() << "#" << std::setfill(' ') << std::setw(2) << i << " " << std::setw(2) << info->maxInputChannels << " " << std::setw(2) << info->maxOutputChannels << " " << info->name;
+            log.info(Log::Magenta) << "#" << std::setfill(' ') << std::setw(2) << i << " " << std::setw(2) << info->maxInputChannels << " " << std::setw(2) << info->maxOutputChannels << " " << info->name;
         }
     }
 
