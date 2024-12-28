@@ -5,8 +5,8 @@
 #include <vector>
 #include <stdexcept>
 #include <atomic>
-#include "../common/Log.hpp"
-#include "../common/util.hpp"
+#include "../util/Log.hpp"
+#include "../util/util.hpp"
 
 extern "C" {
 #include <libavformat/avformat.h>

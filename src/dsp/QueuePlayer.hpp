@@ -9,7 +9,7 @@
 #include <mutex>
 #include "AudioProcessor.hpp"
 #include "MP3Player.hpp"
-#include "../common/Log.hpp"
+#include "../util/Log.hpp"
 
 namespace cst {
 class QueuePlayer : public AudioProcessor {

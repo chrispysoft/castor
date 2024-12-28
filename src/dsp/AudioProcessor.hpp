@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "../util/Log.hpp"
 
 namespace cst {
 

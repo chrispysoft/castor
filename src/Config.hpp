@@ -5,8 +5,8 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include "Log.hpp"
-#include "util.hpp"
+#include "util/Log.hpp"
+#include "util/util.hpp"
 
 namespace cst {
 class Config {

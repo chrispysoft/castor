@@ -11,7 +11,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "../common/Log.hpp"
+#include "../util/Log.hpp"
 
 namespace cst {
 class SocketServer {

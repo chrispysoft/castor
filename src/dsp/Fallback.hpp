@@ -3,7 +3,7 @@
 #include "SinOsc.hpp"
 #include "QueuePlayer.hpp"
 #include "StreamPlayer.hpp"
-#include "../common/Log.hpp"
+#include "../util/Log.hpp"
 
 namespace cst {
 class Fallback {

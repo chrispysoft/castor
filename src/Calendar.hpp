@@ -7,9 +7,9 @@
 #include <string>
 #include <ctime>
 
-#include "../common/Config.hpp"
-#include "../common/APIClient.hpp"
-#include "../common/util.hpp"
+#include "Config.hpp"
+#include "api/APIClient.hpp"
+#include "util/util.hpp"
 
 namespace cst {
 

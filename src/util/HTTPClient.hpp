@@ -4,8 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "../common/Log.hpp"
-#include "json.hpp"
+#include "Log.hpp"
+#include "../third_party/json.hpp"
 
 namespace cst {
 class HTTPClient {

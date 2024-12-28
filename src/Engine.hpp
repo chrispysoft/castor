@@ -5,18 +5,18 @@
 #include <string>
 #include <csignal>
 #include <mutex>
-#include "../common/Config.hpp"
-#include "../common/Log.hpp"
-#include "../common/util.hpp"
-#include "../core/AudioClient.hpp"
-#include "../core/LinePlayer.hpp"
-#include "../core/MP3Player.hpp"
-#include "../core/QueuePlayer.hpp"
-#include "../core/StreamPlayer.hpp"
-#include "../core/Fallback.hpp"
-#include "../core/SilenceDetector.hpp"
-#include "../core/Recorder.hpp"
-#include "../core/StreamOutput.hpp"
+#include "Config.hpp"
+#include "util/Log.hpp"
+#include "util/util.hpp"
+#include "dsp/AudioClient.hpp"
+#include "dsp/LinePlayer.hpp"
+#include "dsp/MP3Player.hpp"
+#include "dsp/QueuePlayer.hpp"
+#include "dsp/StreamPlayer.hpp"
+#include "dsp/Fallback.hpp"
+#include "dsp/SilenceDetector.hpp"
+#include "dsp/Recorder.hpp"
+#include "dsp/StreamOutput.hpp"
 
 namespace cst {
 class Engine : public AudioClientRenderer {

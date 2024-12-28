@@ -2,9 +2,9 @@
 
 #include <string>
 #include "API.hpp"
-#include "HTTPClient.hpp"
-#include "Log.hpp"
-#include "util.hpp"
+#include "../util/HTTPClient.hpp"
+#include "../util/Log.hpp"
+#include "../util/util.hpp"
 
 namespace cst {
 class APIClient {

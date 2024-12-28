@@ -3,7 +3,7 @@
 #include <iostream>
 #include <ctime>
 #include <atomic>
-#include "../common/Log.hpp"
+#include "../util/Log.hpp"
 
 namespace cst {
 class SilenceDetector {

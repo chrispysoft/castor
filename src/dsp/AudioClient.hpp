@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <portaudio.h>
-#include "../common/Log.hpp"
+#include "../util/Log.hpp"
 
 namespace cst {
 

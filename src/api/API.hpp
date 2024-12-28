@@ -1,7 +1,7 @@
 #pragma once
 
 #include <optional>
-#include "json.hpp"
+#include "../third_party/json.hpp"
 
 namespace cst {
 namespace api {

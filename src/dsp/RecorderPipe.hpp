@@ -1,11 +1,11 @@
 #pragma once
 
 #include <atomic>
-#include "../common/Log.hpp"
-#include "../common/util.hpp"
+#include "../util/Log.hpp"
+#include "../util/util.hpp"
 
 namespace cst {
-class StreamOutput {
+class RecorderPipe {
 
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRingBufferSize = 16384;
@@ -19,7 +19,7 @@ class StreamOutput {
 
 public:
 
-    StreamOutput(double tSampleRate) :
+    RecorderPipe(double tSampleRate) :
         mSampleRate(tSampleRate),
         mRingBuffer(kRingBufferSize)
     {
@@ -33,7 +33,7 @@ public:
         using namespace std;
 
         if (mRunning) {
-            log.debug() << "StreamOutput already running";
+            log.debug() << "Recorder already running";
             return;
         }
 
@@ -43,12 +43,13 @@ public:
 
         mRunning = true;
 
-        log.info() << "StreamOutput start " << tURL;
+        log.info() << "Recorder start " << tURL;
         
-        string command = "ffmpeg -f f32le -channel_layout stereo -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -i - -c:a libvorbis -b:a 128k -f ogg -content_type application/ogg " + tURL + " 2>&1";
+        string command = "ffmpeg -f f32le -channel_layout stereo -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -i - -codec:a libmp3lame -q:a 2 -f mp3 - >> " + tURL + " 2>&1";
+
         FILE* pipe = popen(command.c_str(), "w");
         if (!pipe) {
-            throw runtime_error("StreamOutput failed to open pipe");
+            throw runtime_error("Failed to open pipe");
         }
 
         mWorker = make_unique<thread>([this, pipe] {

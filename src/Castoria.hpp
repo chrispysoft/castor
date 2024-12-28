@@ -5,11 +5,11 @@
 #include <string>
 #include <csignal>
 
-#include "engine/Calendar.hpp"
-#include "engine/Engine.hpp"
-#include "common/Config.hpp"
-#include "common/Log.hpp"
-#include "common/util.hpp"
+#include "Calendar.hpp"
+#include "Engine.hpp"
+#include "Config.hpp"
+#include "util/Log.hpp"
+#include "util/util.hpp"
 
 namespace cst {
 class Castoria {
