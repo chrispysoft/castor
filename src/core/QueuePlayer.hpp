@@ -20,7 +20,7 @@ class QueuePlayer : public AudioProcessor {
     MP3Player mPlayer;
     
 public:
-    QueuePlayer(double tSampleRate) :
+    QueuePlayer(double tSampleRate, const std::string tName = "") : AudioProcessor(tName),
         mWorker(nullptr),
         mRunning(false),
         mQueue {},

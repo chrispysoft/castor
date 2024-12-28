@@ -12,7 +12,7 @@ class LinePlayer : public AudioProcessor {
     
 
 public:
-    LinePlayer(double tSampleRate) :
+    LinePlayer(double tSampleRate, const std::string tName = "") : AudioProcessor(tName),
         mSampleRate(tSampleRate)
     {
         

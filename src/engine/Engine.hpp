@@ -49,11 +49,11 @@ public:
         mStreamOutput(mSampleRate),
         mMixBuffer(mBufferSize * 2)
     {
-        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate));
-        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate));
-        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate));
-        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate));
-        mProcessors.push_back(std::make_shared<LinePlayer>(mSampleRate));
+        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate, "File 1"));
+        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate, "File 2"));
+        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate, "Stream 1"));
+        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate, "Stream 2"));
+        mProcessors.push_back(std::make_shared<LinePlayer>(mSampleRate, "Line 1"));
         mAudioClient.setRenderer(this);
     }
 

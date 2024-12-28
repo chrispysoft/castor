@@ -6,9 +6,15 @@ namespace cst {
 
 class AudioProcessor {
 public:
+    AudioProcessor(const std::string& name = "") :
+        name(name)
+    {}
+    
     virtual ~AudioProcessor() = default;
     virtual void process(const float* in, float* out, size_t nframes) = 0;
     bool isActive(const time_t& now = time(0)) { return state == PLAY; } // now >= tsStart && now <= tsEnd; };
+
+    std::string name;
 
     bool accepts(const PlayItem& item) {
         return canPlay(item) && getState() == IDLE;

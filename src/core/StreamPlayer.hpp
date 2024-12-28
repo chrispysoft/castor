@@ -25,9 +25,9 @@ class StreamPlayer : public AudioProcessor {
     std::atomic<bool> mRunning = false;
 
 public:
-    StreamPlayer(double tSampleRate, size_t tRingBufferSize = kRingBufferSize) :
+    StreamPlayer(double tSampleRate, const std::string tName = "") : AudioProcessor(tName),
         mSampleRate(tSampleRate),
-        mRingBuffer(tRingBufferSize)
+        mRingBuffer(kRingBufferSize)
     {
 
     }

@@ -49,7 +49,6 @@ public:
 
 class Log {
     
-
     std::ofstream mFile;
     std::mutex mMutex;
 
