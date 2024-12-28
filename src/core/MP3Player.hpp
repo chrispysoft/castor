@@ -196,23 +196,28 @@ public:
 
         size_t requiredSamples = formatCtx->duration / AV_TIME_BASE * codecCtx->sample_rate * kChannelCount;
         log.debug() << "MP3Player alloc playback buffer size " << std::to_string(requiredSamples);
-        mSamples.resize(requiredSamples + 16384, 0.0f);
+        // mSamples.resize(requiredSamples + 16384, 0.0f);
         auto insertPos = 0;
 
         log.debug() << "MP3Player enter read loop...";
+
+        std::vector<float> tmpBuf(0);
         
         while (!mCancelled && av_read_frame(formatCtx, packet) >= 0) {
             if (packet->stream_index == streamIndex) {
                 if (avcodec_send_packet(codecCtx, packet) >= 0) {
                     while (!mCancelled && avcodec_receive_frame(codecCtx, frame) >= 0) {
                         int outSamples = swr_get_out_samples(swrCtx, frame->nb_samples);
-                        uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mSamples.data() + insertPos) };
+                        tmpBuf.resize(outSamples * kChannelCount, 0.0f);
+                        uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(tmpBuf.data()) };
                         int convertedFrames = swr_convert(swrCtx, outData, outSamples, const_cast<const uint8_t**>(frame->data), frame->nb_samples);
                         if (convertedFrames < 0) {
                             av_packet_unref(packet);
                             av_frame_unref(frame);
                             throw std::runtime_error("Error during resampling.");
                         }
+                        mSamples.insert(mSamples.end(), tmpBuf.begin(), tmpBuf.begin() + convertedFrames * kChannelCount);
+
                         insertPos += convertedFrames * kChannelCount;
                     }
                 }
