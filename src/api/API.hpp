@@ -96,9 +96,9 @@ struct PlayItem {
 
 void to_json(nlohmann::json& j, const PlayItem& p) {
     j = nlohmann::json {
-        {"trackStart", util::timestr(p.start)},
+        {"trackStart", util::utcFmt(p.start)},
         {"trackDuration", p.end - p.start},
-        {"timeslotId", p.program.timeslotId},
+        {"timeslotId", std::to_string(p.program.timeslotId)},
         {"playlistId", p.program.playlistId},
         {"showId", p.program.showId},
         {"showName", p.program.showName}
