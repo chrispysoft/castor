@@ -75,7 +75,7 @@ public:
 
         log.debug() << "APIClient postPlaylog " << url << " " << jstr << " ";
         auto res = HTTPClient().post(url, jstr);
-        if (res.code != 210) {
+        if (res.code != 204) {
             throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
         }
     }
