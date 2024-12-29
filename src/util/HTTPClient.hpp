@@ -14,7 +14,7 @@ class HTTPClient {
 public:
 
     struct Result {
-        int code;
+        long code;
         std::string response;
     };
 
@@ -52,15 +52,11 @@ public:
         curl_slist_free_all(list);
 
         if (res == CURLE_OK) {
-            long statusCode = 0;
-            curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &statusCode);
+            curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &rResult.code);
             rResult.response = string(rxBuf.begin(), rxBuf.end());
-            rResult.code = statusCode;
-            // log.debug() << "HTTPClient get status " << httpStatusCode << " " << tURL;
+            // log.debug() << "HTTPClient get status " << rResult.code << " " << tURL;
         } else {
-            log.error() << "HTTPClient get failed: " << curl_easy_strerror(res) << " " << tURL;
-            rResult.response = string(curl_easy_strerror(res));
-            rResult.code = -1;
+            throw std::runtime_error(curl_easy_strerror(res));
         }
 
         return rResult;
@@ -83,11 +79,10 @@ public:
         curl_slist_free_all(list);
 
         if (res == CURLE_OK) {
-            log.debug() << "HTTPClient post success";
-            rResult.code = 0;
+            curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &rResult.code);
+            // log.debug() << "HTTPClient post status " << rResult.code << " " << tURL;
         } else {
-            log.error() << "HTTPClient post failed: " << curl_easy_strerror(res) << " " << tURL;
-            rResult.code = -1;
+            throw std::runtime_error(curl_easy_strerror(res));
         }
 
         return rResult;

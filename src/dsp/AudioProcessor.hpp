@@ -44,9 +44,12 @@ public:
     time_t tsStart;
     time_t tsEnd;
 
+    std::shared_ptr<PlayItem> playItem = nullptr;
+
     virtual bool canPlay(const PlayItem& item) = 0;
     virtual void load(const std::string& url, double position = 0) = 0;
     void schedule(const PlayItem& item) {
+        playItem = std::make_shared<PlayItem>(item);
         tsStart = item.start;
         tsEnd = item.end;
         auto pos = std::time(0) - tsStart;

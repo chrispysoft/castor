@@ -65,10 +65,16 @@ public:
         }
     }
 
-    void postPlaylog(const std::string& tPlaylog) {
+    void postPlaylog(const PlayItem& item) {
         const auto& url = mConfig.playlogURL;
-        log.debug() << "APIClient postPlaylog " << url << " " << tPlaylog;
-        auto res = HTTPClient().post(url, tPlaylog);
+
+        nlohmann::json j = item;
+        std::stringstream ss;
+        ss << j;
+        auto jstr = ss.str();
+
+        log.debug() << "APIClient postPlaylog " << url << " " << jstr << " ";
+        auto res = HTTPClient().post(url, jstr);
         if (res.code != 210) {
             throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
         }

@@ -77,4 +77,31 @@ void from_json(const json& j, Playlist& p) {
 }
 
 }
+
+struct PlayItem {
+    std::time_t start;
+    std::time_t end;
+    std::string uri;
+    api::Program program = {};
+    std::time_t lastTry = 0;
+    std::time_t retryInterval = 5;
+
+    std::time_t scheduleStart() const { return start - 30; }
+    std::time_t scheduleEnd() const { return end - 5; }
+
+    bool operator==(const PlayItem& item) const {
+        return item.start == this->start && item.end == this->end && item.uri == this->uri;
+    }
+};
+
+void to_json(nlohmann::json& j, const PlayItem& p) {
+    j = nlohmann::json {
+        {"trackStart", util::timestr(p.start)},
+        {"trackDuration", p.end - p.start},
+        {"timeslotId", p.program.timeslotId},
+        {"playlistId", p.program.playlistId},
+        {"showId", p.program.showId},
+        {"showName", p.program.showName}
+    };
+}
 }

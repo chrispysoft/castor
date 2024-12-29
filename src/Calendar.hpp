@@ -8,26 +8,12 @@
 #include <ctime>
 
 #include "Config.hpp"
+#include "api/API.hpp"
 #include "api/APIClient.hpp"
 #include "util/util.hpp"
+#include "third_party/json.hpp"
 
 namespace cst {
-
-struct PlayItem {
-    std::time_t start;
-    std::time_t end;
-    std::string uri;
-    api::Program program = {};
-    std::time_t lastTry = 0;
-    std::time_t retryInterval = 5;
-
-    std::time_t scheduleStart() const { return start - 30; }
-    std::time_t scheduleEnd() const { return end - 5; }
-
-    bool operator==(const PlayItem& item) const {
-        return item.start == this->start && item.end == this->end && item.uri == this->uri;
-    }
-};
 
 class M3UParser {
 public:
@@ -120,15 +106,15 @@ public:
             }
         }
 
-        // if (mItems.empty()) {
-        //     mItems.push_back({ now +  5, now +  20, "./audio/Alternate Gate 6 Master.mp3" });
-        //     mItems.push_back({ now +  20, now + 40, "http://stream.fro.at/fro-128.ogg" });
-        //     mItems.push_back({ now +  40, now + 60, "http://stream.fro.at/oggst3.ogg" });
-        //     // mItems.push_back({ now + 60, now + 75, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-        //     // mItems.push_back({ now + 15, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/C maj.mp3" });
-        //     // mItems.push_back({ now + 20, now + 60, "http://stream.fro.at/fro-128.ogg" });
-        //     // mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
-        // }
+        if (mItems.empty()) {
+            mItems.push_back({ now +  5, now +  20, "./audio/Alternate Gate 6 Master.mp3" });
+            mItems.push_back({ now +  20, now + 40, "http://stream.fro.at/fro-128.ogg" });
+            mItems.push_back({ now +  40, now + 60, "http://stream.fro.at/oggst3.ogg" });
+            // mItems.push_back({ now + 60, now + 75, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
+            // mItems.push_back({ now + 15, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/C maj.mp3" });
+            // mItems.push_back({ now + 20, now + 60, "http://stream.fro.at/fro-128.ogg" });
+            // mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
+        }
 
         std::vector<PlayItem> activeItems(0);
         for (const auto& item : mItems) {

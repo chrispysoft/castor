@@ -8,6 +8,7 @@
 #include "Config.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
+#include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
 #include "dsp/MP3Player.hpp"
@@ -31,6 +32,7 @@ class Engine : public AudioClientRenderer {
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
+    APIClient mAPIClient;
     AudioClient mAudioClient;
     SilenceDetector mSilenceDet;
     Fallback mFallback;
@@ -42,6 +44,7 @@ class Engine : public AudioClientRenderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
+        mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(),
         mFallback(mSampleRate, mConfig.audioFallbackPath),
@@ -107,6 +110,7 @@ public:
                 log.info(Log::Magenta) << "Engine setting " << source->name << " to PLAY";
                 source->play();
                 source->fadeIn();
+                playingItemChanged(*source->playItem);
             }
             else if (now >= source->tsEnd - source->fadeOutTime && now < source->tsEnd && source->state == AudioProcessor::State::PLAY && !source->isFading()) {
                 log.info(Log::Magenta) << "Engine fading out " << source->name;
@@ -140,6 +144,15 @@ public:
                     // mItemsToSchedule.push_front(item);
                 }
             }
+        }
+    }
+
+    void playingItemChanged(const PlayItem& playItem) {
+        try {
+            mAPIClient.postPlaylog(playItem);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Engine failed to post playlog: " << e.what();
         }
     }
 
