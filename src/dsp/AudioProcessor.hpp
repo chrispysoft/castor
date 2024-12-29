@@ -61,6 +61,7 @@ public:
 
     time_t fadeInTime = 1;
     time_t fadeOutTime = 3;
+    time_t ejectTime = 1;
     std::atomic<bool> _isFading = false;
     float volume = 0;
 
@@ -74,7 +75,7 @@ public:
 
     void fade(bool increase, time_t duration) {
         _isFading = true;
-        log.info() << "AudioProcessor " << name << " fading ...";
+        log.debug() << name << " fade start";
         std::thread([increase, duration, this] {
             if (increase) this->volume = 0;
             else this->volume = 1;
@@ -87,12 +88,33 @@ public:
                 // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
             }
             _isFading = false;
-            log.info() << "AudioProcessor " << name << " fade done";
+            log.debug() << name << " fade done";
         }).detach();
     }
 
     bool isFading() {
         return _isFading;
+    }
+
+
+    void work() {
+        time_t now = std::time(0);
+        if (now >= tsStart && now <= tsEnd && state == AudioProcessor::State::CUE) {
+            log.info(Log::Magenta) << name << " PLAY";
+            play();
+            log.info(Log::Magenta) << name << " FADE IN";
+            fadeIn();
+            // playingItemChanged(*source->playItem);
+        }
+        else if (now >= tsEnd - fadeOutTime && now < tsEnd && state == PLAY && !isFading()) {
+            log.info(Log::Magenta) << name << " FADE OUT";
+            fadeOut();
+        }
+        else if (now >= tsEnd + ejectTime && state != IDLE) {
+            log.info(Log::Magenta) << name << " STOP";
+            stop();
+            state = IDLE;
+        }
     }
 };
 }

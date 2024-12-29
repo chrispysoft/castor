@@ -5,6 +5,7 @@
 #include <string>
 #include <csignal>
 #include <mutex>
+#include <ranges>
 #include "Config.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
@@ -108,21 +109,7 @@ public:
 
         time_t now = std::time(0);
         for (const auto& source : mProcessors) {
-            if (now >= source->tsStart && now <= source->tsEnd && source->state == AudioProcessor::State::CUE) {
-                log.info(Log::Magenta) << "Engine setting " << source->name << " to PLAY";
-                source->play();
-                source->fadeIn();
-                playingItemChanged(*source->playItem);
-            }
-            else if (now >= source->tsEnd - source->fadeOutTime && now < source->tsEnd && source->state == AudioProcessor::State::PLAY && !source->isFading()) {
-                log.info(Log::Magenta) << "Engine fading out " << source->name;
-                source->fadeOut();
-            }
-            else if (now >= source->tsEnd + 3 && source->state != AudioProcessor::State::IDLE) {
-                log.info(Log::Magenta) << "Engine setting " << source->name << " to IDLE";
-                source->stop();
-                source->state = AudioProcessor::State::IDLE;
-            }
+            source->work();
         }
 
         // std::lock_guard lock(mMutex);
@@ -137,11 +124,18 @@ public:
             now = std::time(0);
             if (now - item.lastTry >= item.retryInterval) {
                 try {
-                    load(item);
-                    mScheduleItems.push_back(item);
+                    auto sources = mProcessors | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
+                    if (sources.empty()) throw std::runtime_error("Engine could not find processor for uri " + item.uri);
+                    auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == AudioProcessor::State::IDLE; });
+                    if (!freeSources.empty()) {
+                        load(item);
+                        mScheduleItems.push_back(item);
+                    } else {
+                        mItemsToSchedule.push_front(item);
+                    }
                 }
                 catch (const std::exception& e) {
-                    log.error() << "Engine failed to load item";
+                    log.error() << "Engine failed to load item: " << e.what();
                     item.lastTry = now;
                     // mItemsToSchedule.push_front(item);
                 }
