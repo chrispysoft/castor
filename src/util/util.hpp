@@ -19,19 +19,6 @@ bool strbool(const std::string& str) {
     return str == "true" || str == "True";
 }
 
-std::string timestr(std::time_t sec) {
-    using namespace std;
-    static constexpr time_t kSecMin = 60;
-    static constexpr time_t kSecHour = kSecMin * 60;
-    static constexpr time_t kSecDay = kSecHour * 24;
-    auto d = sec / kSecDay;
-    auto h = (sec / kSecHour) % kSecHour;
-    auto m = (sec / kSecMin) % kSecMin;
-    auto s = sec % kSecMin;
-    auto fmt = to_string(d) + "d " + to_string(h) + "h " + to_string(m) + "m " + to_string(s) + "s"; // "0d 00h 01m 11s";
-    return fmt;
-}
-
 std::string currTimeFmtMs() {
     std::stringstream strstr;
     auto now = std::chrono::system_clock::now();
