@@ -106,15 +106,15 @@ public:
             }
         }
 
-        if (mItems.empty()) {
-            mItems.push_back({ now +  5, now +  20, "./audio/Alternate Gate 6 Master.mp3" });
-            mItems.push_back({ now +  20, now + 40, "http://stream.fro.at/fro-128.ogg" });
-            mItems.push_back({ now +  40, now + 60, "http://stream.fro.at/oggst3.ogg" });
-            // mItems.push_back({ now + 60, now + 75, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-            // mItems.push_back({ now + 15, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/C maj.mp3" });
-            // mItems.push_back({ now + 20, now + 60, "http://stream.fro.at/fro-128.ogg" });
-            // mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
-        }
+        // if (mItems.empty()) {
+        //     mItems.push_back({ now +  5, now +  20, "./audio/Alternate Gate 6 Master.mp3" });
+        //     mItems.push_back({ now +  20, now + 40, "http://stream.fro.at/fro-128.ogg" });
+        //     mItems.push_back({ now +  40, now + 60, "http://stream.fro.at/oggst3.ogg" });
+        //     // mItems.push_back({ now + 60, now + 75, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
+        //     // mItems.push_back({ now + 15, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/C maj.mp3" });
+        //     // mItems.push_back({ now + 20, now + 60, "http://stream.fro.at/fro-128.ogg" });
+        //     // mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
+        // }
 
         std::vector<PlayItem> activeItems(0);
         for (const auto& item : mItems) {
