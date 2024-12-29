@@ -14,8 +14,9 @@
 namespace cst {
 class Castoria {
 
-    std::atomic<bool> mRunning = false;
-    std::unique_ptr<std::thread> mWorker = nullptr;
+    bool mRunning = false;
+    std::mutex mMutex;
+    std::condition_variable mCV;
     Config mConfig;
     Calendar mCalendar;
     Engine mEngine;
@@ -57,23 +58,23 @@ public:
         mRunning = true;
         mCalendar.start();
         mEngine.start();
-        mWorker = std::make_unique<std::thread>([this] {
-            while (this->mRunning) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-        });
-        mWorker->join();
+        std::unique_lock<std::mutex> lock(mMutex);
+        while (mRunning) {
+            mCV.wait(lock);
+        }
     }
 
     void terminate() {
         log.debug() << "Castoria terminating...";
-        mRunning = false;
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mRunning = false;
+        }
+        mCV.notify_all();
         mEngine.stop();
         mCalendar.stop();
         log.info() << "Castoria terminated";
     }
 };
-
-
 
 }
