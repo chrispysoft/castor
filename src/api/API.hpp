@@ -104,4 +104,20 @@ void to_json(nlohmann::json& j, const PlayItem& p) {
         {"showName", p.program.showName}
     };
 }
+
+struct Health {
+    bool isHealthy;
+    std::string logTime;
+    std::string details;
+};
+
+void to_json(nlohmann::json& j, const Health& h) {
+    j = nlohmann::json {
+        {"isHealthy", h.isHealthy},
+        {"logTime", h.logTime},
+        {"details", h.details}
+    };
+}
+
+
 }

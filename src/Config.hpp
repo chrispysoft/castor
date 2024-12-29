@@ -24,6 +24,8 @@ class Config {
     static constexpr const char* kProgramURL = "http://localhost/program";
     static constexpr const char* kPlaylistURL = "http://localhost/playlist";
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";
+    static constexpr const char* kHealthURL = "http://localhost/health";
+    static constexpr const char* kClockURL = "http://localhost/clock";
     static constexpr const char* kPlaylistToken = "castoria:id";
 
     static Map parseConfigFile(const std::string& tPath) {
@@ -58,6 +60,8 @@ public:
     std::string programURL;
     std::string playlistURL;
     std::string playlogURL;
+    std::string healthURL;
+    std::string clockURL;
     std::string playlistToken;
 
     static std::string get(Map& map, std::string mapKey, std::string envKey, std::string defaultValue) {
@@ -90,6 +94,8 @@ public:
         programURL = get(map, "program_url", "PROGRAM_URL", kProgramURL);
         playlistURL = get(map, "playlist_url", "PLAYLIST_URL", kPlaylistURL);
         playlogURL = get(map, "playlog_url", "PLAYLOG_URL", kPlaylogURL);
+        healthURL = get(map, "health_url", "HEALTH_URL", kHealthURL);
+        clockURL = get(map, "clock_url", "CLOCK_URL", kClockURL);
         playlistToken = get(map, "playlist_token", "PLAYLIST_TOKEN", kPlaylistToken);
 
         log.info() << "Config:"
@@ -105,6 +111,8 @@ public:
         << "\n\t programURL=" << programURL
         << "\n\t playlistURL=" << playlistURL
         << "\n\t playlogURL=" << playlogURL
+        << "\n\t healthURL=" << healthURL
+        << "\n\t clockURL=" << clockURL
         << "\n\t playlistToken=<hidden>";
     }
 };

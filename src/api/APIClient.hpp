@@ -79,5 +79,20 @@ public:
             throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
         }
     }
+
+    void postHealth(const Health& health) {
+        const auto& url = mConfig.healthURL;
+
+        nlohmann::json j = health;
+        std::stringstream ss;
+        ss << j;
+        auto jstr = ss.str();
+
+        log.debug() << "APIClient postHealth " << url << " " << jstr << " ";
+        auto res = HTTPClient().post(url, jstr);
+        if (res.code != 204) {
+            throw std::runtime_error("APIClient postHealth status code "+std::to_string(res.code));
+        }
+    }
 };
 }

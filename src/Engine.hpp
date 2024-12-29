@@ -40,6 +40,8 @@ class Engine : public AudioClientRenderer {
     StreamOutput mStreamOutput;
     std::vector<float> mMixBuffer;
     std::vector<std::shared_ptr<AudioProcessor>> mProcessors = {};
+    time_t mLastReportTime = 0;
+    time_t mReportInterval = 10;
     
 public:
     Engine(const Config& tConfig) :
@@ -132,7 +134,7 @@ public:
                 return;
             }
 
-            auto now = std::time(0);
+            now = std::time(0);
             if (now - item.lastTry >= item.retryInterval) {
                 try {
                     load(item);
@@ -145,6 +147,12 @@ public:
                 }
             }
         }
+
+        now = std::time(0);
+        if (now - mLastReportTime > mReportInterval) {
+            mLastReportTime = now;
+            postHealth();
+        }
     }
 
     void playingItemChanged(const PlayItem& playItem) {
@@ -153,6 +161,16 @@ public:
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
+        }
+    }
+
+    void postHealth() {
+        try {
+            Health health {true, util::currTimeFmtMs(), ":)"};
+            mAPIClient.postHealth(health);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Engine failed to post health: " << e.what();
         }
     }
 

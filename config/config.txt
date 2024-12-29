@@ -10,4 +10,6 @@ stream_out_url=
 program_url=http://localhost/steering/api/v1/program/playout/
 playlist_url=http://localhost/tank/api/v1/playlists/
 playlog_url=http://localhost:8010/api/v1/playlog
+health_url=http://localhost:8010/api/v1/source/health/1
+clock_url=http://localhost:8010/api/v1/clock
 playlist_token=engine:1234
