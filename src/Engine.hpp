@@ -42,7 +42,7 @@ class Engine : public AudioClientRenderer {
     std::vector<float> mMixBuffer;
     std::vector<std::shared_ptr<AudioProcessor>> mProcessors = {};
     time_t mLastReportTime = 0;
-    time_t mReportInterval = 10;
+    time_t mReportInterval = 300;
     
 public:
     Engine(const Config& tConfig) :
