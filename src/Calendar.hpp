@@ -83,9 +83,7 @@ public:
         }
     }
     
-
-    void refresh() {
-        log.debug() << "Calendar refresh";
+    std::vector<PlayItem> fetchItems() {
         std::vector<PlayItem> items;
         // m3uParser.reset();
         const auto now = std::time(0);
@@ -134,8 +132,14 @@ public:
                 itemStart += entryDuration;
             }
         }
+        return items;
+    }
 
-        if (mItems != items) {
+    void refresh() {
+        log.debug() << "Calendar refresh";
+
+        auto items = fetchItems();
+        if ( items != mItems) {
             mItems = items;
             log.info() << "Calendar changed";
             for (const auto& itm : items) {
