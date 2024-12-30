@@ -87,7 +87,7 @@ public:
     void refresh() {
         log.debug() << "Calendar refresh";
         std::vector<PlayItem> items;
-        m3uParser.reset();
+        // m3uParser.reset();
         const auto now = std::time(0);
         const auto program = mAPIClient.getProgram();
         for (const auto& pr : program) {
