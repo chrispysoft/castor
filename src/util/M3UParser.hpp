@@ -18,7 +18,7 @@ public:
         if (it != mMap.end()) {
             return it->second;
         } else {
-            auto items = _parse(url);
+            auto items = _parse(url, startTime, endTime);
             mMap[hash] = items;
             return items;
         }
@@ -48,10 +48,12 @@ public:
                 if (getline(file, path)) {
                     util::stripM3ULine(path);
                     auto itmEnd = itmStart + duration;
-                    if (endTime > 0 && itmEnd < endTime) {
+                    if (endTime == 0 || itmEnd <= endTime) {
                         items.push_back({itmStart, itmEnd, path});
+                        itmStart = itmEnd;
                     } else {
-                        log.warn() << "M3U item exceeds end time - skipping";
+                        log.info() << "M3U item exceeds end time - cropping";
+                        items.push_back({itmStart, endTime, path});
                         break;
                     }
                 }

@@ -103,7 +103,8 @@ public:
 
             for (const auto& entry : playlist.entries) {
                 // log.debug() << entry.uri;
-                auto itemEnd = itemStart + entry.duration;
+                auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - prStart;
+                auto itemEnd = itemStart + entryDuration;
                 if (itemEnd == itemStart) {
                     itemEnd = prEnd;
                 }
@@ -116,38 +117,28 @@ public:
                     auto uri = mConfig.audioPlaylistPath + entry.uri.substr(m3uPrefix.size());
                     try {
                         // log.debug() << "Calendar parsing m3u " << uri;
-                        auto m3u = m3uParser.parse(uri);
+                        auto m3u = m3uParser.parse(uri, itemStart, itemEnd);
                         if (!m3u.empty()) {
-                            // for (auto& m : m3u) {
-                            //     m.start += itemStart;
-                            //     m.end += itemStart;
-                            //     m.program = pr;
-                            //     itemStart = m.end;
-                            // }
                             items.insert(items.end(), m3u.begin(), m3u.end());
                         } else {
                             log.warn() << "Calendar found no M3U metadata - adding file as item";
-                            PlayItem itm = { itemStart, itemEnd, uri, pr };
-                            items.push_back(itm);
+                            items.push_back({itemStart, itemEnd, uri, pr});
                         }
-                    }
-                    catch (const std::exception& e) {
+                    } catch (const std::exception& e) {
                         log.error() << "Calendar error reading M3U: " << e.what();
                     }
-                }
-                else {
+                } else {
                     auto uri = (entry.uri.starts_with(filePrefix)) ? mConfig.audioSourcePath + entry.uri.substr(filePrefix.size()) : entry.uri;
-                    PlayItem itm = { itemStart, itemEnd, entry.uri, pr };
-                    items.push_back(itm);
+                    items.push_back({itemStart, itemEnd, entry.uri, pr});
                 }
-                itemStart = itemEnd;
+                itemStart += entryDuration;
             }
         }
 
         for (const auto& itm : items) {
+            static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
             auto tm1 = *std::localtime(&itm.start);
             auto tm2 = *std::localtime(&itm.end);
-            static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
             log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.program.showName << " " << itm.uri;
         }
 
