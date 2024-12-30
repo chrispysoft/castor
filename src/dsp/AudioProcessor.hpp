@@ -105,7 +105,7 @@ public:
             fadeIn();
             // playingItemChanged(*source->playItem);
         }
-        else if (now >= tsEnd - fadeOutTime && now < tsEnd && state == PLAY && !isFading()) {
+        else if (now >= tsEnd - fadeOutTime && now < tsEnd && state == PLAY && !isFading) {
             log.info(Log::Magenta) << name << " FADE OUT";
             fadeOut();
         }
