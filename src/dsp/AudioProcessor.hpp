@@ -18,7 +18,7 @@ public:
     std::string name;
 
     bool accepts(const PlayItem& item) {
-        return canPlay(item) && getState() == IDLE;
+        return canPlay(item) && state == IDLE;
     }
 
     virtual void stop() {}
@@ -55,14 +55,17 @@ public:
         auto pos = std::time(0) - tsStart;
         if (pos < 0) pos = 0;
         state = LOAD;
-        load(item.uri, pos);
-        state = CUE;
+        auto uri = item.uri;
+        std::thread([this, uri, pos] {
+            this->load(uri, pos);
+            this->state = CUE;
+        }).detach();
     }
 
     time_t fadeInTime = 1;
     time_t fadeOutTime = 3;
     time_t ejectTime = 1;
-    std::atomic<bool> _isFading = false;
+    std::atomic<bool> isFading = false;
     float volume = 0;
 
     void fadeIn() {
@@ -74,7 +77,7 @@ public:
     }
 
     void fade(bool increase, time_t duration) {
-        _isFading = true;
+        isFading = true;
         log.debug() << name << " fade start";
         std::thread([increase, duration, this] {
             if (increase) this->volume = 0;
@@ -87,13 +90,9 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
             }
-            _isFading = false;
+            isFading = false;
             log.debug() << name << " fade done";
         }).detach();
-    }
-
-    bool isFading() {
-        return _isFading;
     }
 
 
