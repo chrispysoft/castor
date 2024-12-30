@@ -85,7 +85,7 @@ public:
     
 
     void refresh() {
-        log.info() << "Calendar refresh";
+        log.debug() << "Calendar refresh";
         std::vector<PlayItem> items;
         m3uParser.reset();
         const auto now = std::time(0);
@@ -135,18 +135,19 @@ public:
             }
         }
 
-        for (const auto& itm : items) {
-            static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
-            auto tm1 = *std::localtime(&itm.start);
-            auto tm2 = *std::localtime(&itm.end);
-            log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.program.showName << " " << itm.uri;
-        }
+        
 
         if (mItems != items) {
             mItems = items;
             log.info() << "Calendar changed";
+            for (const auto& itm : items) {
+                static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
+                auto tm1 = *std::localtime(&itm.start);
+                auto tm2 = *std::localtime(&itm.end);
+                log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.program.showName << " " << itm.uri;
+            }
         } else {
-            log.info() << "Calendar not changed";
+            log.debug() << "Calendar not changed";
         }
     }
 
