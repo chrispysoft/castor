@@ -118,12 +118,12 @@ public:
                         // log.debug() << "Calendar parsing m3u " << uri;
                         auto m3u = m3uParser.parse(uri);
                         if (!m3u.empty()) {
-                            // for (auto& m : m3u) {
-                            //     m.start += itemStart;
-                            //     m.end += itemStart;
-                            //     m.program = pr;
-                            //     itemStart = m.end;
-                            // }
+                            for (auto& m : m3u) {
+                                m.start += itemStart;
+                                m.end += itemStart;
+                                m.program = pr;
+                                itemStart = m.end;
+                            }
                             items.insert(items.end(), m3u.begin(), m3u.end());
                         } else {
                             log.warn() << "Calendar found no M3U metadata - adding file as item";
