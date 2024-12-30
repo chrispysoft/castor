@@ -29,11 +29,16 @@ std::string currTimeFmtMs() {
     return strstr.str();
 }
 
-std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
+std::string timefmt(const time_t& tTime, const char* tFormat) {
     std::stringstream strstr;
     auto tm = *std::localtime(&tTime);
-    strstr << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+    strstr << std::put_time(&tm, tFormat);
     return strstr.str();
+}
+
+std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
+    static constexpr const char* fmt = "%Y-%m-%dT%H:%M:%S";
+    return timefmt(tTime, fmt);
 }
 
 std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {

@@ -135,16 +135,12 @@ public:
             }
         }
 
-        
-
         if (mItems != items) {
             mItems = items;
             log.info() << "Calendar changed";
             for (const auto& itm : items) {
                 static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
-                auto tm1 = *std::localtime(&itm.start);
-                auto tm2 = *std::localtime(&itm.end);
-                log.debug() << std::put_time(&tm1, fmt) << " - " << std::put_time(&tm2, fmt) << " " << itm.program.showName << " " << itm.uri;
+                log.debug() << util::timefmt(itm.start, fmt) << " - " << util::timefmt(itm.end, fmt) << " " << itm.program.showName << " " << itm.uri;
             }
         } else {
             log.debug() << "Calendar not changed";
