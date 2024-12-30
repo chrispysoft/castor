@@ -1,8 +1,8 @@
 #include <atomic>
 #include <iostream>
 #include <fstream>
-#include <thread>
 #include <string>
+#include <thread>
 #include <csignal>
 
 #include "Calendar.hpp"
@@ -27,7 +27,7 @@ class Castoria {
         mEngine(mConfig)
     {
         log.setFilePath(mConfig.logPath);
-        mCalendar.activeItemChangeHandler = [this](const std::vector<PlayItem>& items) {
+        mCalendar.activeItemChangeHandler = [this](auto items) {
             log.debug() << "Castoria activeItemChangeHandler";
             for (const auto& item : items) {
                 this->mEngine.schedule(item);

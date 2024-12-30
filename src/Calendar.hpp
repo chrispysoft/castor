@@ -6,6 +6,7 @@
 #include <thread>
 #include <string>
 #include <ctime>
+#include <deque>
 
 #include "Config.hpp"
 #include "api/API.hpp"
@@ -22,8 +23,8 @@ class Calendar {
     APIClient mAPIClient;
     time_t mLastRefreshTime = 0;
     time_t mRefreshInterval = 60;
-    std::vector<PlayItem> mItems;
-    std::vector<PlayItem> mActiveItems;
+    std::deque<PlayItem> mItems;
+    std::deque<PlayItem> mActiveItems;
     M3UParser m3uParser;
 
     const std::string m3uPrefix = "m3u://";
@@ -31,7 +32,7 @@ class Calendar {
 
 public:
 
-    std::function<void(const std::vector<PlayItem>& items)> activeItemChangeHandler;
+    std::function<void(const std::deque<PlayItem>& items)> activeItemChangeHandler;
 
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
@@ -69,7 +70,7 @@ public:
             // mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
         }
 
-        std::vector<PlayItem> activeItems(0);
+        std::deque<PlayItem> activeItems(0);
         for (const auto& item : mItems) {
             if (now >= item.scheduleStart() && now <= item.scheduleEnd()) {
                 activeItems.push_back(item);
@@ -83,8 +84,8 @@ public:
         }
     }
     
-    std::vector<PlayItem> fetchItems() {
-        std::vector<PlayItem> items;
+    std::deque<PlayItem> fetchItems() {
+        std::deque<PlayItem> items;
         // m3uParser.reset();
         const auto now = std::time(0);
         const auto program = mAPIClient.getProgram();

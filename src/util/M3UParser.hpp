@@ -1,18 +1,20 @@
 #pragma once
 
+#include <deque>
+#include <unordered_map>
 #include "../api/API.hpp"
 
 namespace cst {
 class M3UParser {
 public:
 
-    std::unordered_map<size_t, std::vector<PlayItem>> mMap = {};
+    std::unordered_map<size_t, std::deque<PlayItem>> mMap = {};
 
     void reset() {
         mMap.clear();
     }
 
-    std::vector<PlayItem> parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
+    std::deque<PlayItem> parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
         auto hash = std::hash<std::string>{}(std::string(url + std::to_string(startTime) + std::to_string(endTime)));
         auto it = mMap.find(hash);
         if (it != mMap.end()) {
@@ -24,10 +26,10 @@ public:
         }
     }
 
-    std::vector<PlayItem> _parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
+    std::deque<PlayItem> _parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
         // std::cout << "_parse " << uri << std::endl;
         using namespace std;
-        std::vector<PlayItem> items;
+        std::deque<PlayItem> items;
         ifstream file(url);
         if (!file.is_open()) {
             throw runtime_error("Failed to open file " + url);

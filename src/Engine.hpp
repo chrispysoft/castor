@@ -1,11 +1,10 @@
-#include <atomic>
-#include <iostream>
-#include <fstream>
-#include <thread>
 #include <string>
-#include <csignal>
-#include <mutex>
+#include <vector>
+#include <deque>
 #include <ranges>
+#include <atomic>
+#include <thread>
+#include <mutex>
 #include "Config.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
@@ -40,7 +39,7 @@ class Engine : public AudioClientRenderer {
     Recorder mRecorder;
     StreamOutput mStreamOutput;
     std::vector<float> mMixBuffer;
-    std::vector<std::shared_ptr<AudioProcessor>> mProcessors = {};
+    std::deque<std::shared_ptr<AudioProcessor>> mProcessors = {};
     time_t mLastReportTime = 0;
     time_t mReportInterval = 300;
     
