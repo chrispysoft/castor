@@ -3,6 +3,7 @@
 #include <deque>
 #include <unordered_map>
 #include "../api/API.hpp"
+#include "../dsp/AudioCodecReader.hpp"
 
 namespace cst {
 class M3UParser {
@@ -37,18 +38,44 @@ public:
         // log.debug() << "M3UParser opened " + uri;
         auto itmStart = startTime;
         string line;
-        while (getline(file, line)) {
-            if (line.starts_with("#EXTINF:")) {
-                auto metadata = util::splitBy(line, ':').second;
-                auto metainfo = util::splitBy(metadata, ',');
-                int duration = stoi(metainfo.first);
-                if (duration <= 0) {
-                    throw runtime_error("Invalid duration " + to_string(duration));
+        getline(file, line);
+        if (line.starts_with("#EXTM3U")) {
+            while (getline(file, line)) {
+                if (line.starts_with("#EXTINF:")) {
+                    auto metadata = util::splitBy(line, ':').second;
+                    auto metainfo = util::splitBy(metadata, ',');
+                    int duration = stoi(metainfo.first);
+                    if (duration <= 0) {
+                        throw runtime_error("Invalid duration " + to_string(duration));
+                    }
+                    auto artist = metainfo.second;
+                    string path;
+                    if (getline(file, path)) {
+                        util::stripM3ULine(path);
+                        auto itmEnd = itmStart + duration;
+                        if (endTime == 0 || itmEnd <= endTime) {
+                            items.push_back({itmStart, itmEnd, path});
+                            itmStart = itmEnd;
+                        } else {
+                            log.info() << "M3U item exceeds end time - cropping";
+                            items.push_back({itmStart, endTime, path});
+                            break;
+                        }
+                    }
                 }
-                auto artist = metainfo.second;
-                string path;
-                if (getline(file, path)) {
-                    util::stripM3ULine(path);
+                // std::cout << line << std::endl;
+            }
+        } else {
+            string path;
+            while (getline(file, path)) {
+                util::stripM3ULine(path);
+                try {
+                    auto reader = audio::AudioCodecReader(44100, path);
+                    int duration = round(reader.duration());
+                    if (duration <= 0) {
+                        throw std::runtime_error("Could not get duration");
+                    }
+
                     auto itmEnd = itmStart + duration;
                     if (endTime == 0 || itmEnd <= endTime) {
                         items.push_back({itmStart, itmEnd, path});
@@ -59,8 +86,10 @@ public:
                         break;
                     }
                 }
+                catch (const std::exception& e) {
+                    log.error() << "M3UParser failed to get metadata: " << e.what();
+                }
             }
-            // std::cout << line << std::endl;
         }
 
         return items;

@@ -13,14 +13,13 @@
 #include "dsp/LinePlayer.hpp"
 #include "dsp/MP3Player.hpp"
 #include "dsp/QueuePlayer.hpp"
-#include "dsp/StreamPlayer.hpp"
 #include "dsp/Fallback.hpp"
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
 
 namespace cst {
-class Engine : public AudioClientRenderer {
+class Engine : public audio::Client::Renderer {
 
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
@@ -32,14 +31,14 @@ class Engine : public AudioClientRenderer {
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
-    APIClient mAPIClient;
-    AudioClient mAudioClient;
-    SilenceDetector mSilenceDet;
-    Fallback mFallback;
-    Recorder mRecorder;
-    StreamOutput mStreamOutput;
+    api::Client mAPIClient;
+    audio::Client mAudioClient;
+    audio::SilenceDetector mSilenceDet;
+    audio::Fallback mFallback;
+    audio::Recorder mRecorder;
+    audio::StreamOutput mStreamOutput;
     std::vector<float> mMixBuffer;
-    std::deque<std::shared_ptr<AudioProcessor>> mProcessors = {};
+    std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
     time_t mLastReportTime = 0;
     time_t mReportInterval = 300;
     
@@ -54,11 +53,14 @@ public:
         mStreamOutput(mSampleRate),
         mMixBuffer(mBufferSize * 2)
     {
-        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate, "File 1"));
-        mProcessors.push_back(std::make_shared<QueuePlayer>(mSampleRate, "File 2"));
-        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate, "Stream 1"));
-        mProcessors.push_back(std::make_shared<StreamPlayer>(mSampleRate, "Stream 2"));
-        mProcessors.push_back(std::make_shared<LinePlayer>(mSampleRate, "Line 1"));
+        mPlayers.push_back(std::make_shared<audio::MP3Player>(mSampleRate, "Player 1"));
+        mPlayers.push_back(std::make_shared<audio::MP3Player>(mSampleRate, "Player 2"));
+        mPlayers.push_back(std::make_shared<audio::LinePlayer>(mSampleRate, "Line 1"));
+
+        for (auto& proc : mPlayers) {
+            proc->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
+        }
+
         mAudioClient.setRenderer(this);
     }
 
@@ -91,7 +93,7 @@ public:
         log.debug() << "Engine stopping...";
         mRunning = false;
         mRecorder.stop();
-        for (const auto& source : mProcessors) source->stop();
+        for (const auto& source : mPlayers) source->stop();
         mFallback.stop();
         mStreamOutput.stop();
         mAudioClient.stop();
@@ -107,7 +109,7 @@ public:
         }
 
         time_t now = std::time(0);
-        for (const auto& source : mProcessors) {
+        for (const auto& source : mPlayers) {
             source->work();
         }
 
@@ -123,9 +125,9 @@ public:
             now = std::time(0);
             if (now - item.lastTry >= item.retryInterval) {
                 try {
-                    auto sources = mProcessors | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
+                    auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
                     if (sources.empty()) throw std::runtime_error("Engine could not find processor for uri " + item.uri);
-                    auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == AudioProcessor::State::IDLE; });
+                    auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
                     if (!freeSources.empty()) {
                         load(item);
                         mScheduleItems.push_back(item);
@@ -148,9 +150,9 @@ public:
         }
     }
 
-    void playingItemChanged(const PlayItem& playItem) {
+    void playItemDidStart(const std::shared_ptr<PlayItem>& item) {
         try {
-            mAPIClient.postPlaylog(playItem);
+            mAPIClient.postPlaylog(*item);
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
@@ -174,8 +176,8 @@ public:
 
     void load(const PlayItem& item) {
         log.info(Log::Magenta) << "Engine load " << item.uri;
-        auto it = std::find_if(mProcessors.begin(), mProcessors.end(), [&](std::shared_ptr<AudioProcessor>& p) { return p->accepts(item); });
-        if (it == mProcessors.end()) {
+        auto it = std::find_if(mPlayers.begin(), mPlayers.end(), [&](auto p) { return p->accepts(item); });
+        if (it == mPlayers.end()) {
             log.error() << "Could not find available player for item " << item.uri;
             return;
         }
@@ -187,7 +189,7 @@ public:
         auto nsamples = nframes * 2;
         memset(out, 0, nsamples * sizeof(float));
 
-        for (auto source : mProcessors) {
+        for (auto source : mPlayers) {
             if (!source->isActive()) continue;
             source->process(in, mMixBuffer.data(), nframes);
             for (auto i = 0; i < mMixBuffer.size(); ++i) {

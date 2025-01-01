@@ -6,6 +6,7 @@
 #include "../util/Log.hpp"
 
 namespace cst {
+namespace audio {
 class SilenceDetector {
 
     static constexpr size_t kChannelCount = 2;
@@ -59,4 +60,5 @@ public:
     }
 
 };
+}
 }

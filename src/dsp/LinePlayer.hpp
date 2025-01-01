@@ -5,14 +5,15 @@
 #include "AudioProcessor.hpp"
 
 namespace cst {
-class LinePlayer : public AudioProcessor {
+namespace audio {
+class LinePlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
     const double mSampleRate;
     
 
 public:
-    LinePlayer(double tSampleRate, const std::string tName = "") : AudioProcessor(tName),
+    LinePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate)
     {
         
@@ -34,4 +35,5 @@ public:
         memcpy(tOutBuffer, tInBuffer, byteSize);
     }
 };
+}
 }

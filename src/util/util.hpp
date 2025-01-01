@@ -6,7 +6,9 @@
 #include <map>
 #include <regex>
 #include <mutex>
+#include <condition_variable>
 #include <ctime>
+#include <cstring>
 
 namespace cst {
 namespace util {
@@ -104,6 +106,7 @@ class RingBuffer {
     size_t mTail = 0;
     std::vector<T> mBuffer;
     std::mutex mMutex;
+    std::condition_variable mCV;
 
 public:
     explicit RingBuffer(size_t tCapacity) :
@@ -117,6 +120,7 @@ public:
 
     void write(const T* tData, size_t tLen) {
         std::unique_lock<std::mutex> lock(mMutex);
+        mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
             mTail = (mTail + 1) % mCapacity;
@@ -129,19 +133,28 @@ public:
     }
 
     size_t read(T* tData, size_t tLen) {
-        std::unique_lock<std::mutex> lock(mMutex);
         if (mSize < tLen) {
             return 0;
         }
 
+        std::unique_lock<std::mutex> lock(mMutex);
         size_t read = 0;
         while (read < tLen && mSize > 0) {
             tData[read++] = mBuffer[mHead];
             mHead = (mHead + 1) % mCapacity;
             --mSize;
         }
-
+        mCV.notify_all();
         return read;
+    }
+
+    void flush() {
+        std::unique_lock<std::mutex> lock(mMutex);
+        mSize = 0;
+        mHead = 0;
+        mTail = 0;
+        // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
+        mCV.notify_all();
     }
 };
 

@@ -2,27 +2,25 @@
 
 #include "SinOsc.hpp"
 #include "QueuePlayer.hpp"
-#include "StreamPlayer.hpp"
 #include "../util/Log.hpp"
 
 namespace cst {
-class Fallback {
+namespace audio {
+class Fallback : public Input {
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
 
     SinOsc mOscL;
     SinOsc mOscR;
     QueuePlayer mQueuePlayer;
-    StreamPlayer mStreamPlayer;
     std::string mFallbackURL;
     bool mActive;
 
 public:
-    Fallback(double tSampleRate, const std::string tFallbackURL) :
+    Fallback(double tSampleRate, const std::string tFallbackURL) : Input(),
         mOscL(tSampleRate),
         mOscR(tSampleRate),
         mQueuePlayer(tSampleRate),
-        mStreamPlayer(tSampleRate),
         mFallbackURL(tFallbackURL)
     {
         mOscL.setFrequency(kBaseFreq);
@@ -33,18 +31,13 @@ public:
         if (mActive) return;
         log.info(Log::Yellow) << "Fallback start";
         mActive = true;
-        // if (mFallbackURL.starts_with("http")) {
-        //     mStreamPlayer.load(mFallbackURL);
-        // } else {
-        //     mQueuePlayer.load(mFallbackURL);
-        // }
+        // mQueuePlayer.load(mFallbackURL);
     }
 
     void stop() {
         if (!mActive) return;
         log.info(Log::Yellow) << "Fallback stop";
         mActive = false;
-        // mStreamPlayer.stop();
         // mQueuePlayer.clear();
     }
 
@@ -53,7 +46,6 @@ public:
     }
 
     void process(const float* in, float* out, size_t nframes) {
-        // mStreamPlayer.process(in, out, nframes);
         // mQueuePlayer.process(in, out, nframes);
         
         for (auto i = 0; i < nframes; ++i) {
@@ -62,4 +54,5 @@ public:
         }
     }
 };
+}
 }

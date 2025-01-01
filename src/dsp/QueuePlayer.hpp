@@ -12,7 +12,8 @@
 #include "../util/Log.hpp"
 
 namespace cst {
-class QueuePlayer : public AudioProcessor {
+namespace audio {
+class QueuePlayer : public Player {
     std::unique_ptr<std::thread> mWorker;
     std::atomic<bool> mRunning;
     std::deque<std::string> mQueue;
@@ -20,7 +21,7 @@ class QueuePlayer : public AudioProcessor {
     MP3Player mPlayer;
     
 public:
-    QueuePlayer(double tSampleRate, const std::string tName = "") : AudioProcessor(tName),
+    QueuePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mWorker(nullptr),
         mRunning(false),
         mQueue {},
@@ -42,6 +43,7 @@ public:
         if (tURL.ends_with(".m3u")) {
             log.debug() << "QueuePlayer opening m3u file " << tURL;
             std::ifstream file(tURL);
+            if (!file.is_open()) throw std::runtime_error("Failed to open file");
             std::string line;
             while (getline(file, line)) {
                 if (line.starts_with("#")) continue;
@@ -82,10 +84,6 @@ public:
         }
     }
 
-    void roll(double pos) {
-        mPlayer.roll(pos);
-    }
-
     void stop() override {
         log.debug() << "QueuePlayer stopping...";
         mRunning = false;
@@ -123,4 +121,5 @@ private:
         }
     }
 };
+}
 }

@@ -5,6 +5,7 @@
 #include "../util/util.hpp"
 
 namespace cst {
+namespace audio {
 class StreamOutput {
 
     static constexpr size_t kChannelCount = 2;
@@ -95,4 +96,5 @@ public:
     }
 
 };
+}
 }

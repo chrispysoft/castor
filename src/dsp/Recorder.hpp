@@ -18,6 +18,7 @@ extern "C" {
 }
 
 namespace cst {
+namespace audio {
 class Recorder {
 
     static constexpr size_t kChannelCount = 2;
@@ -187,4 +188,5 @@ public:
         log.info() << "Recorder finished";
     }
 };
+}
 }

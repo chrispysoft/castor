@@ -7,14 +7,15 @@
 #include "../util/util.hpp"
 
 namespace cst {
-class APIClient {
+namespace api {
+class Client {
 
     const Config& mConfig;
     const std::vector<std::string> mAuthHeaders;
 
 public:
 
-    APIClient(const Config& tConfig) :
+    Client(const Config& tConfig) :
         mConfig(tConfig),
         mAuthHeaders {
             "Authorization: Bearer " + mConfig.playlistToken,
@@ -24,7 +25,7 @@ public:
         
     }
 
-    ~APIClient() {
+    ~Client() {
     }
 
     std::vector<api::Program> getProgram(time_t duration = 3600) {
@@ -95,4 +96,5 @@ public:
         }
     }
 };
+}
 }

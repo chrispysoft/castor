@@ -8,25 +8,24 @@
 #include "../util/Log.hpp"
 
 namespace cst {
-
-class AudioClientRenderer {
+namespace audio {
+class Client {
 public:
-    virtual void renderCallback(const float* in, float* out, size_t nframes) = 0;
-    virtual ~AudioClientRenderer() = default;
-};
 
-class AudioClient {
+    class Renderer {
+        public:
+            virtual void renderCallback(const float* in, float* out, size_t nframes) = 0;
+            virtual ~Renderer() = default;
+        };
     
     const std::string mIDevName;
     const std::string mODevName;
     const double mSampleRate;
     const size_t mBufferSize;
     PaStream* mStream;
-    AudioClientRenderer* mRenderer;
+    Renderer* mRenderer;
 
-public:
-
-    AudioClient(const std::string& tIDevName, const std::string& tODevName, double tSampleRate, size_t tBufferSize) :
+    Client(const std::string& tIDevName, const std::string& tODevName, double tSampleRate, size_t tBufferSize) :
         mIDevName(tIDevName),
         mODevName(tODevName),
         mSampleRate(tSampleRate),
@@ -38,7 +37,7 @@ public:
         printDeviceNames();
     }
 
-    ~AudioClient() {
+    ~Client() {
         Pa_Terminate();
     }
 
@@ -80,12 +79,12 @@ public:
 
         PaStreamParameters iParams(iDevID, 2, paFloat32, iDevInfo->defaultLowInputLatency, NULL);
         PaStreamParameters oParams(oDevID, 2, paFloat32, oDevInfo->defaultLowOutputLatency, NULL);
-        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &AudioClient::paCallback, this);
+        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &Client::paCallback, this);
         if (res != paNoError) {
             throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res));
         }
 
-        res = Pa_SetStreamFinishedCallback(mStream, &AudioClient::paStreamFinished);
+        res = Pa_SetStreamFinishedCallback(mStream, &Client::paStreamFinished);
         if (res != paNoError) {
             stop();
             throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
@@ -113,7 +112,7 @@ public:
         mStream = nullptr;
     }
 
-    void setRenderer(AudioClientRenderer* tRenderer) {
+    void setRenderer(Renderer* tRenderer) {
         mRenderer = tRenderer;
     }
 
@@ -139,12 +138,13 @@ private:
     }
 
     static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {
-        return static_cast<AudioClient*>(userData)->paCallbackMethod(inputBuffer, outputBuffer, framesPerBuffer, timeInfo, statusFlags);
+        return static_cast<Client*>(userData)->paCallbackMethod(inputBuffer, outputBuffer, framesPerBuffer, timeInfo, statusFlags);
     }
 
     static void paStreamFinished(void* userData) {
-        return static_cast<AudioClient*>(userData)->paStreamFinishedMethod();
+        return static_cast<Client*>(userData)->paStreamFinishedMethod();
     }
 };
 
+}
 }
