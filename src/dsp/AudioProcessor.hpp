@@ -120,6 +120,10 @@ public:
             state = IDLE;
         }
     }
+
+    void getStatus(std::stringstream& ss) {
+        ss << name << " " << state << " " << std::setfill(' ') << std::setw(2) << volume << "    ";
+    }
 };
 }
 }
