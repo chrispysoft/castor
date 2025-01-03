@@ -56,8 +56,9 @@ public:
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
         log.debug() << "AudioCodecReader open file...";
-        if (avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options) < 0) {
-            throw std::runtime_error("Could not open input file.");
+        auto res = avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options);
+        if (res < 0) {
+            throw std::runtime_error("Could not open input file: " + AVErrorString(res));
         }
 
         // log.debug() << "AudioCodecReader find stream info...";
@@ -201,6 +202,13 @@ public:
         log.debug() << "AudioCodecReader cancel...";
         mCancelled = true;
         log.info() << "AudioCodecReader cancelled";
+    }
+
+    static std::string AVErrorString(int error) {
+        char errbuf[256];
+        av_strerror(error, errbuf, 256);
+        std::string errstr(errbuf);
+        return errstr;
     }
 };
 }
