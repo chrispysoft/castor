@@ -70,7 +70,7 @@ public:
         //     mItems.push_back({ now + 50, now + 55, "/Users/chris/Music/Audio-Test-Files/Key/F# maj.mp3" });
         //     mItems.push_back({ now + 55, now + 60, "/Users/chris/Music/Audio-Test-Files/Key/B maj.mp3" });
         //     mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-        }
+        // }
     }
     
     std::deque<PlayItem> fetchItems() {
