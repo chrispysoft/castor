@@ -82,6 +82,7 @@ public:
         log.debug() << "MP3Player eject...";
         state = IDLE;
         if (mReader) mReader->cancel();
+        mReader = nullptr;
         //std::lock_guard lock(mMutex);
         mReadPos = 0;
         mCurrURL = "";

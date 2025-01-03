@@ -27,6 +27,8 @@ class AudioCodecReader {
     size_t mSampleCount;
     double mDuration;
     std::atomic<bool> mCancelled = false;
+    std::mutex mMutex;
+    std::condition_variable mCV;
     std::vector<float> mFrameBuffer;
     size_t mReadSamples = 0;
 
@@ -195,12 +197,15 @@ public:
             av_frame_unref(mFrame);
         }
 
+        mCV.notify_all();
         log.info() << "AudioCodecReader read finished";
     }
 
     void cancel() {
         log.debug() << "AudioCodecReader cancel...";
         mCancelled = true;
+        std::unique_lock<std::mutex> lock(mMutex);
+        mCV.wait(lock);
         log.info() << "AudioCodecReader cancelled";
     }
 
