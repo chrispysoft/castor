@@ -27,10 +27,6 @@ public:
 
     bool isActive(const time_t& now = time(0)) { return state == PLAY; }
 
-    bool accepts(const PlayItem& item) {
-        return canPlay(item) && state == IDLE;
-    }
-
     enum State {
         IDLE, LOAD, CUE, PLAY
     };

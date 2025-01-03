@@ -32,13 +32,15 @@ class Calendar {
 
 public:
 
-    std::function<void(const std::deque<PlayItem>& items)> activeItemChangeHandler;
-
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
         mAPIClient(tConfig),
         m3uParser()
     {}
+
+    std::deque<PlayItem> activeItems() {
+        return mActiveItems;
+    }
 
     void work() {
         auto now = std::time(0);
@@ -72,7 +74,7 @@ public:
 
         std::deque<PlayItem> activeItems(0);
         for (const auto& item : mItems) {
-            if (now >= item.scheduleStart() && now <= item.scheduleEnd()) {
+            if (item.isInScheduleTime()) {
                 activeItems.push_back(item);
             }
         }
@@ -80,7 +82,6 @@ public:
         if (mActiveItems != activeItems) {
             log.info() << "Calendar active items changed";
             mActiveItems.assign(activeItems.begin(), activeItems.end());
-            if (activeItemChangeHandler) activeItemChangeHandler(mActiveItems);
         }
     }
     

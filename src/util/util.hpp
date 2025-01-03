@@ -96,6 +96,11 @@ void stripM3ULine(std::string& line) {
     line = std::regex_replace(line, removeRgx, "");
 }
 
+template <typename T>
+bool contains(const std::deque<T>& tDeque, const T& tItem) {
+    return (std::find(tDeque.begin(), tDeque.end(), tItem) != tDeque.end());
+}
+
 
 
 template <typename T>

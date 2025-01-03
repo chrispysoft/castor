@@ -93,6 +93,11 @@ struct PlayItem {
     std::time_t scheduleStart() const { return start - loadTime; }
     std::time_t scheduleEnd() const { return end - 5; }
 
+    bool isInScheduleTime() const {
+        auto now = std::time(0);
+        return now >= scheduleStart() && now <= scheduleEnd();
+    }
+
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
     }

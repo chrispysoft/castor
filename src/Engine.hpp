@@ -6,6 +6,7 @@
 #include <thread>
 #include <mutex>
 #include "Config.hpp"
+#include "Calendar.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
 #include "api/APIClient.hpp"
@@ -31,6 +32,7 @@ class Engine : public audio::Client::Renderer {
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
+    Calendar mCalendar;
     api::Client mAPIClient;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
@@ -45,6 +47,7 @@ class Engine : public audio::Client::Renderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
+        mCalendar(mConfig),
         mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(),
@@ -67,6 +70,7 @@ public:
     void start() {
         log.debug() << "Engine starting...";
         mRunning = true;
+        mCalendar.start();
         mAudioClient.start();
         try {
             if (!mConfig.audioRecordPath.empty()) mRecorder.start(mConfig.audioRecordPath + "/test.mp3");
@@ -92,6 +96,7 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
+        mCalendar.stop();
         mRecorder.stop();
         for (const auto& source : mPlayers) source->stop();
         mFallback.stop();
@@ -114,32 +119,20 @@ public:
         }
 
         // std::lock_guard lock(mMutex);
-        if (mItemsToSchedule.size() > 0) {
-            auto item = mItemsToSchedule.front();
-            mItemsToSchedule.pop_front();
-
-            if (std::find(mScheduleItems.begin(), mScheduleItems.end(), item) != mScheduleItems.end()) {
-                return;
+        for (auto item : mCalendar.activeItems()) {
+            if (util::contains(mScheduleItems, item)) continue;
+            
+            auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
+            if (sources.empty()) {
+                log.error() << "No processor registered for uri " << item.uri;
+                mScheduleItems.push_back(item);
+                continue;
             }
-
-            now = std::time(0);
-            if (now - item.lastTry >= item.retryInterval) {
-                try {
-                    auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
-                    if (sources.empty()) throw std::runtime_error("Engine could not find processor for uri " + item.uri);
-                    auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
-                    if (!freeSources.empty()) {
-                        load(item);
-                        mScheduleItems.push_back(item);
-                    } else {
-                        mItemsToSchedule.push_front(item);
-                    }
-                }
-                catch (const std::exception& e) {
-                    log.error() << "Engine failed to load item: " << e.what();
-                    item.lastTry = now;
-                    // mItemsToSchedule.push_front(item);
-                }
+            auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
+            if (!freeSources.empty()) {
+                auto source = freeSources.front();
+                source->schedule(item);
+                mScheduleItems.push_back(item);
             }
         }
 
@@ -167,22 +160,6 @@ public:
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();
         }
-    }
-
-    void schedule(const PlayItem& item) {
-        // std::lock_guard lock(mMutex);
-        mItemsToSchedule.push_back(item);
-    }
-
-    void load(const PlayItem& item) {
-        log.info(Log::Magenta) << "Engine load " << item.uri;
-        auto it = std::find_if(mPlayers.begin(), mPlayers.end(), [&](auto p) { return p->accepts(item); });
-        if (it == mPlayers.end()) {
-            log.error() << "Could not find available player for item " << item.uri;
-            return;
-        }
-        auto source = *it;
-        source->schedule(item);
     }
 
     void renderCallback(const float* in, float* out, size_t nframes) override {
