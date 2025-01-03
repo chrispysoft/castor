@@ -84,7 +84,7 @@ struct PlayItem {
     std::string uri;
     api::Program program = {};
     std::time_t lastTry = 0;
-    std::time_t retryInterval = 5;
+    std::time_t retryInterval = 2;
     std::time_t loadTime = 30;
     std::time_t fadeInTime = 1;
     std::time_t fadeOutTime = 3;

@@ -37,7 +37,7 @@ public:
 
     }
     
-    ~MP3Player() override {
+    ~MP3Player() {
         if (state != IDLE) stop();
     }
     

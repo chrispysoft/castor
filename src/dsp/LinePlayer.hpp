@@ -19,8 +19,8 @@ public:
         
     }
 
-    ~LinePlayer() override {
-        
+    ~LinePlayer() {
+
     }
 
     void load(const std::string& tURL, double seek = 0) override {}

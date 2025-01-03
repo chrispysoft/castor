@@ -30,7 +30,7 @@ public:
         
     }
 
-    ~QueuePlayer() override {
+    ~QueuePlayer() {
         if (mRunning) stop();
     }
 

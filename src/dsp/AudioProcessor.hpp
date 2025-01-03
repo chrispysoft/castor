@@ -37,8 +37,6 @@ public:
         return state;
     }
 
-    std::shared_ptr<PlayItem> playItem = nullptr;
-
     void play() {
         state = PLAY;
     }
@@ -49,24 +47,33 @@ public:
 
     virtual void load(const std::string& url, double position = 0) = 0;
 
+    std::shared_ptr<PlayItem> playItem = nullptr;
+    std::unique_ptr<std::thread> schedulingThread = nullptr;
+
     void schedule(const PlayItem& item) {
         playItem = std::make_shared<PlayItem>(item);
         state = LOAD;
-        //std::thread([this] {
-            if (playItem && item.isInScheduleTime() && state != CUE) {
+        if (schedulingThread && schedulingThread->joinable()) schedulingThread->join();
+        schedulingThread = std::make_unique<std::thread>([this] {
+            while (playItem && playItem->isInScheduleTime() && state != CUE) {
                 auto pos = std::time(0) - playItem->start;
                 if (pos < 0) pos = 0;
                 try {
-                    auto uri = item.uri;
+                    auto uri = playItem->uri;
                     load(uri, pos);
                     state = CUE;
                 }
                 catch (std::exception& e) {
-                    log.error() << "AudioProcessor failed to load '" << item.uri << "': " << e.what();
-                    std::this_thread::sleep_for(std::chrono::seconds(3));
+                    log.error() << "AudioProcessor failed to load '" << playItem->uri << "': " << e.what();
+                    std::this_thread::sleep_for(std::chrono::seconds(playItem->retryInterval));
                 }
             }
-        //}).detach();
+        });
+    }
+
+    ~Player() {
+        playItem = nullptr;
+        if (schedulingThread && schedulingThread->joinable()) schedulingThread->join();
     }
 
 
