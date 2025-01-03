@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include "../third_party/json.hpp"
 
 namespace cst {
