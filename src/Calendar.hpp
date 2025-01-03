@@ -24,7 +24,6 @@ class Calendar {
     time_t mLastRefreshTime = 0;
     time_t mRefreshInterval = 60;
     std::deque<PlayItem> mItems;
-    std::deque<PlayItem> mActiveItems;
     M3UParser m3uParser;
 
     const std::string m3uPrefix = "m3u://";
@@ -38,8 +37,9 @@ public:
         m3uParser()
     {}
 
-    std::deque<PlayItem> activeItems() {
-        return mActiveItems;
+    std::deque<PlayItem> items() {
+        const auto items = std::deque(mItems.begin(), mItems.end());
+        return items;
     }
 
     void work() {
@@ -70,18 +70,6 @@ public:
         //     mItems.push_back({ now + 50, now + 55, "/Users/chris/Music/Audio-Test-Files/Key/F# maj.mp3" });
         //     mItems.push_back({ now + 55, now + 60, "/Users/chris/Music/Audio-Test-Files/Key/B maj.mp3" });
         //     mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-        // }
-
-        std::deque<PlayItem> activeItems(0);
-        for (const auto& item : mItems) {
-            if (item.isInScheduleTime()) {
-                activeItems.push_back(item);
-            }
-        }
-
-        if (mActiveItems != activeItems) {
-            log.info() << "Calendar active items changed";
-            mActiveItems.assign(activeItems.begin(), activeItems.end());
         }
     }
     

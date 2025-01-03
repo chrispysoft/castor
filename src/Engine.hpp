@@ -24,8 +24,7 @@ class Engine : public audio::Client::Renderer {
 
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
-    std::deque<PlayItem> mItemsToSchedule = {};
-    std::deque<PlayItem> mScheduleItems = {};
+    std::deque<PlayItem> mScheduledItems = {};
     std::mutex mMutex;
 
     double mSampleRate = 44100;
@@ -113,30 +112,32 @@ public:
             mFallback.stop();
         }
 
-        time_t now = std::time(0);
         for (const auto& source : mPlayers) {
             source->work();
         }
 
         // std::lock_guard lock(mMutex);
-        for (auto item : mCalendar.activeItems()) {
-            if (util::contains(mScheduleItems, item)) continue;
-            
-            auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
-            if (sources.empty()) {
-                log.error() << "No processor registered for uri " << item.uri;
-                mScheduleItems.push_back(item);
-                continue;
-            }
-            auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
-            if (!freeSources.empty()) {
-                auto source = freeSources.front();
-                source->schedule(item);
-                mScheduleItems.push_back(item);
+        const auto items = mCalendar.items();
+        for (auto item : items) {
+            if (item.isInScheduleTime()) {
+                if (util::contains(mScheduledItems, item)) continue;
+                
+                auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
+                if (sources.empty()) {
+                    log.error() << "No processor registered for uri " << item.uri;
+                    mScheduledItems.push_back(item);
+                    continue;
+                }
+                auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
+                if (!freeSources.empty()) {
+                    auto source = freeSources.front();
+                    source->schedule(item);
+                    mScheduledItems.push_back(item);
+                }
             }
         }
 
-        now = std::time(0);
+        auto now = std::time(0);
         if (now - mLastReportTime > mReportInterval) {
             mLastReportTime = now;
             postHealth();

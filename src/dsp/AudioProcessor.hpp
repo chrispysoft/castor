@@ -51,11 +51,22 @@ public:
 
     void schedule(const PlayItem& item) {
         playItem = std::make_shared<PlayItem>(item);
-        auto pos = std::time(0) - item.start;
-        if (pos < 0) pos = 0;
         state = LOAD;
-        load(item.uri, pos);
-        state = CUE;
+        //std::thread([this] {
+            if (playItem && item.isInScheduleTime() && state != CUE) {
+                auto pos = std::time(0) - playItem->start;
+                if (pos < 0) pos = 0;
+                try {
+                    auto uri = item.uri;
+                    load(uri, pos);
+                    state = CUE;
+                }
+                catch (std::exception& e) {
+                    log.error() << "AudioProcessor failed to load '" << item.uri << "': " << e.what();
+                    std::this_thread::sleep_for(std::chrono::seconds(3));
+                }
+            }
+        //}).detach();
     }
 
 
