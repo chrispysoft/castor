@@ -14,8 +14,15 @@ namespace cst {
 namespace audio {
 class MP3Player : public Player {
 
+    static size_t align16byte(size_t val) {
+        if (val & (16-1)) {
+            return val + (16 - (val & (16-1)));
+        }
+        return val;
+    }
+
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferSize = 65536 * 64;
+    const size_t kRingBufferSize = 65536; /// align16byte(44100 * 2 * 60 * 60);
 
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
