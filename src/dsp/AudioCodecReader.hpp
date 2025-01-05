@@ -59,6 +59,7 @@ public:
 
         log.debug() << "AudioCodecReader open file...";
         auto res = avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options);
+        av_dict_free(&options);
         if (res < 0) {
             throw std::runtime_error("Could not open input file: " + AVErrorString(res));
         }
