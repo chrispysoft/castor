@@ -59,8 +59,8 @@ public:
         mPlayers.push_back(std::make_shared<audio::MP3Player>(mSampleRate, "Player 2"));
         mPlayers.push_back(std::make_shared<audio::LinePlayer>(mSampleRate, "Line 1"));
 
-        for (auto& proc : mPlayers) {
-            proc->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
+        for (auto& player : mPlayers) {
+            player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
         }
 
         mAudioClient.setRenderer(this);
