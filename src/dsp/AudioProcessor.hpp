@@ -162,9 +162,11 @@ public:
                 stop();
                 state = IDLE;
             }
-        }
 
-        sleep(10);
+            sleep(10);
+        } else {
+            sleep(100);
+        }
     }
 
     void getStatus(std::stringstream& ss) {
