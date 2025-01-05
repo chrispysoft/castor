@@ -202,6 +202,7 @@ public:
     }
 
     void cancel() {
+        if (mCancelled) return;
         log.debug() << "AudioCodecReader cancel...";
         mCancelled = true;
         std::unique_lock<std::mutex> lock(mMutex);

@@ -141,25 +141,30 @@ public:
 
     std::function<void(const std::shared_ptr<PlayItem>& item)> playItemDidStartCallback;
 
-    void work() {
-        if (!playItem) return;
-        time_t now = std::time(0);
-        if (now >= playItem->start && now <= playItem->end && state == CUE) {
-            log.info(Log::Magenta) << name << " PLAY";
-            play();
-            log.info(Log::Magenta) << name << " FADE IN";
-            fadeIn();
-            if (playItemDidStartCallback) playItemDidStartCallback(playItem);
+    void work() override {
+        if (playItem) {
+            auto item = *playItem;
+            time_t now = std::time(0);
+            
+            if (now >= item.start && now <= item.end && state == CUE) {
+                log.info(Log::Magenta) << name << " PLAY";
+                play();
+                log.info(Log::Magenta) << name << " FADE IN";
+                fadeIn();
+                if (playItemDidStartCallback) playItemDidStartCallback(std::make_shared<PlayItem>(item));
+            }
+            else if (now >= item.end - item.fadeOutTime && now < item.end && state == PLAY && !isFading) {
+                log.info(Log::Magenta) << name << " FADE OUT";
+                fadeOut();
+            }
+            else if (now >= item.end + item.ejectTime && state != IDLE) {
+                log.info(Log::Magenta) << name << " STOP";
+                stop();
+                state = IDLE;
+            }
         }
-        else if (now >= playItem->end - playItem->fadeOutTime && now < playItem->end && state == PLAY && !isFading) {
-            log.info(Log::Magenta) << name << " FADE OUT";
-            fadeOut();
-        }
-        else if (now >= playItem->end + playItem->ejectTime && state != IDLE) {
-            log.info(Log::Magenta) << name << " STOP";
-            stop();
-            state = IDLE;
-        }
+
+        sleep(10);
     }
 
     void getStatus(std::stringstream& ss) {
