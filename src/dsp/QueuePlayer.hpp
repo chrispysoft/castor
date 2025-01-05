@@ -77,7 +77,7 @@ public:
             mRunning = true;
             mWorker = std::make_unique<std::thread>([this] {
                 while (this->mRunning) {
-                    this->work();
+                    this->work2();
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
             });
@@ -103,7 +103,7 @@ public:
     }
 
 private:
-    void work() {
+    void work2() {
         if (mPlayer.isIdle()) {
             if (mQueue.size() > 0) {
                 auto url = mQueue.front();

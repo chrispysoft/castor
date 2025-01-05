@@ -89,6 +89,7 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });
+        for (auto& player : mPlayers) player->run();
         log.info() << "Engine started";
     }
 
@@ -97,7 +98,7 @@ public:
         mRunning = false;
         mCalendar.stop();
         mRecorder.stop();
-        for (const auto& source : mPlayers) source->stop();
+        for (const auto& player : mPlayers) player->terminate();
         mFallback.stop();
         mStreamOutput.stop();
         mAudioClient.stop();
@@ -110,10 +111,6 @@ public:
             mFallback.start();
         } else {
             mFallback.stop();
-        }
-
-        for (const auto& source : mPlayers) {
-            source->work();
         }
 
         // std::lock_guard lock(mMutex);

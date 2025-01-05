@@ -20,10 +20,37 @@ public:
 };
 
 
-class Player : public Input {
+class Runner {
+    std::atomic<bool> mRunning = false;
+    std::unique_ptr<std::thread> mWorker = nullptr;
+
+public:
+    void run() {
+        mRunning = true;
+        mWorker = std::make_unique<std::thread>([this] {
+            while (this->mRunning) {
+                this->work();
+            }
+        });
+    }
+
+    void terminate() {
+        mRunning = false;
+        if (mWorker && mWorker->joinable()) mWorker->join();
+    }
+
+    void sleep(time_t millis) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(millis));
+    }
+
+    virtual void work() = 0;
+};
+
+
+class Player : public Input, public Runner {
 public:
 
-    Player(const std::string& name = "") : Input(name) {}
+    Player(const std::string& name = "") : Input(name), Runner() {}
 
     bool isActive(const time_t& now = time(0)) { return state == PLAY; }
 
