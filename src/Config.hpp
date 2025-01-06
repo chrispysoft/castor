@@ -25,7 +25,7 @@ class Config {
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";
     static constexpr const char* kHealthURL = "http://localhost/health";
     static constexpr const char* kClockURL = "http://localhost/clock";
-    static constexpr const char* kPlaylistToken = "castoria:id";
+    static constexpr const char* kPlaylistToken = "castor:id";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);

@@ -1,5 +1,5 @@
-log_path=./logs/castoria.log
-socket_path=./socket/castoria.socket
+log_path=./logs/castor.log
+socket_path=./socket/castor.socket
 audio_source_path=/opt/MP3/Sendungsarch/aura
 audio_playlist_path=/opt/aura/audio/playlist
 audio_record_path=

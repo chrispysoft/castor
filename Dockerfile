@@ -17,8 +17,8 @@ COPY src/ src/
 COPY CMakeLists.txt .
 RUN mkdir /build && cd /build && \
     cmake /app && \
-    cmake --build . --target castoria && \
-    strip castoria
+    cmake --build . --target castor && \
+    strip castor
 
 # Runtime image
 FROM debian:12-slim
@@ -30,5 +30,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libportaudio2 \
     ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /build/castoria /usr/local/bin/castoria
-CMD ["castoria"]
+COPY --from=builder /build/castor /usr/local/bin/castor
+CMD ["castor"]

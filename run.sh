@@ -7,4 +7,4 @@ cmake ..
 cmake --build ..
 make
 cd ..
-build/castoria
+build/castor

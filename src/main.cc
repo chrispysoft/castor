@@ -1,6 +1,6 @@
-#include "Castoria.hpp"
+#include "Castor.hpp"
 
 int main() {
-    cst::Castoria::instance().run();
+    cst::Castor::instance().run();
     return 0;
 }

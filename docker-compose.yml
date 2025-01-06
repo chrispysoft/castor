@@ -1,7 +1,7 @@
 services:
-  castoria:
-    container_name: castoria
-    image: crispybitsapp/castoria:alpha6
+  castor:
+    container_name: castor
+    image: crispybitsapp/castor:alpha5
     restart: always
     build:
       context: .
@@ -15,8 +15,8 @@ services:
     devices:
       - /dev/snd:/dev/snd
     environment:
-      LOG_PATH: "/srv/logs/castoria.log"
-      SOCKET_PATH: "/srv/socket/castoria.sock"
+      LOG_PATH: "/srv/logs/castor.log"
+      SOCKET_PATH: "/srv/socket/castor.sock"
       AUDIO_SOURCE_PATH: ${AUDIO_SOURCE_PATH}
       AUDIO_PLAYLIST_PATH: ${AUDIO_PLAYLIST_PATH}
       AUDIO_RECORD_PATH: ${AUDIO_RECORD_PATH}

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(castoria)
+project(castor)
 
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -13,14 +13,14 @@ if (APPLE)
     link_directories(/opt/homebrew/lib)
 endif()
 
-add_executable(castoria src/main.cc)
+add_executable(castor src/main.cc)
 
-set_target_properties(castoria PROPERTIES
+set_target_properties(castor PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
 
-target_link_libraries(castoria PRIVATE ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${FFMPEG_LIBRARIES})
+target_link_libraries(castor PRIVATE ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${FFMPEG_LIBRARIES})
 
-target_compile_options(castoria PRIVATE -Wno-psabi)
+target_compile_options(castor PRIVATE -Wno-psabi)

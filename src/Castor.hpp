@@ -9,7 +9,7 @@
 #include "util/Log.hpp"
 
 namespace cst {
-class Castoria {
+class Castor {
 
     bool mRunning = false;
     std::mutex mMutex;
@@ -17,7 +17,7 @@ class Castoria {
     Config mConfig;
     Engine mEngine;
     
-    Castoria() :
+    Castor() :
         mConfig("./config/config.txt"),
         mEngine(mConfig)
     {
@@ -38,8 +38,8 @@ class Castoria {
     }
 
 public:
-    static Castoria& instance() {
-        static Castoria instance;
+    static Castor& instance() {
+        static Castor instance;
         return instance;
     }
 
@@ -53,14 +53,14 @@ public:
     }
 
     void terminate() {
-        log.debug() << "Castoria terminating...";
+        log.debug() << "Castor terminating...";
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mRunning = false;
         }
         mCV.notify_all();
         mEngine.stop();
-        log.info() << "Castoria terminated";
+        log.info() << "Castor terminated";
     }
 };
 
