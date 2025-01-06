@@ -115,7 +115,7 @@ public:
 
         // std::lock_guard lock(mMutex);
         const auto items = mCalendar.items();
-        for (auto item : items) {
+        for (auto& item : items) {
             if (item.isInScheduleTime()) {
                 if (util::contains(mScheduledItems, item)) continue;
                 
@@ -164,7 +164,7 @@ public:
         auto nsamples = nframes * 2;
         memset(out, 0, nsamples * sizeof(float));
 
-        for (auto source : mPlayers) {
+        for (auto& source : mPlayers) {
             if (!source->isActive()) continue;
             source->process(in, mMixBuffer.data(), nframes);
             for (auto i = 0; i < mMixBuffer.size(); ++i) {
