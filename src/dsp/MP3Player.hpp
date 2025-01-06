@@ -22,7 +22,7 @@ class MP3Player : public Player {
     }
 
     static constexpr size_t kChannelCount = 2;
-    const size_t kRingBufferSize = 65536; /// align16byte(44100 * 2 * 60 * 60);
+    const size_t kRingBufferSize = align16byte(44100 * 2 * 60 * 60);
 
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
