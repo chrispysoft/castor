@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SinOsc.hpp"
+#include "SineOscillator.hpp"
 #include "QueuePlayer.hpp"
 #include "../util/Log.hpp"
 
@@ -10,8 +10,8 @@ class Fallback : public Input {
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
 
-    SinOsc mOscL;
-    SinOsc mOscR;
+    SineOscillator mOscL;
+    SineOscillator mOscR;
     QueuePlayer mQueuePlayer;
     std::string mFallbackURL;
     bool mActive;
