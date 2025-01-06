@@ -118,6 +118,7 @@ public:
         log.debug() << "SocketServer stopped";
     }
 
+    std::string statusString;
 
 private:
 
@@ -163,20 +164,26 @@ private:
                 memset(buffer, 0, sizeof(buffer));
                 ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
-                if (bytesRead <= 0) {
-                    if (bytesRead < 0) {
-                        log.error() << "SocketServer recv failed: " << strerror(errno);
-                    }
+                // if (bytesRead <= 0) {
+                //     if (bytesRead < 0) {
+                //         log.error() << "SocketServer recv failed: " << strerror(errno);
+                //     }
+                //     break;
+                // }
+
+                // if (rxHandler) {
+                //     rxHandler(buffer, static_cast<size_t>(bytesRead), [clientSocket](const std::string& response) {
+                //         if (send(clientSocket, response.c_str(), response.size(), 0) < 0) {
+                //             log.error() << "SocketServer send failed: " << strerror(errno);
+                //         }
+                //     });
+                // }
+                // log.debug() << response;
+                if (send(clientSocket, statusString.c_str(), statusString.size(), 0) < 0) {
+                    log.error() << "SocketServer send failed: " << strerror(errno);
                     break;
                 }
-
-                if (rxHandler) {
-                    rxHandler(buffer, static_cast<size_t>(bytesRead), [clientSocket](const std::string& response) {
-                        if (send(clientSocket, response.c_str(), response.size(), 0) < 0) {
-                            log.error() << "SocketServer send failed: " << strerror(errno);
-                        }
-                    });
-                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
         catch (const std::exception& e) {

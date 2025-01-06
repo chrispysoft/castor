@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <iomanip>
 #include "../util/Log.hpp"
 
 namespace cst {
@@ -62,6 +63,19 @@ public:
 
     State getState(const time_t& now = std::time(0)) const {
         return state;
+    }
+
+    const char* stateStr() {
+        static constexpr const char* Idle = "IDLE";
+        static constexpr const char* Load = "LOAD";
+        static constexpr const char* Cue  = "CUE";
+        static constexpr const char* Play = "PLAY";
+        switch (state) {
+            case IDLE: return Idle;
+            case LOAD: return Load;
+            case CUE:  return Cue;
+            case PLAY: return Play;
+        }
     }
 
     void play() {
@@ -167,10 +181,6 @@ public:
         } else {
             sleep(100);
         }
-    }
-
-    void getStatus(std::stringstream& ss) {
-        ss << name << " " << state << " " << std::setfill(' ') << std::setw(2) << volume << "    ";
     }
 };
 }
