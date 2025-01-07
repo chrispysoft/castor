@@ -33,6 +33,7 @@ public:
         auto sampleCount = tFrameCount * kChannelCount;
         auto byteSize = sampleCount * sizeof(float);
         memcpy(tOutBuffer, tInBuffer, byteSize);
+        calcRMS(tOutBuffer, sampleCount);
     }
 };
 }

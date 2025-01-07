@@ -118,6 +118,7 @@ public:
         } else {
             memset(tBuffer, 0, sampleCount * sizeof(float));
         }
+        calcRMS(tBuffer, sampleCount);
     }
 };
 }

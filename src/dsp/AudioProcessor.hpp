@@ -165,6 +165,12 @@ public:
     }
 
 
+    std::atomic<float> rms = -INFINITY;
+    void calcRMS(const float* buffer, size_t sampleCount) {
+        rms = util::rms_dB(buffer, sampleCount);
+    }
+
+
     std::function<void(const std::shared_ptr<PlayItem>& item)> playItemDidStartCallback;
 
     void work() override {
