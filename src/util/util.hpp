@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <ctime>
 #include <cstring>
+#include <cmath>
 
 namespace cst {
 namespace util {
@@ -102,6 +103,19 @@ bool contains(const std::deque<T>& tDeque, const T& tItem) {
 }
 
 
+template <typename T>
+inline T rms_dB(const T* tBlock, size_t tNumSamples) {
+    T rms = 0;
+    for (auto i = 0; i < tNumSamples; ++i) {
+        rms += tBlock[i] * tBlock[i];
+    }
+    if (rms == 0) return -std::numeric_limits<T>::infinity();
+    rms = sqrt(rms / tNumSamples);
+    T dB = 20 * log10(rms);
+    // log.debug() << "RMS lin: " << rms << " dB: " << dB;
+    return dB;
+}
+
 
 template <typename T>
 class RingBuffer {
@@ -114,7 +128,7 @@ class RingBuffer {
     std::condition_variable mCV;
 
 public:
-    explicit RingBuffer(size_t tCapacity) :
+    RingBuffer(size_t tCapacity) :
         mCapacity(tCapacity),
         mBuffer(mCapacity)
     {}
