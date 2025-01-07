@@ -19,6 +19,7 @@ class SocketServer {
     int mSocket;
     std::string mSocketPath;
     std::atomic<bool> mRunning;
+    std::atomic<bool> mConnected;
     std::thread mListenerThread;
     std::mutex mSocketMutex;
 
@@ -118,6 +119,10 @@ public:
         log.debug() << "SocketServer stopped";
     }
 
+    bool connected() {
+        return mConnected;
+    }
+
     std::string statusString;
 
 private:
@@ -157,6 +162,7 @@ private:
     }
 
     void handleClient(int clientSocket) {
+        mConnected = true;
         char buffer[1024];
 
         try {
@@ -191,6 +197,7 @@ private:
         }
         
         close(clientSocket);
+        mConnected = false;
         log.info() << "Client disconnected";
     }
 };
