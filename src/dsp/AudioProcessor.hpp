@@ -139,8 +139,11 @@ public:
         std::thread([increase, duration, this] {
             auto niters = duration * 100;
             float incr = 1.0 / 100.0 / duration;
-            if (!increase) incr *= -1;
-            float vol = this->volume;
+            float vol = 0;
+            if (!increase) {
+                incr *= -1;
+                vol = 1;
+            }
             for (auto i = 0; i < niters; ++i) {
                 vol += incr;
                 this->setVolume(vol, true);
