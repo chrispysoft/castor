@@ -75,6 +75,7 @@ public:
             case LOAD: return Load;
             case CUE:  return Cue;
             case PLAY: return Play;
+            default: throw std::runtime_error("Unknown default");
         }
     }
 
