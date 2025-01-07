@@ -158,6 +158,7 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
             }
+            this->setVolume(std::round(vol), false);
             isFading = false;
             log.debug() << name << " fade done";
         }).detach();
