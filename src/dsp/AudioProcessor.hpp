@@ -122,6 +122,13 @@ public:
     float volume = 0;
 
     void setVolume(float vol, bool exp) {
+        if (vol < 0) {
+            log.error() << "AudioProcessor " << name << " volume < 0";
+            vol = 0;
+        } else if (vol > 1) {
+            log.error() << "AudioProcessor " << name << " volume > 1";
+            vol = 1;
+        }
         volume = exp ? vol*vol : vol;
     }
 
