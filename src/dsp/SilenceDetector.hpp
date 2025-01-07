@@ -34,20 +34,8 @@ public:
         
     }
 
-    static inline float rms_dB(const float* tBlock, size_t tNumFrames, size_t tNumChannels) {
-        const auto nsamples = tNumFrames * tNumChannels;
-        float rms = 0;
-        for (auto i = 0; i < nsamples; ++i) {
-            rms += tBlock[i] * tBlock[i];
-        }
-        rms = sqrt(rms / nsamples);
-        float dB = (rms > 0) ? 20 * log10(rms) : -std::numeric_limits<float>::infinity();
-        // log.debug() << "RMS lin: " << rms << " dB: " << dB;
-        return dB;
-    }
-
     void process(const float* in, size_t nframes) {
-        float rms = rms_dB(in, nframes, kChannelCount);
+        float rms = util::rms_dB(in, nframes * kChannelCount);
         bool silence = rms <= mThreshold;
         if (silence) {
             if (mSilenceStart == 0) {
