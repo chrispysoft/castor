@@ -150,16 +150,9 @@ public:
             postHealth();
         }
 
-        std::ostringstream statusSS;
-        statusSS << "\x1b[4A";
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->name << ' ';
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->stateStr() << ' ';
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->volume << ' ';
-        statusSS << '\n';
-        mSocketServer.statusString = statusSS.str();
+        if (mSocketServer.connected()) {
+            updateStatus();
+        }
     }
 
     void playItemDidStart(const std::shared_ptr<PlayItem>& item) {
@@ -180,6 +173,23 @@ public:
             log.error() << "Engine failed to post health: " << e.what();
         }
     }
+
+    void updateStatus() {
+        std::ostringstream statusSS;
+        statusSS << "\x1b[5A";
+        statusSS << '\n';
+        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->name << ' ';
+        statusSS << '\n';
+        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->stateStr() << ' ';
+        statusSS << '\n';
+        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->volume << ' ';
+        statusSS << '\n';
+        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
+        statusSS << '\n';
+        mSocketServer.statusString = statusSS.str();
+        log.debug() << statusSS.str();
+    }
+    
 
     void renderCallback(const float* in, float* out, size_t nframes) override {
         auto nsamples = nframes * 2;
