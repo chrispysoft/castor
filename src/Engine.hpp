@@ -7,7 +7,7 @@
 #include <mutex>
 #include "Config.hpp"
 #include "Calendar.hpp"
-#include "util/SocketServer.hpp"
+#include "util/TCPServer.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
 #include "api/APIClient.hpp"
@@ -32,7 +32,7 @@ class Engine : public audio::Client::Renderer {
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
-    SocketServer mSocketServer;
+    TCPServer mTCPServer;
     Calendar mCalendar;
     api::Client mAPIClient;
     audio::Client mAudioClient;
@@ -48,7 +48,7 @@ class Engine : public audio::Client::Renderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
-        mSocketServer(mConfig.socketPath),
+        mTCPServer(mConfig.tcpPort),
         mCalendar(mConfig),
         mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
@@ -94,7 +94,7 @@ public:
         });
         for (auto& player : mPlayers) player->run();
         try {
-            mSocketServer.start();
+            mTCPServer.start();
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to start socket server: " << e.what();
@@ -105,7 +105,7 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
-        mSocketServer.stop();
+        mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
         for (const auto& player : mPlayers) player->terminate();
@@ -150,7 +150,7 @@ public:
             postHealth();
         }
 
-        if (mSocketServer.connected()) {
+        if (mTCPServer.connected()) {
             updateStatus();
         }
     }
@@ -186,8 +186,8 @@ public:
         statusSS << '\n';
         for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
         statusSS << '\n';
-        mSocketServer.statusString = statusSS.str();
-        log.debug() << statusSS.str();
+        mTCPServer.statusString = statusSS.str();
+        // log.debug() << statusSS.str();
     }
     
 
