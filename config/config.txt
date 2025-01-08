@@ -13,3 +13,4 @@ playlog_url=http://localhost:8010/api/v1/playlog
 health_url=http://localhost:8010/api/v1/source/health/1
 clock_url=http://localhost:8010/api/v1/clock
 playlist_token=engine:1234
+tcp_port=4440
