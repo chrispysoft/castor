@@ -26,6 +26,7 @@ class Config {
     static constexpr const char* kHealthURL = "http://localhost/health";
     static constexpr const char* kClockURL = "http://localhost/clock";
     static constexpr const char* kPlaylistToken = "castor:id";
+    static constexpr const char* kTCPPort = "0";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -62,6 +63,7 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string playlistToken;
+    int tcpPort;
 
     static std::string get(Map& map, std::string mapKey, std::string envKey, std::string defaultValue) {
         std::string value;
@@ -96,6 +98,7 @@ public:
         healthURL = get(map, "health_url", "HEALTH_URL", kHealthURL);
         clockURL = get(map, "clock_url", "CLOCK_URL", kClockURL);
         playlistToken = get(map, "playlist_token", "PLAYLIST_TOKEN", kPlaylistToken);
+        tcpPort = std::stoi(get(map, "tcp_port", "TCP_PORT", kTCPPort));
 
         log.info() << "Config:"
         << "\n\t logPath=" << logPath 
@@ -112,7 +115,8 @@ public:
         << "\n\t playlogURL=" << playlogURL
         << "\n\t healthURL=" << healthURL
         << "\n\t clockURL=" << clockURL
-        << "\n\t playlistToken=<hidden>";
+        << "\n\t playlistToken=<hidden>"
+        << "\n\t tcpPort=" << tcpPort;
     }
 };
 }
