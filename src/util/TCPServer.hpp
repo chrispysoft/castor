@@ -48,6 +48,10 @@ public:
             return;
         }
 
+        if (mPort <= 0 || mPort > UINT16_MAX) {
+            throw std::runtime_error("invalid port "+std::to_string(mPort));
+        }
+
         mSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (mSocket < 0) {
             throw std::runtime_error("socket failed");
