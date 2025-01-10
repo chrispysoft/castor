@@ -6,15 +6,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./audio:/srv/audio
-      - ./logs:/srv/logs
-      - ./socket:/srv/socket
-      - /opt/aura/audio:/opt/aura/audio
-      - /opt/MP3:/opt/MP3
-    devices:
-      - /dev/snd:/dev/snd
     environment:
+      TZ: ${TIMEZONE}
       LOG_PATH: "/srv/logs/castor.log"
       SOCKET_PATH: "/srv/socket/castor.sock"
       AUDIO_SOURCE_PATH: ${AUDIO_SOURCE_PATH}
@@ -28,8 +21,17 @@ services:
       PLAYLIST_URL: ${PLAYLIST_URL}
       PLAYLOG_URL: ${PLAYLOG_URL}
       PLAYLIST_TOKEN: ${PLAYLIST_TOKEN}
+      TCP_PORT: ${TCP_PORT}
+    volumes:
+      - ./audio:/srv/audio
+      - ./logs:/srv/logs
+      - /opt/aura/audio:/opt/aura/audio
+      - /opt/MP3:/opt/MP3
+    devices:
+      - /dev/snd:/dev/snd
+    ports:
+      - "${TCP_PORT}:${TCP_PORT}/tcp"
 
 volumes:
   audio:
   logs:
-  socket:
