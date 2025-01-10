@@ -32,7 +32,7 @@ public:
     }
 
     void start(const std::string tURL) {
-        log.error() << "Recorder start";
+        log.info(Log::Magenta) << "Recorder start";
         if (mRunning) {
             log.debug() << "Recorder already running";
             return;
@@ -62,7 +62,7 @@ public:
         mWriter = nullptr;
         mWorker = nullptr;
         mRingBuffer.flush();
-        log.info() << "Recorder stopped";
+        log.info(Log::Magenta) << "Recorder stopped";
     }
 
     bool isRunning() {
