@@ -7,6 +7,7 @@
 #include <string>
 #include <ctime>
 #include <deque>
+#include <filesystem>
 
 #include "Config.hpp"
 #include "api/API.hpp"
@@ -28,6 +29,7 @@ class Calendar {
 
     const std::string m3uPrefix = "m3u://";
     const std::string filePrefix = "file://";
+    const std::string defaultFileSuffix = ".flac";
 
 public:
 
@@ -116,11 +118,23 @@ public:
                         log.error() << "Calendar error reading M3U: " << e.what();
                     }
                 } else {
-                    auto uri = (entry.uri.starts_with(filePrefix)) ? mConfig.audioSourcePath + entry.uri.substr(filePrefix.size()) : entry.uri;
-                    items.push_back({itemStart, itemEnd, entry.uri, pr});
+                    auto uri = entry.uri;
+                    if (uri.starts_with(filePrefix)) {
+                        uri = mConfig.audioSourcePath + "/" + entry.uri.substr(filePrefix.size());
+                        if (std::filesystem::path(uri).extension().empty()) {
+                            log.warn() << "Calendar item '" << uri << "' has no file extension - adding default " << defaultFileSuffix;
+                            uri += defaultFileSuffix;
+                        }
+                    }
+                    items.push_back({itemStart, itemEnd, uri, pr});
                 }
                 itemStart += entryDuration;
             }
+
+            // if (!std::filesystem::exists(uri)) {
+            //     log.error() << "Calendar item '" << uri << "' does not exist";
+            //     continue;
+            // }
         }
         return items;
     }
