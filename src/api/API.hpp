@@ -16,6 +16,10 @@ struct Program {
     std::string end;
     std::string showName;
     std::string episodeTitle;
+
+    bool operator==(const Program& other) const {
+        return other.timeslotId == this->timeslotId && other.showId == this->showId && other.playlistId == this->playlistId && other.id == this->id;
+    }
 };
 
 

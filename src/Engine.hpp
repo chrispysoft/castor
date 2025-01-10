@@ -74,12 +74,6 @@ public:
         mCalendar.start();
         mAudioClient.start();
         try {
-            if (!mConfig.audioRecordPath.empty()) mRecorder.start(mConfig.audioRecordPath + "/test.mp3");
-        }
-        catch (const std::runtime_error& e) {
-            log.error() << "Engine failed to start recorder: " << e.what();
-        }
-        try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
         }
         catch (const std::exception& e) {
@@ -154,7 +148,29 @@ public:
         }
     }
 
+
+    api::Program mCurrProgram = {};
+
     void playItemDidStart(const std::shared_ptr<PlayItem>& item) {
+        log.info() << "Engine playItemDidStart";
+        if (mCurrProgram != item->program) {
+            mCurrProgram = item->program;
+            log.info() << "Engine program changed to " << mCurrProgram.showName;
+
+            if (mConfig.audioRecordPath.size() > 0) {
+                mRecorder.stop();
+
+                if (mCurrProgram.showId >= 1) {
+                    auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".ogg";
+                    try {
+                        mRecorder.start(recURL);
+                    }
+                    catch (const std::runtime_error& e) {
+                        log.error() << "Engine failed to start recorder for url: " << recURL << " " << e.what();
+                    }
+                }
+            }
+        }
         try {
             mAPIClient.postPlaylog(*item);
         }
