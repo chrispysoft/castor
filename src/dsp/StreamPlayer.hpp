@@ -6,13 +6,13 @@
 #include <mutex>
 #include <condition_variable>
 #include "AudioProcessor.hpp"
-#include "AudioCodecReader.hpp"
+#include "CodecReader.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
 
 namespace cst {
 namespace audio {
-class MP3Player : public Player {
+class StreamPlayer : public Player {
 
     static size_t align16byte(size_t val) {
         if (val & (16-1)) {
@@ -22,7 +22,7 @@ class MP3Player : public Player {
     }
 
     static constexpr size_t kChannelCount = 2;
-    const size_t kRingBufferSize = align16byte(44100 * 2 * 60 * 60);
+    const size_t kRingBufferSize = align16byte(44100 * 2 * 60 * 10);
 
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
@@ -32,19 +32,19 @@ class MP3Player : public Player {
     std::mutex mMutex;
     std::condition_variable mCondition;
     std::atomic<bool> mLoading = false;
-    std::unique_ptr<AudioCodecReader> mReader = nullptr;
+    std::unique_ptr<CodecReader> mReader = nullptr;
     util::RingBuffer<float> mRingBuffer;
     
 
 public:
-    MP3Player(double tSampleRate, const std::string tName = "") : Player(tName),
+    StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
         mRingBuffer(kRingBufferSize)
     {
 
     }
     
-    ~MP3Player() {
+    ~StreamPlayer() {
         if (state != IDLE) stop();
     }
     
@@ -57,13 +57,13 @@ public:
     }
 
     void load(const std::string& tURL, double seek = 0) override {
-        log.info() << "MP3Player load " << tURL << " position " << seek;
+        log.info() << "StreamPlayer load " << tURL << " position " << seek;
         // eject();
         state = LOAD;
         mLoading = true;
         try {
             if (mReader) mReader->cancel();
-            mReader = std::make_unique<AudioCodecReader>(mSampleRate, tURL, seek);
+            mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
             mSampleCount = mReader->sampleCount();
             std::thread([this] {
                 this->mReader->read(this->mRingBuffer);
@@ -86,7 +86,7 @@ public:
     }
 
     void eject() {
-        log.debug() << "MP3Player eject...";
+        log.debug() << "StreamPlayer eject...";
         state = IDLE;
         if (mReader) mReader->cancel();
         mReader = nullptr;
@@ -94,7 +94,7 @@ public:
         mReadPos = 0;
         mCurrURL = "";
         mRingBuffer.flush();
-        log.info() << "MP3Player ejected";
+        log.info() << "StreamPlayer ejected";
     }
 
 

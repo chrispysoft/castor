@@ -3,7 +3,7 @@
 #include <deque>
 #include <unordered_map>
 #include "../api/API.hpp"
-#include "../dsp/AudioCodecReader.hpp"
+#include "../dsp/CodecReader.hpp"
 
 namespace cst {
 class M3UParser {
@@ -70,7 +70,7 @@ public:
             while (getline(file, path)) {
                 util::stripM3ULine(path);
                 try {
-                    auto reader = audio::AudioCodecReader(44100, path);
+                    auto reader = audio::CodecReader(44100, path);
                     int duration = round(reader.duration());
                     if (duration <= 0) {
                         throw std::runtime_error("Could not get duration");

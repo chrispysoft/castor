@@ -1,5 +1,8 @@
 #pragma once
 
+#include "AudioProcessor.hpp"
+#include "../util/Log.hpp"
+#include "../util/util.hpp"
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -7,18 +10,16 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 }
-#include "AudioProcessor.hpp"
 #include <iostream>
 #include <string>
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-#include "../util/Log.hpp"
-#include "../util/util.hpp"
+
 
 namespace cst {
 namespace audio {
-class AudioCodecReader {
+class CodecReader {
 
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kFrameBufferSize = 4096; // 128 - 2048
@@ -41,7 +42,7 @@ class AudioCodecReader {
     
 
 public:
-    AudioCodecReader(double tSampleRate, const std::string tURL, double tSeek = 0) :
+    CodecReader(double tSampleRate, const std::string tURL, double tSeek = 0) :
         mSampleRate(tSampleRate),
         mSampleCount(0),
         mFrameBuffer(kFrameBufferSize)
@@ -151,7 +152,7 @@ public:
         log.debug() << "AudioCodecReader sample count " << std::to_string(mSampleCount);
     }
 
-    ~AudioCodecReader() {
+    ~CodecReader() {
         av_packet_free(&mPacket);
         av_frame_free(&mFrame);
         swr_free(&mSwrCtx);
@@ -217,6 +218,7 @@ public:
         std::string errstr(errbuf);
         return errstr;
     }
+    
 };
 }
 }

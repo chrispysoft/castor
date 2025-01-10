@@ -13,8 +13,7 @@
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
-#include "dsp/MP3Player.hpp"
-#include "dsp/QueuePlayer.hpp"
+#include "dsp/StreamPlayer.hpp"
 #include "dsp/Fallback.hpp"
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
@@ -58,8 +57,8 @@ public:
         mStreamOutput(mSampleRate),
         mMixBuffer(mBufferSize * 2)
     {
-        mPlayers.push_back(std::make_shared<audio::MP3Player>(mSampleRate, "Player 1"));
-        mPlayers.push_back(std::make_shared<audio::MP3Player>(mSampleRate, "Player 2"));
+        mPlayers.push_back(std::make_shared<audio::StreamPlayer>(mSampleRate, "Player 1"));
+        mPlayers.push_back(std::make_shared<audio::StreamPlayer>(mSampleRate, "Player 2"));
         mPlayers.push_back(std::make_shared<audio::LinePlayer>(mSampleRate, "Line 1"));
 
         for (auto& player : mPlayers) {

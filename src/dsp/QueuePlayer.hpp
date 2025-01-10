@@ -8,7 +8,7 @@
 #include <iostream>
 #include <mutex>
 #include "AudioProcessor.hpp"
-#include "MP3Player.hpp"
+#include "StreamPlayer.hpp"
 #include "../util/Log.hpp"
 
 namespace cst {
@@ -18,7 +18,7 @@ class QueuePlayer : public Player {
     std::atomic<bool> mRunning;
     std::deque<std::string> mQueue;
     std::mutex mMutex;
-    MP3Player mPlayer;
+    StreamPlayer mPlayer;
     
 public:
     QueuePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
