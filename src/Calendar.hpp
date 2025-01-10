@@ -93,7 +93,7 @@ public:
 
             for (const auto& entry : playlist.entries) {
                 // log.debug() << entry.uri;
-                auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - prStart;
+                auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - itemStart;
                 auto itemEnd = itemStart + entryDuration;
                 if (itemEnd == itemStart) {
                     itemEnd = prEnd;
@@ -125,11 +125,6 @@ public:
                             log.warn() << "Calendar item '" << uri << "' has no file extension - adding default " << defaultFileSuffix;
                             uri += defaultFileSuffix;
                         }
-                    }
-                    if (itemEnd >= prEnd) {
-                        log.warn() << "Calendar item '" << uri << "' exceeds program end time - cropping";
-                        items.push_back({itemStart, prEnd, uri, pr});
-                        break;
                     }
                     items.push_back({itemStart, itemEnd, uri, pr});
                 }
