@@ -81,7 +81,7 @@ public:
                         items.push_back({itmStart, itmEnd, path});
                         itmStart = itmEnd;
                     } else {
-                        log.info() << "M3U item exceeds end time - cropping";
+                        log.warn() << "M3U item exceeds end time - cropping";
                         items.push_back({itmStart, endTime, path});
                         break;
                     }

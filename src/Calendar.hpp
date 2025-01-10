@@ -126,6 +126,11 @@ public:
                             uri += defaultFileSuffix;
                         }
                     }
+                    if (itemEnd >= prEnd) {
+                        log.warn() << "Calendar item '" << uri << "' exceeds program end time - cropping";
+                        items.push_back({itemStart, prEnd, uri, pr});
+                        break;
+                    }
                     items.push_back({itemStart, itemEnd, uri, pr});
                 }
                 itemStart += entryDuration;
