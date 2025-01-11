@@ -21,6 +21,7 @@ class TCPServer {
     int mPort;
     std::atomic<bool> mRunning = false;
     std::thread mListenerThread;
+    std::mutex mSocketMutex;
     std::vector<std::future<void>> mFutures;
 
     void setNonBlocking(int socket) const {
@@ -119,27 +120,30 @@ public:
 private:
 
     void run() {
-        fd_set read_fds;
         while (mRunning) {
-            FD_ZERO(&read_fds);
-            FD_SET(mSocket, &read_fds);
+            pollfd fds[1];
+            {
+                std::lock_guard<std::mutex> lock(mSocketMutex);
+                if (mSocket < 0) break; // socket closed during stop()
+                fds[0].fd = mSocket;
+            }
+            fds[0].events = POLLIN;
 
-            int activity = select(mSocket + 1, &read_fds, nullptr, nullptr, nullptr);
-            if (activity < 0) {
-                if (errno != EINTR) {
-                    log.error() << "TCPServer select error";
-                    break;
-                }
-                continue;
+            int ret = poll(fds, 1, 100); // avoid busy-waiting
+            if (ret < 0) {
+                if (errno == EINTR) continue;
+                log.error() << "TCPServer poll failed: " << strerror(errno);
+                break;
             }
 
-            if (FD_ISSET(mSocket, &read_fds)) {
+            if (fds[0].revents & POLLIN) {
                 sockaddr_in clientAddr{};
-                socklen_t addrLen = sizeof(clientAddr);
+                socklen_t clientLen = sizeof(clientAddr);
 
-                int clientSocket = accept(mSocket, reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
+                int clientSocket = accept(mSocket, reinterpret_cast<struct sockaddr*>(&clientAddr), &clientLen);
                 if (clientSocket < 0) {
-                    if (mRunning) log.error() << "TCPServer accept failed: " << strerror(errno);
+                    if (errno == EINTR) continue; // interrupted
+                    log.error() << "TCPServer accept failed: " << strerror(errno);
                     continue;
                 }
 
@@ -153,12 +157,13 @@ private:
         try {
             setNonBlocking(clientSocket);
 
-            char buffer[1024];
+            static constexpr size_t rxBufSz = 1024;
+            char rxBuf[rxBufSz];
             while (mRunning) {
-                memset(buffer, 0, sizeof(buffer));
-                ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+                memset(rxBuf, 0, rxBufSz);
+                ssize_t bytesRead = recv(clientSocket, rxBuf, rxBufSz - 1, 0);
                 if (bytesRead > 0) {
-                    auto response = std::string(buffer, bytesRead);
+                    auto response = std::string(rxBuf, bytesRead);
                     log.info() << "TCPServer received from client [" << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "]: " << response;
                 }
 
