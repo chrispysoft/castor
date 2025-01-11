@@ -94,7 +94,8 @@ public:
         }
 
         if (!(mFormatCtx->oformat->flags & AVFMT_NOFILE)) {
-            if (avio_open(&mFormatCtx->pb, tURL.c_str(), AVIO_FLAG_WRITE) < 0) {
+            log.debug() << "CodecWriter AVFMT_NOFILE";
+            if (avio_open2(&mFormatCtx->pb, tURL.c_str(), AVIO_FLAG_WRITE, nullptr, &mOptions) < 0) {
                 throw std::runtime_error("Failed to open output file");
             }
         }
