@@ -27,10 +27,12 @@ class CodecReader {
     const double mSampleRate;
     size_t mSampleCount;
     double mDuration;
+    std::vector<float> mFrameBuffer;
     std::atomic<bool> mCancelled = false;
     std::mutex mMutex;
     std::condition_variable mCV;
-    std::vector<float> mFrameBuffer;
+    bool mReading = false;
+    
     size_t mReadSamples = 0;
 
     AVFormatContext* mFormatCtx = nullptr;
@@ -167,6 +169,8 @@ public:
     void read(util::RingBuffer<float>& tBuffer) {
         log.debug() << "AudioCodecReader read...";
 
+        mReading = true;
+
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index == mStreamIndex) {
                 if (avcodec_send_packet(mCodecCtx, mPacket) >= 0) {
@@ -199,7 +203,11 @@ public:
             av_frame_unref(mFrame);
         }
 
-        mCV.notify_all();
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mReading = false;
+            mCV.notify_all();
+        };
         log.info() << "AudioCodecReader read finished";
     }
 
@@ -207,8 +215,10 @@ public:
         if (mCancelled) return;
         log.debug() << "AudioCodecReader cancel...";
         mCancelled = true;
-        std::unique_lock<std::mutex> lock(mMutex);
-        mCV.wait(lock);
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [this] { return !mReading; });
+        }
         log.info() << "AudioCodecReader cancelled";
     }
 
