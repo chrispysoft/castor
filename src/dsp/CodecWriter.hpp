@@ -30,6 +30,7 @@ class CodecWriter {
     std::atomic<bool> mCancelled = false;
     std::mutex mMutex;
     std::condition_variable mCV;
+    bool mWriting = false;
 
     AVChannelLayout mChannelLayout;
     AVDictionary *mOptions = nullptr;
@@ -47,7 +48,7 @@ public:
         mURL(tURL),
         mFrameBuffer(kFrameBufferSize)
     {
-        // av_log_set_level(AV_LOG_TRACE);
+        av_log_set_level(AV_LOG_INFO);
 
         av_channel_layout_default(&mChannelLayout, kChannelCount);
 
@@ -148,6 +149,8 @@ public:
     void write(util::RingBuffer<float>& tBuffer) {
         log.debug() << "AudioCodecWriter write...";
 
+        mWriting = true;
+
         auto samplesPerFrame = mCodecCtx->frame_size * kChannelCount;
         auto framesWritten = 0;
 
@@ -195,18 +198,19 @@ public:
         
         {
             std::unique_lock<std::mutex> lock(mMutex);
+            mWriting = false;
             mCV.notify_all();
         }
         log.info() << "AudioCodecWriter wrote << " << framesWritten << " frames";
     }
 
     void cancel() {
-        if (mCancelled) return;
+        if (mCancelled || !mWriting) return;
         log.debug() << "AudioCodecWriter cancel...";
         mCancelled = true;
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock);
+            mCV.wait(lock, [this] { return !mWriting; });
         }
         log.info() << "AudioCodecWriter cancelled";
     }
