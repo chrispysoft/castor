@@ -74,6 +74,7 @@ public:
         auto nsamples = nframes * kChannelCount;
         if (mRingBuffer.size() + nsamples > kRingBufferSize) {
             log.warn() << "Recorder ring buffer overflow";
+            mRingBuffer.flush();
             return;
         }
         mRingBuffer.write(in, nsamples);
