@@ -32,6 +32,7 @@ class CodecWriter {
     std::condition_variable mCV;
 
     AVChannelLayout mChannelLayout;
+    AVDictionary *mOptions = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
     AVFormatContext* mFormatCtx = nullptr;
     AVStream* mStream = nullptr;
@@ -49,6 +50,15 @@ public:
         // av_log_set_level(AV_LOG_TRACE);
 
         av_channel_layout_default(&mChannelLayout, kChannelCount);
+
+        av_dict_set(&mOptions, "timeout", "5000000", 0); // 5 seconds
+        av_dict_set(&mOptions, "buffer_size", "65536", 0); // 64 kB
+        av_dict_set(&mOptions, "reconnect", "1", 0);
+        av_dict_set(&mOptions, "reconnect_at_eof", "1", 0);
+        av_dict_set(&mOptions, "reconnect_streamed", "1", 0);
+        av_dict_set(&mOptions, "reconnect_delay_max", "2", 0);
+        av_dict_set(&mOptions, "fflags", "+discardcorrupt+genpts", 0);
+        av_dict_set(&mOptions, "content_type", "application/ogg", 0);
         
         auto codec = avcodec_find_encoder(AV_CODEC_ID_VORBIS);
         if (!codec) {
@@ -89,7 +99,7 @@ public:
             }
         }
 
-        if (avformat_write_header(mFormatCtx, nullptr) < 0) {
+        if (avformat_write_header(mFormatCtx, &mOptions) < 0) {
             throw std::runtime_error("Failed to write header");
         }
 
@@ -128,6 +138,8 @@ public:
         if (!(mFormatCtx->oformat->flags & AVFMT_NOFILE) && mFormatCtx->pb) avio_closep(&mFormatCtx->pb);
         avformat_close_input(&mFormatCtx);
         avformat_free_context(mFormatCtx);
+        av_dict_free(&mOptions);
+        av_channel_layout_uninit(&mChannelLayout);
         log.debug() << "AudioCodecWriter deinited";
     }
 
