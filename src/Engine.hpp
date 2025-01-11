@@ -73,19 +73,21 @@ public:
         mRunning = true;
         mCalendar.start();
         mAudioClient.start();
-        try {
-            if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
-        }
-        catch (const std::exception& e) {
-            log.error() << "Engine failed to start output stream: " << e.what();
-        }
+        for (auto& player : mPlayers) player->run();
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning) {
                 this->work();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });
-        for (auto& player : mPlayers) player->run();
+
+        try {
+            if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Engine failed to start output stream: " << e.what();
+        }
+
         try {
             mTCPServer.start();
         }
@@ -98,14 +100,14 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
+        if (mWorker && mWorker->joinable()) mWorker->join();
         mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
-        for (const auto& player : mPlayers) player->terminate();
         mFallback.stop();
         mStreamOutput.stop();
+        for (const auto& player : mPlayers) player->terminate();
         mAudioClient.stop();
-        if (mWorker && mWorker->joinable()) mWorker->join();
         log.info() << "Engine stopped";
     }
 
