@@ -183,13 +183,14 @@ public:
                 if (av_interleaved_write_frame(mFormatCtx, mPacket) < 0) {
                     // throw std::runtime_error("Error writing packet");
                     log.error() << "Error writing packet";
-                    break;
+                    goto cleanup;
                 }
                 
                 av_packet_unref(mPacket);
             }
         }
 
+        cleanup:
         av_write_trailer(mFormatCtx);
         
         {
