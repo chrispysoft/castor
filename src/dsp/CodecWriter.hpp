@@ -168,7 +168,7 @@ public:
             uint8_t* dst = mFrame->data[0];
 
             if (swr_convert(mSwrCtx, &dst, mFrame->nb_samples, (const uint8_t**) &src, mCodecCtx->frame_size) < 0) {
-                log.error() << "Error converting samples";
+                log.error() << "AudioCodecWriter swr_convert failed";
                 break;
             }
             // log.debug() << "AudioCodecWriter converted";
@@ -177,7 +177,7 @@ public:
             framesWritten += mCodecCtx->frame_size;
 
             if (avcodec_send_frame(mCodecCtx, mFrame) < 0) {
-                log.error() << "Failed to send frame to encoder";
+                log.error() << "AudioCodecWriter avcodec_send_frame failed";
                 break;
             }
 
@@ -185,15 +185,15 @@ public:
                 mPacket->stream_index = mStream->index;
                 if (av_interleaved_write_frame(mFormatCtx, mPacket) < 0) {
                     // throw std::runtime_error("Error writing packet");
-                    log.error() << "Error writing packet";
-                    goto cleanup;
+                    log.error() << "AudioCodecWriter av_interleaved_write_frame failed";
+                    goto finalize;
                 }
                 
                 av_packet_unref(mPacket);
             }
         }
 
-        cleanup:
+        finalize:
         av_write_trailer(mFormatCtx);
         
         {
@@ -201,7 +201,7 @@ public:
             mWriting = false;
             mCV.notify_all();
         }
-        log.info() << "AudioCodecWriter wrote << " << framesWritten << " frames";
+        log.info() << "AudioCodecWriter wrote " << framesWritten << " frames";
     }
 
     void cancel() {
