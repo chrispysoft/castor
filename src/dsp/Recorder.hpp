@@ -37,16 +37,18 @@ public:
             log.debug() << "Recorder already running";
             return;
         }
-        mRunning = true;
+        
         mWriter = std::make_unique<CodecWriter>(mSampleRate, tURL);
         mWorker = std::make_unique<std::thread>([this] {
             log.debug() << "Recorder worker started";
+            mRunning = true;
             try {
                 mWriter->write(mRingBuffer);
             }
             catch (const std::exception& e) {
                 log.error() << "Recorder error: " << e.what();
             }
+            mRunning = false;
             log.debug() << "Recorder worker finished";
         });
     }
@@ -72,11 +74,11 @@ public:
 
     void process(const float* in, size_t nframes) {
         auto nsamples = nframes * kChannelCount;
-        if (mRingBuffer.size() + nsamples > kRingBufferSize) {
-            log.warn() << "Recorder ring buffer overflow";
-            mRingBuffer.flush();
-            return;
-        }
+        // if (mRingBuffer.size() + nsamples > kRingBufferSize) {
+        //     log.warn() << "Recorder ring buffer overflow";
+        //     mRingBuffer.flush();
+        //     return;
+        // }
         mRingBuffer.write(in, nsamples);
     }
 };
