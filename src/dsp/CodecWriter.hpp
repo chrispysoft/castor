@@ -90,7 +90,7 @@ public:
         if (avformat_alloc_output_context2(&mFormatCtx, nullptr, nullptr, mURL.c_str()) < 0) {
             throw std::runtime_error("Failed to allocate output context");
         }
-        mFormatCtx->metadata = mMetadata;
+        mFormatCtx->metadata = mMetadata; // freed by libavformat in avformat_free_context()
 
         mStream = avformat_new_stream(mFormatCtx, nullptr);
         if (!mStream) {
@@ -156,7 +156,7 @@ public:
         avformat_close_input(&mFormatCtx);
         avformat_free_context(mFormatCtx);
         av_dict_free(&mOptions);
-        av_dict_free(&mMetadata);
+        // mMetadata already freed by avformat_free_context
         av_channel_layout_uninit(&mChannelLayout);
         log.debug() << "AudioCodecWriter deinited";
     }
