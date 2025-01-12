@@ -196,8 +196,10 @@ public:
 
     void postHealth() {
         try {
-            Health health {true, util::currTimeFmtMs(), ":)"};
-            mAPIClient.postHealth(health);
+            nlohmann::json j = mCalendar.items();
+            std::stringstream s;
+            s << j;
+            mAPIClient.postHealth({true, util::currTimeFmtMs(), s.str()});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();
