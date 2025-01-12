@@ -3,11 +3,13 @@
 #include "Recorder.hpp"
 #include "../util/Log.hpp"
 #include "../util/HTTPClient.hpp"
+#include <atomic>
 
 namespace cst {
 namespace audio {
 class StreamOutput {
 
+    std::atomic<bool> mRunning = false;
     Recorder mRecorder;
 
 public:
@@ -21,11 +23,33 @@ public:
         return mRecorder.isRunning();
     }
 
-    void start(const std::string& tURL) {
-        mRecorder.start(tURL);
+    void start(const std::string& tURL, int tRetryInterval = 5) {
+        log.debug() << "StreamOutput start " << tURL;
+        mRunning = true;
+        try {
+            mRecorder.start(tURL);
+        }
+        catch (const std::exception& e) {
+            log.error() << "StreamOutput failed to start: " << e.what();
+            if (tRetryInterval > 0) {
+                std::thread([this, url=tURL, interval=tRetryInterval] {
+                    if (!this->mRunning) return;
+                    log.warn() << "StreamOutput retrying to start in " <<  interval << " seconds...";
+                    std::this_thread::sleep_for(std::chrono::seconds(interval));
+                    if (!this->mRunning) return;
+                    log.warn() << "StreamOutput restarting...";
+                    this->start(url, interval);
+                }).detach();
+            }
+        }
     }
 
     void stop() {
+        if (!mRunning) {
+            return;
+        }
+        log.debug() << "StreamOutput stop...";
+        mRunning = false;
         mRecorder.stop();
     }
 
