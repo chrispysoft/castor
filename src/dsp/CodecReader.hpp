@@ -35,6 +35,7 @@ class CodecReader {
     
     size_t mReadSamples = 0;
 
+    AVChannelLayout mChannelLayout;
     AVFormatContext* mFormatCtx = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
     SwrContext* mSwrCtx = nullptr;
@@ -50,6 +51,8 @@ public:
         mFrameBuffer(kFrameBufferSize)
     {
         av_log_set_level(AV_LOG_ERROR);
+
+        av_channel_layout_default(&mChannelLayout, kChannelCount);
 
         AVDictionary *options = NULL;
         av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
@@ -103,28 +106,13 @@ public:
 
         // log.debug() << "AudioCodecReader alloc resampler...";
         mSwrCtx = swr_alloc();
+        swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr);
         if (!mSwrCtx) {
-            throw std::runtime_error("Could not allocate resampler context.");
+            throw std::runtime_error("swr_alloc failed");
         }
-
-        // log.debug() << "AudioCodecReader get channel layout...";
-        char inChLayoutDesc[128];
-        int sts = av_channel_layout_describe(&mCodecCtx->ch_layout, inChLayoutDesc, sizeof(inChLayoutDesc));
-        if (sts < 0) {
-            throw std::runtime_error("Could not load input channel layout description");
-        }
-
-        // log.debug() << "AudioCodecReader set av options...";
-        av_opt_set(mSwrCtx, "in_chlayout", inChLayoutDesc, 0);
-        av_opt_set(mSwrCtx, "out_chlayout", "stereo", 0);
-        av_opt_set_int(mSwrCtx, "in_sample_rate", mCodecCtx->sample_rate, 0);
-        av_opt_set_int(mSwrCtx, "out_sample_rate", mSampleRate, 0);
-        av_opt_set_sample_fmt(mSwrCtx, "in_sample_fmt", mCodecCtx->sample_fmt, 0);
-        av_opt_set_sample_fmt(mSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
-
         // log.debug() << "AudioCodecReader init resampler...";
         if (swr_init(mSwrCtx) < 0) {
-            throw std::runtime_error("Could not init resampler.");
+            throw std::runtime_error("swr_init failed");
         }
 
         // log.debug() << "AudioCodecReader alloc mPacket and frame...";
@@ -160,6 +148,7 @@ public:
         swr_free(&mSwrCtx);
         avcodec_free_context(&mCodecCtx);
         avformat_close_input(&mFormatCtx);
+        av_channel_layout_uninit(&mChannelLayout);
     }
 
     size_t sampleCount() { return mSampleCount; }
