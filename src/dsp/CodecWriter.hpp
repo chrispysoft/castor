@@ -33,7 +33,8 @@ class CodecWriter {
     bool mWriting = false;
 
     AVChannelLayout mChannelLayout;
-    AVDictionary *mOptions = nullptr;
+    AVDictionary* mOptions = nullptr;
+    AVDictionary* mMetadata = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
     AVFormatContext* mFormatCtx = nullptr;
     AVStream* mStream = nullptr;
@@ -59,9 +60,20 @@ public:
         av_dict_set(&mOptions, "reconnect_streamed", "1", 0);
         av_dict_set(&mOptions, "reconnect_delay_max", "2", 0);
         av_dict_set(&mOptions, "fflags", "+discardcorrupt+genpts", 0);
-        av_dict_set(&mOptions, "content_type", "application/ogg", 0);
+
+        av_dict_set(&mOptions, "content_type", "audio/mpeg", 0);
+        av_dict_set(&mOptions, "user_agent", "castor/0.0.5", 0);
+        av_dict_set(&mOptions, "ice_name", "My Awesome Stream", 0);
+        av_dict_set(&mOptions, "ice_description", "Castor", 0);
+        av_dict_set(&mOptions, "ice_genre", "Live Stream", 0);
+        av_dict_set(&mOptions, "ice_url", "https://crispybits.app", 0);
+
+        av_dict_set(&mMetadata, "title", "Track Title", 0);
+        av_dict_set(&mMetadata, "artist", "Track Artist", 0);
+        av_dict_set(&mMetadata, "album", "Track Album", 0);
+        av_dict_set(&mMetadata, "comments", "Created with castor", 0);
         
-        auto codec = avcodec_find_encoder(AV_CODEC_ID_VORBIS);
+        auto codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
         if (!codec) {
             throw std::runtime_error("Recorder encoder not found");
         }
@@ -70,22 +82,22 @@ public:
         if (!mCodecCtx) {
             throw std::runtime_error("Failed to allocate codec context");
         }
+        mCodecCtx->ch_layout = mChannelLayout;
+        mCodecCtx->bit_rate = kBitRate;
+        mCodecCtx->sample_rate = mSampleRate;
+        mCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
         if (avformat_alloc_output_context2(&mFormatCtx, nullptr, nullptr, mURL.c_str()) < 0) {
             throw std::runtime_error("Failed to allocate output context");
         }
+        mFormatCtx->metadata = mMetadata;
 
         mStream = avformat_new_stream(mFormatCtx, nullptr);
         if (!mStream) {
             throw std::runtime_error("Failed to create new stream");
         }
-
-        mCodecCtx->ch_layout = mChannelLayout;
-        mCodecCtx->bit_rate = kBitRate;
-        mCodecCtx->sample_rate = mSampleRate;
-        mCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;
         mStream->time_base = {1, static_cast<int>(mSampleRate)};
-
+        
         if (avcodec_open2(mCodecCtx, codec, nullptr) < 0) {
             throw std::runtime_error("Failed to open codec");
         }
@@ -101,14 +113,17 @@ public:
             }
         }
 
-        if (avformat_write_header(mFormatCtx, &mOptions) < 0) {
+        if (avformat_write_header(mFormatCtx, nullptr) < 0) {
             throw std::runtime_error("Failed to write header");
         }
 
         mSwrCtx = swr_alloc();
         swr_alloc_set_opts2(&mSwrCtx, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, &mCodecCtx->ch_layout, AV_SAMPLE_FMT_FLT, mSampleRate, 0, nullptr);
-        if (!mSwrCtx || swr_init(mSwrCtx) < 0) {
-            throw std::runtime_error("Failed to initialize resampler");
+        if (!mSwrCtx) {
+            throw std::runtime_error("swr_alloc failed");
+        }
+        if (swr_init(mSwrCtx) < 0) {
+            throw std::runtime_error("swr_init failed");
         }
 
         mPacket = av_packet_alloc();
@@ -141,6 +156,7 @@ public:
         avformat_close_input(&mFormatCtx);
         avformat_free_context(mFormatCtx);
         av_dict_free(&mOptions);
+        av_dict_free(&mMetadata);
         av_channel_layout_uninit(&mChannelLayout);
         log.debug() << "AudioCodecWriter deinited";
     }
@@ -164,10 +180,8 @@ public:
             tBuffer.read(mFrameBuffer.data(), samplesPerFrame);
             // log.debug() << "AudioCodecWriter read " << samplesPerFrame << " samples";
 
-            float* src = const_cast<float*>(mFrameBuffer.data());
-            uint8_t* dst = mFrame->data[0];
-
-            if (swr_convert(mSwrCtx, &dst, mFrame->nb_samples, (const uint8_t**) &src, mCodecCtx->frame_size) < 0) {
+            const float* src = mFrameBuffer.data();
+            if (swr_convert(mSwrCtx, mFrame->data, mFrame->nb_samples, (const uint8_t**) &src, mCodecCtx->frame_size) < 0) {
                 log.error() << "AudioCodecWriter swr_convert failed";
                 break;
             }
