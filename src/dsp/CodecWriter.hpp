@@ -165,6 +165,19 @@ public:
     void write(util::RingBuffer<float>& tBuffer) {
         log.debug() << "AudioCodecWriter write...";
 
+        auto writeFrame = [this](AVFrame* lFrame) {
+            if (avcodec_send_frame(mCodecCtx, lFrame) < 0) {
+                throw std::runtime_error("avcodec_send_frame failed");
+            }
+            while (avcodec_receive_packet(mCodecCtx, mPacket) == 0) {
+                mPacket->stream_index = mStream->index;
+                if (av_interleaved_write_frame(mFormatCtx, mPacket) < 0) {
+                    throw std::runtime_error("av_interleaved_write_frame failed");
+                }
+                av_packet_unref(mPacket);
+            }
+        };
+
         mWriting = true;
 
         auto samplesPerFrame = mCodecCtx->frame_size * kChannelCount;
@@ -190,24 +203,22 @@ public:
             mFrame->pts = av_rescale_q(framesWritten, {1, mCodecCtx->sample_rate}, mStream->time_base);
             framesWritten += mCodecCtx->frame_size;
 
-            if (avcodec_send_frame(mCodecCtx, mFrame) < 0) {
-                log.error() << "AudioCodecWriter avcodec_send_frame failed";
-                break;
+            try {
+                writeFrame(mFrame);
             }
-
-            while (avcodec_receive_packet(mCodecCtx, mPacket) == 0) {
-                mPacket->stream_index = mStream->index;
-                if (av_interleaved_write_frame(mFormatCtx, mPacket) < 0) {
-                    // throw std::runtime_error("Error writing packet");
-                    log.error() << "AudioCodecWriter av_interleaved_write_frame failed";
-                    goto finalize;
-                }
-                
-                av_packet_unref(mPacket);
+            catch (const std::exception& e) {
+                log.error() << "AudioCodecWriter writeFrame data failed: " << e.what();
+                break;
             }
         }
 
-        finalize:
+        try {
+            writeFrame(nullptr);
+        }
+        catch (const std::exception& e) {
+            log.error() << "AudioCodecWriter writeFrame null (flush) failed: " << e.what();
+        }
+
         av_write_trailer(mFormatCtx);
         
         {
