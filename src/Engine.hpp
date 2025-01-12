@@ -176,7 +176,7 @@ public:
                 mRecorder.stop();
 
                 if (mCurrProgram.showId >= 1) {
-                    auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".ogg";
+                    auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".mp3";
                     try {
                         mRecorder.start(recURL);
                     }
