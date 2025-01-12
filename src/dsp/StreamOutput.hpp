@@ -1,98 +1,52 @@
 #pragma once
 
-#include <atomic>
+#include "Recorder.hpp"
 #include "../util/Log.hpp"
-#include "../util/util.hpp"
+#include "../util/HTTPClient.hpp"
 
 namespace cst {
 namespace audio {
 class StreamOutput {
 
-    static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferSize = 16384;
-    static constexpr size_t kPipeBufferSize = 512;
-
-    const double mSampleRate;
-    util::RingBuffer<float> mRingBuffer;
-    std::unique_ptr<std::thread> mWorker = nullptr;
-    std::atomic<bool> mRunning = false;
-    std::atomic<bool> mEnabled = false;
+    Recorder mRecorder;
 
 public:
 
     StreamOutput(double tSampleRate) :
-        mSampleRate(tSampleRate),
-        mRingBuffer(kRingBufferSize)
+        mRecorder(tSampleRate)
     {
     }
 
     bool isRunning() {
-        return mRunning;
+        return mRecorder.isRunning();
     }
 
     void start(const std::string& tURL) {
-        using namespace std;
-
-        if (mRunning) {
-            log.debug() << "StreamOutput already running";
-            return;
-        }
-
-        if (mWorker && mWorker->joinable()) {
-            mWorker->join();
-        }
-
-        mRunning = true;
-
-        log.info() << "StreamOutput start " << tURL;
-        
-        string command = "ffmpeg -f f32le -channel_layout stereo -ac " + to_string(kChannelCount) + " -ar " + to_string(int(mSampleRate)) + " -i - -c:a libvorbis -b:a 128k -f ogg -content_type application/ogg " + tURL + " 2>&1";
-        FILE* pipe = popen(command.c_str(), "w");
-        if (!pipe) {
-            throw runtime_error("StreamOutput failed to open pipe");
-        }
-
-        mWorker = make_unique<thread>([this, pipe] {
-            vector<float> rxBuf(kPipeBufferSize);
-            vector<float> txBuf(kPipeBufferSize);
-            size_t bytesRead, bytesWritten;
-
-            while (this->mRunning) {
-
-                // bytesRead = fread(rxBuf.data(), 1, kPipeBufferSize * sizeof(float), pipe)) > 0) {
-
-                if (this->mRingBuffer.size() < kPipeBufferSize) continue;
-
-                this->mRingBuffer.read(txBuf.data(), kPipeBufferSize);
-
-                bytesWritten = fwrite(txBuf.data(), 1, kPipeBufferSize * sizeof(float), pipe);
-                // log.debug() << "wrote " << bytesWritten << " bytes";
-
-                if (bytesWritten != kPipeBufferSize * sizeof(float)) {
-                    log.error() << "Error writing to pipe";
-                    break;
-                }
-
-                fflush(pipe);
-            }
-            pclose(pipe);
-            mRunning = false;
-            log.info() << "Recorder finished";
-        });
+        mRecorder.start(tURL);
     }
 
     void stop() {
-        mRunning = false;
-        if (mWorker && mWorker->joinable()) {
-            mWorker->join();
+        mRecorder.stop();
+    }
+
+    void updateMetadata(const std::string& tMetadata) {
+        log.debug() << "StreamOutput updateMetadata " << tMetadata;
+        auto url = "http://source:hackme@localhost:8000/admin/metadata?mount=/test.mp3&mode=updinfo&song="+tMetadata;
+        auto res = HTTPClient().get(url);
+        auto code = res.code;
+        if (code != 200) {
+            throw std::runtime_error("metadata http request failed with code: " + std::to_string(code));
         }
-        mWorker = nullptr;
-        log.info() << "Recorder stopped";
+        auto xml = res.response;
+        if (xml.find("<message>Metadata update successful</message>") == std::string::npos) {
+            throw std::runtime_error("metadata http request failed with response: " + xml);
+        }
+        log.debug() << "StreamOutput updateMetadata success";
     }
 
 
     void process(const float* tSamples, size_t nframes) {
-        mRingBuffer.write(tSamples, nframes * kChannelCount);
+        mRecorder.process(tSamples, nframes);
     }
 
 };
