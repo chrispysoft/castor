@@ -175,7 +175,7 @@ public:
             if (mConfig.audioRecordPath.size() > 0) {
                 mRecorder.stop();
 
-                if (mCurrProgram.showId >= 1) {
+                if (mCurrProgram.showId > 1) {
                     auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".mp3";
                     try {
                         mRecorder.start(recURL);
