@@ -20,6 +20,7 @@ class Config {
     static constexpr const char* kAudioRecordPath = "";
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kStreamOutURL = "";
+    static constexpr const char* kStreamOutMetadataURL = "";
     static constexpr const char* kProgramURL = "http://localhost/program";
     static constexpr const char* kPlaylistURL = "http://localhost/playlist";
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";
@@ -57,6 +58,7 @@ public:
     std::string iDevName;
     std::string oDevName;
     std::string streamOutURL;
+    std::string streamOutMetadataURL;
     std::string programURL;
     std::string playlistURL;
     std::string playlogURL;
@@ -92,6 +94,7 @@ public:
         iDevName = get(map, "in_device_name", "INPUT_DEVICE", kDeviceName);
         oDevName = get(map, "out_device_name", "OUTPUT_DEVICE", kDeviceName);
         streamOutURL = get(map, "stream_out_url", "STREAM_OUTPUT_URL", kStreamOutURL);
+        streamOutMetadataURL = get(map, "stream_out_metadata_url", "STREAM_OUT_METADATA_URL", kStreamOutMetadataURL);
         programURL = get(map, "program_url", "PROGRAM_URL", kProgramURL);
         playlistURL = get(map, "playlist_url", "PLAYLIST_URL", kPlaylistURL);
         playlogURL = get(map, "playlog_url", "PLAYLOG_URL", kPlaylogURL);
@@ -110,6 +113,7 @@ public:
         << "\n\t iDevName=" << iDevName 
         << "\n\t oDevName=" << oDevName 
         << "\n\t streamOutURL=" << streamOutURL 
+        << "\n\t streamOutMetadataURL=" << streamOutMetadataURL
         << "\n\t programURL=" << programURL
         << "\n\t playlistURL=" << playlistURL
         << "\n\t playlogURL=" << playlogURL

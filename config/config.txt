@@ -7,6 +7,7 @@ audio_fallback_path=./audio/fallback.m3u
 in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio
 stream_out_url=icecast://source:hackme@localhost:8000/castor.mp3
+stream_out_metadata_url=http://source:hackme@localhost:8000/admin/metadata?mount=/castor.mp3
 program_url=http://localhost/steering/api/v1/program/playout/
 playlist_url=http://localhost/tank/api/v1/playlists/
 playlog_url=http://localhost:8010/api/v1/playlog

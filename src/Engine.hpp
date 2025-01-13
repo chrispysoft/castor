@@ -156,12 +156,12 @@ public:
     void playItemDidStart(const std::shared_ptr<PlayItem>& item) {
         log.info() << "Engine playItemDidStart";
 
-        if (mStreamOutput.isRunning()) {
+        if (mStreamOutput.isRunning() && !mConfig.streamOutMetadataURL.empty()) {
             // log.debug() << "Engine updating stream metadata";
             try {
                 auto songName = (item) ? item->program.showName : "";
                 std::replace(songName.begin(), songName.end(), ' ', '+');
-                mStreamOutput.updateMetadata(songName);
+                mStreamOutput.updateMetadata(mConfig.streamOutMetadataURL, songName);
             }
             catch (const std::exception& e) {
                 log.error() << "Engine failed to update stream metadata: " << e.what();

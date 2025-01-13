@@ -53,9 +53,9 @@ public:
         mRecorder.stop();
     }
 
-    void updateMetadata(const std::string& tMetadata) {
+    void updateMetadata(const std::string& tURL, const std::string& tMetadata) {
         log.debug() << "StreamOutput updateMetadata " << tMetadata;
-        auto url = "http://source:hackme@localhost:8000/admin/metadata?mount=/test.mp3&mode=updinfo&song="+tMetadata;
+        auto url = tURL + "&mode=updinfo&song=" + tMetadata;
         auto res = HTTPClient().get(url);
         auto code = res.code;
         if (code != 200) {
