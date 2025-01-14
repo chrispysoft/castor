@@ -42,7 +42,7 @@ class Engine : public audio::Client::Renderer {
     std::vector<float> mMixBuffer;
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
     time_t mLastReportTime = 0;
-    time_t mReportInterval = 300;
+    time_t mReportInterval = 10;
     
 public:
     Engine(const Config& tConfig) :
@@ -187,7 +187,7 @@ public:
             }
         }
         try {
-            mAPIClient.postPlaylog(*item);
+            mAPIClient.postPlaylog({*item});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
@@ -196,10 +196,10 @@ public:
 
     void postHealth() {
         try {
-            nlohmann::json j = mCalendar.items();
-            std::stringstream s;
-            s << j;
-            mAPIClient.postHealth({true, util::currTimeFmtMs(), s.str()});
+            // nlohmann::json j = mCalendar.items();
+            // std::stringstream s;
+            // s << j;
+            mAPIClient.postHealth({true, util::currTimeFmtMs(), ":)"});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();

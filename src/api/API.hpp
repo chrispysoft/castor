@@ -54,6 +54,19 @@ void from_json(const json& j, Program& t) {
     }
 }
 
+void to_json(nlohmann::json& j, const Program& p) {
+    j = nlohmann::json {
+        {"showName", p.showName},
+        {"episodeTitle", p.episodeTitle},
+        {"timeslotId", p.timeslotId},
+        {"showId", p.showId},
+        {"playlistId", p.playlistId},
+        {"id", p.id},
+        {"start", p.start},
+        {"end", p.end}
+    };
+}
+
 
 struct Playlist {
     struct Entry {
@@ -108,12 +121,39 @@ struct PlayItem {
 
 void to_json(nlohmann::json& j, const PlayItem& p) {
     j = nlohmann::json {
-        {"trackStart", util::utcFmt(p.start)},
-        {"trackDuration", p.end - p.start},
-        {"timeslotId", std::to_string(p.program.timeslotId)},
-        {"playlistId", p.program.playlistId},
-        {"showId", p.program.showId},
-        {"showName", p.program.showName}
+        {"start", p.start},
+        {"end", p.end},
+        //{"uri", p.uri},
+        {"program", p.program}
+    };
+}
+
+struct PlayLog {
+    std::string trackStart;
+    std::time_t trackDuration;
+    int playlistId;
+    int showId;
+    std::string showName;
+    std::string timeslotId;
+
+    PlayLog(const PlayItem& p) :
+        trackStart(util::utcFmt(p.start)),
+        trackDuration(p.end - p.start),
+        playlistId(p.program.playlistId),
+        showId(p.program.showId),
+        showName(p.program.showName),
+        timeslotId(std::to_string(p.program.timeslotId))
+    {}
+};
+
+void to_json(nlohmann::json& j, const PlayLog& p) {
+    j = nlohmann::json {
+        {"trackStart", p.trackStart},
+        {"trackDuration", p.trackDuration},
+        {"playlistId", p.playlistId},
+        {"showId", p.showId},
+        {"showName", p.showName},
+        {"timeslotId", p.timeslotId}
     };
 }
 

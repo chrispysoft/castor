@@ -66,7 +66,7 @@ public:
         }
     }
 
-    void postPlaylog(const PlayItem& item) {
+    void postPlaylog(const PlayLog& item) {
         const auto& url = mConfig.playlogURL;
 
         nlohmann::json j = item;
