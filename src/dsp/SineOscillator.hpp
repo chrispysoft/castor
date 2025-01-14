@@ -2,7 +2,11 @@
 
 #include <numbers>
 #include <cmath>
+#include <limits>
+#include "audio.hpp"
 
+namespace cst {
+namespace audio {
 class SineOscillator {
 
     static constexpr double k2Pi = 2 * M_PI;
@@ -25,11 +29,18 @@ public:
         mOmega = 0;
     }
 
-    double process() {
+    double processDbl() {
         const double sample = std::sin(mOmega * k2Pi);
         mOmega += mDeltaOmega;
 
         if (mOmega >= 1.0) { mOmega -= 1.0; }
         return sample;
     }
+
+    sam_t process() {
+        double sam = round(processDbl() * std::numeric_limits<sam_t>::max());
+        return static_cast<sam_t>(sam);
+    }
 };
+}
+}
