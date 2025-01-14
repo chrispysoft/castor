@@ -17,7 +17,7 @@ class Recorder {
     static constexpr size_t kRingBufferSize = 65536;
 
     const double mSampleRate;
-    util::RingBuffer<float> mRingBuffer;
+    util::RingBuffer<sam_t> mRingBuffer;
     std::unique_ptr<CodecWriter> mWriter = nullptr;
     std::unique_ptr<std::thread> mWorker = nullptr;
     std::atomic<bool> mRunning = false;
@@ -72,7 +72,7 @@ public:
     }
 
 
-    void process(const float* in, size_t nframes) {
+    void process(const sam_t* in, size_t nframes) {
         auto nsamples = nframes * kChannelCount;
         // if (mRingBuffer.size() + nsamples > kRingBufferSize) {
         //     log.warn() << "Recorder ring buffer overflow";

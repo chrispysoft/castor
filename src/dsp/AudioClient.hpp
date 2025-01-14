@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <portaudio.h>
+#include "audio.hpp"
 #include "../util/Log.hpp"
 
 namespace cst {
@@ -14,9 +15,9 @@ public:
 
     class Renderer {
         public:
-            virtual void renderCallback(const float* in, float* out, size_t nframes) = 0;
-            virtual ~Renderer() = default;
-        };
+        virtual void renderCallback(const sam_t* in, sam_t* out, size_t nframes) = 0;
+        virtual ~Renderer() = default;
+    };
     
     const std::string mIDevName;
     const std::string mODevName;
@@ -129,7 +130,7 @@ public:
 private:
 
     int paCallbackMethod(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags) {
-        if (mRenderer) mRenderer->renderCallback(static_cast<const float*>(inputBuffer), static_cast<float*>(outputBuffer), framesPerBuffer);
+        if (mRenderer) mRenderer->renderCallback(static_cast<const sam_t*>(inputBuffer), static_cast<sam_t*>(outputBuffer), framesPerBuffer);
         return paContinue;
     }
 

@@ -27,7 +27,7 @@ class CodecReader {
     const double mSampleRate;
     size_t mSampleCount;
     double mDuration;
-    std::vector<float> mFrameBuffer;
+    std::vector<sam_t> mFrameBuffer;
     std::atomic<bool> mCancelled = false;
     std::mutex mMutex;
     std::condition_variable mCV;
@@ -155,7 +155,7 @@ public:
 
     double duration() { return mDuration; }
 
-    void read(util::RingBuffer<float>& tBuffer) {
+    void read(util::RingBuffer<sam_t>& tBuffer) {
         log.debug() << "AudioCodecReader read...";
 
         mReading = true;

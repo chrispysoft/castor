@@ -69,7 +69,7 @@ public:
     }
 
 
-    void process(const float* tSamples, size_t nframes) {
+    void process(const sam_t* tSamples, size_t nframes) {
         mRecorder.process(tSamples, nframes);
     }
 

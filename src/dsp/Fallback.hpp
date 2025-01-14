@@ -45,7 +45,7 @@ public:
         return mActive;
     }
 
-    void process(const float* in, float* out, size_t nframes) {
+    void process(const sam_t* in, sam_t* out, size_t nframes) {
         // mQueuePlayer.process(in, out, nframes);
         
         for (auto i = 0; i < nframes; ++i) {

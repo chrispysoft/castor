@@ -33,7 +33,7 @@ class StreamPlayer : public Player {
     std::condition_variable mCondition;
     std::atomic<bool> mLoading = false;
     std::unique_ptr<CodecReader> mReader = nullptr;
-    util::RingBuffer<float> mRingBuffer;
+    util::RingBuffer<sam_t> mRingBuffer;
     
 
 public:
@@ -104,7 +104,7 @@ public:
     }
 
     
-    void process(const float*, float* tBuffer, size_t tFrameCount) override {
+    void process(const sam_t*, sam_t* tBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
         if (sampleCount <= mRingBuffer.size()) {
             auto samplesRead = mRingBuffer.read(tBuffer, sampleCount);
@@ -113,10 +113,10 @@ public:
                 // log.debug() << "read " << samplesRead << " from ringbuffer";
             } else {
                 // log.debug() << "0 bytes read"; 
-                memset(tBuffer, 0, sampleCount * sizeof(float));
+                memset(tBuffer, 0, sampleCount * sizeof(sam_t));
             }
         } else {
-            memset(tBuffer, 0, sampleCount * sizeof(float));
+            memset(tBuffer, 0, sampleCount * sizeof(sam_t));
         }
         calcRMS(tBuffer, sampleCount);
     }

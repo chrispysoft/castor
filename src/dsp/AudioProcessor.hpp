@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iomanip>
+#include "audio.hpp"
 #include "../util/Log.hpp"
 
 namespace cst {
@@ -17,7 +18,7 @@ public:
     {}
     
     virtual ~Input() = default;
-    virtual void process(const float* in, float* out, size_t nframes) = 0;
+    virtual void process(const sam_t* in, sam_t* out, size_t nframes) = 0;
 };
 
 
@@ -166,7 +167,7 @@ public:
 
 
     std::atomic<float> rms = -INFINITY;
-    void calcRMS(const float* buffer, size_t sampleCount) {
+    void calcRMS(const sam_t* buffer, size_t sampleCount) {
         rms = util::rms_dB(buffer, sampleCount);
     }
 

@@ -39,7 +39,7 @@ class Engine : public audio::Client::Renderer {
     audio::Fallback mFallback;
     audio::Recorder mRecorder;
     audio::StreamOutput mStreamOutput;
-    std::vector<float> mMixBuffer;
+    std::vector<audio::sam_t> mMixBuffer;
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
     time_t mLastReportTime = 0;
     time_t mReportInterval = 10;
@@ -223,9 +223,9 @@ public:
     }
     
 
-    void renderCallback(const float* in, float* out, size_t nframes) override {
+    void renderCallback(const audio::sam_t* in,  audio::sam_t* out, size_t nframes) override {
         auto nsamples = nframes * 2;
-        memset(out, 0, nsamples * sizeof(float));
+        memset(out, 0, nsamples * sizeof(audio::sam_t));
 
         for (auto& source : mPlayers) {
             if (!source->isActive()) continue;

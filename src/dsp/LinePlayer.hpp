@@ -29,9 +29,9 @@ public:
         return item.uri.starts_with("line");
     }
 
-    void process(const float* tInBuffer, float* tOutBuffer, size_t tFrameCount) override {
+    void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
-        auto byteSize = sampleCount * sizeof(float);
+        auto byteSize = sampleCount * sizeof(sam_t);
         memcpy(tOutBuffer, tInBuffer, byteSize);
         calcRMS(tOutBuffer, sampleCount);
     }

@@ -34,7 +34,7 @@ public:
         
     }
 
-    void process(const float* in, size_t nframes) {
+    void process(const sam_t* in, size_t nframes) {
         float rms = util::rms_dB(in, nframes * kChannelCount);
         bool silence = rms <= mThreshold;
         if (silence) {

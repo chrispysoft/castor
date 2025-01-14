@@ -98,7 +98,7 @@ public:
     }
 
     
-    void process(const float* in, float* out, size_t framecount) override {
+    void process(const sam_t* in, sam_t* out, size_t framecount) override {
         mPlayer.process(in, out, framecount);
     }
 

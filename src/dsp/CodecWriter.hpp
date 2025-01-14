@@ -26,7 +26,7 @@ class CodecWriter {
 
     const double mSampleRate;
     const std::string mURL;
-    std::vector<float> mFrameBuffer;
+    std::vector<sam_t> mFrameBuffer;
     std::atomic<bool> mCancelled = false;
     std::mutex mMutex;
     std::condition_variable mCV;
@@ -162,7 +162,7 @@ public:
     }
 
 
-    void write(util::RingBuffer<float>& tBuffer) {
+    void write(util::RingBuffer<sam_t>& tBuffer) {
         log.debug() << "AudioCodecWriter write...";
 
         auto writeFrame = [this](AVFrame* lFrame) {
@@ -193,7 +193,7 @@ public:
             tBuffer.read(mFrameBuffer.data(), samplesPerFrame);
             // log.debug() << "AudioCodecWriter read " << samplesPerFrame << " samples";
 
-            const float* src = mFrameBuffer.data();
+            const auto* src = mFrameBuffer.data();
             if (swr_convert(mSwrCtx, mFrame->data, mFrame->nb_samples, (const uint8_t**) &src, mCodecCtx->frame_size) < 0) {
                 log.error() << "AudioCodecWriter swr_convert failed";
                 break;
