@@ -44,7 +44,7 @@ class CodecWriter {
     
 public:
 
-    CodecWriter(double tSampleRate, const std::string& tURL) :
+    CodecWriter(double tSampleRate, const std::string& tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) :
         mSampleRate(tSampleRate),
         mURL(tURL),
         mFrameBuffer(kFrameBufferSize)
@@ -63,15 +63,15 @@ public:
 
         av_dict_set(&mOptions, "content_type", "audio/mpeg", 0);
         av_dict_set(&mOptions, "user_agent", "castor/0.0.5", 0);
-        av_dict_set(&mOptions, "ice_name", "My Awesome Stream", 0);
-        av_dict_set(&mOptions, "ice_description", "Castor", 0);
-        av_dict_set(&mOptions, "ice_genre", "Live Stream", 0);
+        av_dict_set(&mOptions, "ice_name", "Castor live stream", 0);
+        av_dict_set(&mOptions, "ice_description", "Castor developed by Chris Pastl", 0);
+        av_dict_set(&mOptions, "ice_genre", "Earth", 0);
         av_dict_set(&mOptions, "ice_url", "https://crispybits.app", 0);
 
-        av_dict_set(&mMetadata, "title", "Track Title", 0);
-        av_dict_set(&mMetadata, "artist", "Track Artist", 0);
-        av_dict_set(&mMetadata, "album", "Track Album", 0);
-        av_dict_set(&mMetadata, "comments", "Created with castor", 0);
+        for (const auto& m : tMetadata) {
+            av_dict_set(&mMetadata, m.first.c_str(), m.second.c_str(), 0);
+        }
+        av_dict_set(&mMetadata, "copyright", "Recorded with castor", 0);
         
         auto codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
         if (!codec) {

@@ -31,14 +31,14 @@ public:
         
     }
 
-    void start(const std::string tURL) {
+    void start(const std::string tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) {
         log.info(Log::Magenta) << "Recorder start";
         if (mRunning) {
             log.debug() << "Recorder already running";
             return;
         }
-        
-        mWriter = std::make_unique<CodecWriter>(mSampleRate, tURL);
+
+        mWriter = std::make_unique<CodecWriter>(mSampleRate, tURL, tMetadata);
         mWorker = std::make_unique<std::thread>([this] {
             log.debug() << "Recorder worker started";
             mRunning = true;

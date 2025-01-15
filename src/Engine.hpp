@@ -178,7 +178,8 @@ public:
                 if (mCurrProgram.showId > 1) {
                     auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".mp3";
                     try {
-                        mRecorder.start(recURL);
+                        std::unordered_map<std::string, std::string> metadata = {{"artist", item->program.showName }, {"title", item->program.episodeTitle}};
+                        mRecorder.start(recURL, metadata);
                     }
                     catch (const std::runtime_error& e) {
                         log.error() << "Engine failed to start recorder for url: " << recURL << " " << e.what();
