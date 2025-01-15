@@ -78,8 +78,8 @@ public:
             throw std::runtime_error("AudioClient failed to get output device info");
         }
 
-        PaStreamParameters iParams(iDevID, 2, paFloat32, iDevInfo->defaultLowInputLatency, NULL);
-        PaStreamParameters oParams(oDevID, 2, paFloat32, oDevInfo->defaultLowOutputLatency, NULL);
+        PaStreamParameters iParams(iDevID, 2, paInt16, iDevInfo->defaultLowInputLatency, NULL);
+        PaStreamParameters oParams(oDevID, 2, paInt16, oDevInfo->defaultLowOutputLatency, NULL);
         auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &Client::paCallback, this);
         if (res != paNoError) {
             throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res));
