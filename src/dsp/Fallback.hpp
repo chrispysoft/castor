@@ -59,7 +59,7 @@ class BufletController {
                     auto buflet = std::make_unique<Buflet>(mSampleRate, file, mBuffer);
                     auto duration = buflet->mDuration;
                     auto total = mDuration + duration;
-                    if (mDuration + duration > kMaxDuration) break;
+                    if (total > kMaxDuration) break;
                     buflet->load();
                     mDuration = total;
                     mQueueItems.push_back(std::move(buflet));
@@ -74,8 +74,7 @@ class BufletController {
 
 
     void loadAsync(const std::string& tURL) {
-        auto fut = std::async(std::launch::async, &BufletController::load, this, tURL);
-        mFuts.push_back(fut);
+        mFuts.push_back(std::async(std::launch::async, &BufletController::load, this, tURL));
     }
 
     size_t read(sam_t* out, size_t nsamples) {
