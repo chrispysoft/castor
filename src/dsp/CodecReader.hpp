@@ -127,7 +127,7 @@ public:
 
         if (mCancelled) throw std::runtime_error("Cancelled");
 
-        if (tSeek > 0) {
+        if (!tURL.starts_with("http") && tSeek > 0) {
             auto ts = tSeek * AV_TIME_BASE;
             log.debug() << "AudioCodecReader seek frame " << std::to_string(ts);
             av_seek_frame(mFormatCtx, -1, ts, 0);
