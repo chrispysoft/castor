@@ -115,6 +115,7 @@ public:
     void start() {
         if (mActive) return;
         log.info(Log::Yellow) << "Fallback start";
+        mBufletController.mBuffer.resetHead();
         mActive = true;
     }
 

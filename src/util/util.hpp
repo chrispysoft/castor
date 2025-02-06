@@ -169,6 +169,10 @@ public:
         return read;
     }
 
+    void resetHead() {
+        mHead = 0;
+    }
+
     void flush() {
         std::unique_lock<std::mutex> lock(mMutex);
         mSize = 0;
