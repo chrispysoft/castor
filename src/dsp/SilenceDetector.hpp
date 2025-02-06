@@ -11,9 +11,6 @@ namespace audio {
 class SilenceDetector {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr float kThreshold = -90;
-    static constexpr float kStartDuration = 10;
-    static constexpr float kStopDuration = 1;
     
     const float mThreshold;
     const time_t mStartDuration;
@@ -22,7 +19,7 @@ class SilenceDetector {
     std::atomic<time_t> mSilenceStop = 0;
     
 public:
-    SilenceDetector(float tThreshold = kThreshold, time_t tStartDuration = kStartDuration, time_t tStopDuration = kStopDuration) :
+    SilenceDetector(float tThreshold, time_t tStartDuration, time_t tStopDuration) :
         mThreshold(tThreshold),
         mStartDuration(tStartDuration),
         mStopDuration(tStopDuration)

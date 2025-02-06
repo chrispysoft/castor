@@ -51,7 +51,7 @@ public:
         mCalendar(mConfig),
         mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
-        mSilenceDet(),
+        mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
         mFallback(mSampleRate, mConfig.audioFallbackPath),
         mRecorder(mSampleRate),
         mStreamOutput(mSampleRate),

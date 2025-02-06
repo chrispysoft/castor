@@ -28,6 +28,10 @@ class Config {
     static constexpr const char* kClockURL = "http://localhost/clock";
     static constexpr const char* kPlaylistToken = "castor:id";
     static constexpr const char* kTCPPort = "0";
+    static constexpr const char* kSilenceThreshold = "-80";
+    static constexpr const char* kSilenceStartDuration = "5";
+    static constexpr const char* kSilenceStopDuration = "1";
+    static constexpr const char* kFallbackCacheTime = "1800";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -66,6 +70,10 @@ public:
     std::string clockURL;
     std::string playlistToken;
     int tcpPort;
+    int silenceThreshold;
+    int silenceStartDuration;
+    int silenceStopDuration;
+    int fallbackCacheTime;
 
     static std::string get(Map& map, std::string mapKey, std::string envKey, std::string defaultValue) {
         std::string value;
@@ -102,6 +110,10 @@ public:
         clockURL = get(map, "clock_url", "CLOCK_URL", kClockURL);
         playlistToken = get(map, "playlist_token", "PLAYLIST_TOKEN", kPlaylistToken);
         tcpPort = std::stoi(get(map, "tcp_port", "TCP_PORT", kTCPPort));
+        silenceThreshold = std::stoi(get(map, "silence_threshold", "SILENCE_THRESHOLD", kSilenceThreshold));
+        silenceStartDuration = std::stoi(get(map, "silence_start_duration", "SILENCE_START_DURATION", kSilenceStartDuration));
+        silenceStopDuration = std::stoi(get(map, "silence_stop_duration", "SILENCE_STOP_DURATION", kSilenceStopDuration));
+        fallbackCacheTime = std::stoi(get(map, "fallback_cache_time", "FALLBACK_CACHE_TIME", kFallbackCacheTime));
 
         log.info() << "Config:"
         << "\n\t logPath=" << logPath 
@@ -120,7 +132,11 @@ public:
         << "\n\t healthURL=" << healthURL
         << "\n\t clockURL=" << clockURL
         << "\n\t playlistToken=<hidden>"
-        << "\n\t tcpPort=" << tcpPort;
+        << "\n\t tcpPort=" << tcpPort
+        << "\n\t silenceThreshold=" << silenceThreshold
+        << "\n\t silenceStartDuration=" << silenceStartDuration
+        << "\n\t silenceStopDuration=" << silenceStopDuration
+        << "\n\t fallbackCacheTime=" << fallbackCacheTime;
     }
 };
 }
