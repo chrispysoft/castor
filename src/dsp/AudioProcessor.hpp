@@ -142,9 +142,9 @@ public:
         fade(false, playItem->fadeOutTime);
     }
 
-    void fade(bool increase, time_t duration) {
+    void fade(bool increase, double duration) {
         isFading = true;
-        log.debug() << name << " fade start";
+        log.debug() << name << " fade start " << duration << " sec.";
         std::thread([increase, duration, this] {
             auto niters = duration * 100;
             float incr = 1.0 / 100.0 / duration;
