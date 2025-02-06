@@ -82,7 +82,7 @@ public:
         PaStreamParameters oParams(oDevID, 2, paInt16, oDevInfo->defaultLowOutputLatency, NULL);
         auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &Client::paCallback, this);
         if (res != paNoError) {
-            throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res));
+            throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res)+" ("+Pa_GetErrorText(res)+")");
         }
 
         res = Pa_SetStreamFinishedCallback(mStream, &Client::paStreamFinished);
