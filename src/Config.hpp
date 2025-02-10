@@ -31,8 +31,8 @@ class Config {
 
     typedef std::unordered_map<std::string, std::string> Map;
 
-    static constexpr const char* kLogPath = "./logs/cst.log";
-    static constexpr const char* kSocketPath = "/tmp/cst_socket";
+    static constexpr const char* kLogPath = "./logs/castor.log";
+    static constexpr const char* kSocketPath = "/tmp/castor.socket";
     static constexpr const char* kAudioSourcePath = "";
     static constexpr const char* kAudioPlaylistPath = "";
     static constexpr const char* kAudioFallbackPath = "";
