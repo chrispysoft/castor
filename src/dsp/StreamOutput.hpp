@@ -19,10 +19,10 @@
 
 #pragma once
 
+#include <atomic>
 #include "Recorder.hpp"
 #include "../util/Log.hpp"
 #include "../util/HTTPClient.hpp"
-#include <atomic>
 
 namespace castor {
 namespace audio {
