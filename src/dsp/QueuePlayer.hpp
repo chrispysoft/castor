@@ -30,7 +30,7 @@
 #include "StreamPlayer.hpp"
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 class QueuePlayer : public Player {
     std::unique_ptr<std::thread> mWorker;

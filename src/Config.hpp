@@ -26,7 +26,7 @@
 #include "util/Log.hpp"
 #include "util/util.hpp"
 
-namespace cst {
+namespace castor {
 class Config {
 
     typedef std::unordered_map<std::string, std::string> Map;

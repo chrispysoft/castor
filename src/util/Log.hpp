@@ -28,7 +28,7 @@
 #include <mutex>
 #include "util.hpp"
 
-namespace cst {
+namespace castor {
 
 class LogStream {
     std::ostream& mOut;

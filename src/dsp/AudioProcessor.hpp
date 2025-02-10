@@ -24,7 +24,7 @@
 #include "audio.hpp"
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 
 class Input {

@@ -25,7 +25,7 @@
 #include <limits>
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 class SilenceDetector {
 

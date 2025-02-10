@@ -7,7 +7,7 @@
 #include "QueuePlayer.hpp"
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 
 class BufletController {

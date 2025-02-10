@@ -25,7 +25,7 @@
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
 
-namespace cst {
+namespace castor {
 namespace api {
 class Client {
 

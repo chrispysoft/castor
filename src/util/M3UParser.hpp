@@ -24,7 +24,7 @@
 #include "../api/API.hpp"
 #include "../dsp/CodecReader.hpp"
 
-namespace cst {
+namespace castor {
 class M3UParser {
 public:
 

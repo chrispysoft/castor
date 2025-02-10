@@ -24,7 +24,7 @@
 #include "../util/HTTPClient.hpp"
 #include <atomic>
 
-namespace cst {
+namespace castor {
 namespace audio {
 class StreamOutput {
 

@@ -27,7 +27,7 @@
 #include "Config.hpp"
 #include "util/Log.hpp"
 
-namespace cst {
+namespace castor {
 class Castor {
 
     bool mRunning = false;

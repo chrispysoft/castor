@@ -30,7 +30,7 @@
 #include <cstring>
 #include <cmath>
 
-namespace cst {
+namespace castor {
 namespace util {
 
 std::string currTimeFmtMs() {

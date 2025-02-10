@@ -24,7 +24,7 @@
 #include <limits>
 #include "audio.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 class SineOscillator {
 

@@ -36,7 +36,7 @@ extern "C" {
 #include <condition_variable>
 
 
-namespace cst {
+namespace castor {
 namespace audio {
 class CodecReader {
 

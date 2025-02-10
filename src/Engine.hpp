@@ -38,7 +38,7 @@
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
 
-namespace cst {
+namespace castor {
 class Engine : public audio::Client::Renderer {
 
     std::atomic<bool> mRunning = false;

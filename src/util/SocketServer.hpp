@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 class SocketServer {
 
     int mSocket;

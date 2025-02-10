@@ -33,7 +33,7 @@
 #include <netinet/in.h>
 #include "../util/Log.hpp"
 
-namespace cst {
+namespace castor {
 class TCPServer {
 
     int mSocket;

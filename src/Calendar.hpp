@@ -35,7 +35,7 @@
 #include "util/util.hpp"
 #include "third_party/json.hpp"
 
-namespace cst {
+namespace castor {
 class Calendar {
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;

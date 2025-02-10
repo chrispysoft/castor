@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace cst {
+namespace castor {
 namespace audio {
 
 using sam_t = int16_t;

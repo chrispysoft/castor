@@ -26,7 +26,7 @@
 #include "Log.hpp"
 #include "../third_party/json.hpp"
 
-namespace cst {
+namespace castor {
 class HTTPClient {
     CURL* mCURL;
 

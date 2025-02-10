@@ -23,7 +23,7 @@
 #include <string>
 #include "AudioProcessor.hpp"
 
-namespace cst {
+namespace castor {
 namespace audio {
 class LinePlayer : public Player {
 

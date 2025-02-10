@@ -21,7 +21,7 @@
 
 #include "../third_party/json.hpp"
 
-namespace cst {
+namespace castor {
 namespace api {
 
 using json = nlohmann::json;

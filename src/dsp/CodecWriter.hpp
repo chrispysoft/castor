@@ -35,7 +35,7 @@ extern "C" {
 #include <mutex>
 #include <condition_variable>
 
-namespace cst {
+namespace castor {
 namespace audio {
 class CodecWriter {
 
