@@ -33,14 +33,6 @@
 namespace cst {
 namespace util {
 
-std::string boolstr(const bool& flag) {
-    return flag ? "true" : "false";
-}
-
-bool strbool(const std::string& str) {
-    return str == "true" || str == "True";
-}
-
 std::string currTimeFmtMs() {
     std::stringstream strstr;
     auto now = std::chrono::system_clock::now();
@@ -63,43 +55,6 @@ std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
     return timefmt(tTime, fmt);
 }
 
-std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
-    size_t pos = input.find(delim);
-    if (pos == std::string::npos) {
-        return {input, ""};
-    }
-    return {input.substr(0, pos), input.substr(pos + 1)};
-}
-
-std::unordered_map<std::string, std::string> extractMetadata(const std::string& annotation) {
-    using namespace std;
-    unordered_map<string, string> keyValuePairs;
-    
-    regex kvRegex(R"((\w+)=["]?([^",]+)["]?)");
-    smatch match;
-    string::const_iterator searchStart(annotation.begin());
-    while (regex_search(searchStart, annotation.end(), match, kvRegex)) {
-        keyValuePairs[match[1]] = match[2]; // Group 1: key, Group 2: value
-        searchStart = match.suffix().first; // Continue searching from the end of the current match
-    }
-    
-    return keyValuePairs;
-}
-
-std::string extractUrl(const std::string& annotation) {
-    std::regex pattern(R"((?:[^:]*:){2}(.*))");
-    std::smatch match;
-    if (std::regex_match(annotation, match, pattern)) {
-        return match[1];
-    }
-    return "";
-}
-
-std::string getEnvar(const std::string& key) {
-    char* val = getenv(key.c_str());
-    return val == NULL ? std::string("") : std::string(val);
-}
-
 std::time_t parseDatetime(const std::string& datetime) {
     std::tm t{};
     std::istringstream ss(datetime);
@@ -111,10 +66,24 @@ std::time_t parseDatetime(const std::string& datetime) {
     return ts;
 }
 
+std::pair<std::string, std::string> splitBy(const std::string& input, const char& delim) {
+    size_t pos = input.find(delim);
+    if (pos == std::string::npos) {
+        return {input, ""};
+    }
+    return {input.substr(0, pos), input.substr(pos + 1)};
+}
+
 void stripM3ULine(std::string& line) {
     std::regex removeRgx("[\\r]");
     line = std::regex_replace(line, removeRgx, "");
 }
+
+std::string getEnvar(const std::string& key) {
+    char* val = getenv(key.c_str());
+    return val == NULL ? std::string("") : std::string(val);
+}
+
 
 template <typename T>
 bool contains(const std::deque<T>& tDeque, const T& tItem) {
@@ -199,21 +168,6 @@ public:
         mTail = 0;
         // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
         mCV.notify_all();
-    }
-};
-
-
-class Timer {
-    time_t mStartTime;
-
-public:
-
-    Timer() :
-        mStartTime(std::time(0))
-    {}
-
-    time_t get() {
-        return std::time(0) - mStartTime;
     }
 };
 
