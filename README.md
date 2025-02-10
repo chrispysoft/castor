@@ -5,24 +5,52 @@ Castor is a broadcasting playout engine written in C++ and conforming to the AUR
 ## Features
 
 - Fetches program and playlists from `AURA` `steering` and `tank` (alpha5)
-- Posts playlogs, health status and clock info to `engine-api` (alpha5)
-- Parses M3U files and fetches missing metadata (duration)
-- 2 generic File-/Stream Players (can read chunkwise or at once)
+- Posts playlog, health status and clock info to `engine-api` (alpha5)
+- Parses M3U files and fetches missing metadata
+- 2 generic File-/Stream Players
 - 1 Stereo Line Input
 - 1 Stereo Line Output
 - Recorder
-- Stream Output (experimantal)
+- Stream Output
 - Crossfading
 - Silence Detector
-- Fallback (playlist, stream, test signal)
+- Fallback
 - Configuration using file or environment variables
 - Logs to console and file
 - Runs natively on Debian, Ubuntu, macOS and Docker (Debian)
 - Can be integrated into `AURA-playout` at ease
 
-
-### Fast playback availibilty 
-To start the playback as quick as possible, sources are read into a fifo buffer with a default capacity of 1 hour (44100 kHz sample rate). The playback can start as soon as enough samples have been received, converted and stored in the buffer. This ensures a minimal downtime after restart. If the buffer has raeached its capacity, the read loop pauses and continues if the player has pulled the next block to render. This applies also to live streams, where the buffer acts more like a ring buffer since the received audio data is in realtime.
-
 ## Configuration
-Configuration can be applied via the config file and environment variables which have a higher priority. For convenience, all config file variables are lowercased while envars are uppercased. Setting `some_var` in the config file to "foo" and setting the envar `SOME_VAR` to "bar" will evaluate to "bar".
+Configuration can be applied via the config file and environment variables which have a higher priority. For convenience, all config file variables are lowercased while envars are uppercased. Setting `some_var` in the config file to "foo" and setting the envar `SOME_VAR` to "bar" will evaluate to "bar". See `config/config.txt` and `.env` for examples.
+
+## Prerequisites
+
+Make sure your machine meets the following requirements:
+
+- Debian 12, Ubuntu 23.10 or newer, macOS 12.0
+- `git`, `cmake`
+- [libcurl](https://curl.se/)
+- [PortAudio](https://www.portaudio.com/)
+- [FFmpeg](https://www.ffmpeg.org/)
+- optional: [Docker](https://www.docker.com/)
+
+Install dependencies on Debian/Ubuntu:
+```
+apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libcurl4-openssl-dev \
+    libasound2-dev \
+    portaudio19-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswresample-dev
+```
+
+## Building and running
+### On the host
+Execute `run.sh` to build and run the target.
+
+### Docker
+Run `docker compose build && docker compose up`
