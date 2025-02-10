@@ -104,12 +104,14 @@ public:
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
-        try {
-            mBufletController.load(tFallbackURL);
-        }
-        catch (const std::exception& e) {
-            log.error() << "Fallback failed to load queue: " << e.what();
-        }
+        std::thread([this, tFallbackURL] {
+            try {
+                mBufletController.load(tFallbackURL);
+            }
+            catch (const std::exception& e) {
+                log.error() << "Fallback failed to load queue: " << e.what();
+            }
+        }).detach();
     }
 
     void start() {
