@@ -1,5 +1,7 @@
-audio/*
+audio/fallback/*
+audio/recordings/*
 build
 logs/*
 .vscode
 .env
+.DS_Store
