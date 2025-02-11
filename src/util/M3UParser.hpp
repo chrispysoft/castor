@@ -49,6 +49,16 @@ public:
     std::deque<PlayItem> _parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
         // std::cout << "_parse " << uri << std::endl;
         using namespace std;
+
+        auto getDuration = [](const string& path) {
+            auto reader = audio::CodecReader(44100, path);
+            int duration = round(reader.duration());
+            if (duration <= 0) {
+                throw std::runtime_error("M3UParser could not get duration");
+            }
+            return duration;
+        };
+
         std::deque<PlayItem> items;
         ifstream file(url);
         if (!file.is_open()) {
@@ -63,14 +73,15 @@ public:
                 if (line.starts_with("#EXTINF:")) {
                     auto metadata = util::splitBy(line, ':').second;
                     auto metainfo = util::splitBy(metadata, ',');
-                    int duration = stoi(metainfo.first);
-                    if (duration <= 0) {
-                        throw runtime_error("Invalid duration " + to_string(duration));
-                    }
+                    auto duration = stoi(metainfo.first);
                     auto artist = metainfo.second;
                     string path;
                     if (getline(file, path)) {
                         util::stripM3ULine(path);
+                        if (duration <= 0) {
+                            log.warn() << "M3UParser found invalid duration - using CodecReader...";
+                            duration = getDuration(path);
+                        }
                         auto itmEnd = itmStart + duration;
                         if (endTime == 0 || itmEnd <= endTime) {
                             items.push_back({itmStart, itmEnd, path});
@@ -89,12 +100,7 @@ public:
             while (getline(file, path)) {
                 util::stripM3ULine(path);
                 try {
-                    auto reader = audio::CodecReader(44100, path);
-                    int duration = round(reader.duration());
-                    if (duration <= 0) {
-                        throw std::runtime_error("Could not get duration");
-                    }
-
+                    int duration = getDuration(path);
                     auto itmEnd = itmStart + duration;
                     if (endTime == 0 || itmEnd <= endTime) {
                         items.push_back({itmStart, itmEnd, path});
