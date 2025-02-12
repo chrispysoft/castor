@@ -102,7 +102,7 @@ public:
                     auto buflet = std::make_unique<Buflet>(mSampleRate, file, mBuffer);
                     while (mRunning && mBuffer.remaining() < buflet->size()) {
                         // log.debug() << Waiting for buffer space...";
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
                     }
                     if (!mRunning) return;
                     buflet->load();

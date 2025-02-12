@@ -23,6 +23,7 @@
 #include <ctime>
 #include <atomic>
 #include <limits>
+#include "RMS.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -30,10 +31,12 @@ namespace audio {
 class SilenceDetector {
 
     static constexpr size_t kChannelCount = 2;
+    static constexpr size_t kRMSCycleCount = 8;
     
     const float mThreshold;
     const time_t mStartDuration;
     const time_t mStopDuration;
+    RMS mRMS;
     std::atomic<time_t> mSilenceStart = 0;
     std::atomic<time_t> mSilenceStop = 0;
     
@@ -41,17 +44,14 @@ public:
     SilenceDetector(float tThreshold, time_t tStartDuration, time_t tStopDuration) :
         mThreshold(tThreshold),
         mStartDuration(tStartDuration),
-        mStopDuration(tStopDuration)
-    {
-        
-    }
+        mStopDuration(tStopDuration),
+        mRMS(kRMSCycleCount, kChannelCount)
+    {}
 
-    ~SilenceDetector() {
-        
-    }
-
+    
     void process(const sam_t* in, size_t nframes) {
-        float rms = util::rms_dB(in, nframes * kChannelCount);
+        float rms = mRMS.process(in, nframes);
+        // std::cout << rms << "\n";
         bool silence = rms <= mThreshold;
         if (silence) {
             if (mSilenceStart == 0) {

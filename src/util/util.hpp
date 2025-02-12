@@ -92,22 +92,6 @@ bool contains(const std::deque<T>& tDeque, const T& tItem) {
 
 
 template <typename T>
-inline float rms_dB(const T* tBlock, size_t tNumSamples, size_t tSampleMax = 1) {
-    float rms = 0;
-    float divisor = (typeid(T) == typeid(float) || typeid(T) == typeid(double)) ? 1.0 : std::numeric_limits<T>::max();
-    for (auto i = 0; i < tNumSamples; ++i) {
-        float sam = static_cast<float>(tBlock[i]) / divisor;
-        rms += sam * sam;
-    }
-    if (rms == 0) return -std::numeric_limits<float>::infinity();
-    rms = sqrt(rms / tNumSamples);
-    float dB = 20 * log10(rms);
-    // std::cout << "RMS lin: " << rms << " dB: " << dB;
-    return dB;
-}
-
-
-template <typename T>
 class RingBuffer {
     const size_t mCapacity;
     size_t mSize = 0;

@@ -22,6 +22,7 @@
 #include <string>
 #include <iomanip>
 #include "audio.hpp"
+#include "RMS.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -144,10 +145,10 @@ public:
 
     void setVolume(float vol, bool exp) {
         if (vol < 0) {
-            log.error() << "AudioProcessor " << name << " volume < 0";
+            log.debug() << "AudioProcessor " << name << " volume < 0";
             vol = 0;
         } else if (vol > 1) {
-            log.error() << "AudioProcessor " << name << " volume > 1";
+            log.debug() << "AudioProcessor " << name << " volume > 1";
             vol = 1;
         }
         volume = exp ? vol*vol : vol;
@@ -186,8 +187,10 @@ public:
 
 
     std::atomic<float> rms = -INFINITY;
+    RMS mRMS = RMS(1, 2);
+
     void calcRMS(const sam_t* buffer, size_t sampleCount) {
-        rms = util::rms_dB(buffer, sampleCount);
+        rms = mRMS.process(buffer, sampleCount);
     }
 
 
