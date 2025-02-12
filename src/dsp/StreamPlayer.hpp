@@ -41,7 +41,7 @@ class StreamPlayer : public Player {
     }
 
     static constexpr size_t kChannelCount = 2;
-    const size_t kRingBufferSize = align16byte(44100 * 2 * 60 * 10);
+    const size_t kRingBufferSize = align16byte(44100 * 2 * 3600);
 
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
