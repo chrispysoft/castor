@@ -32,7 +32,7 @@ class LinePlayer : public Player {
     
 
 public:
-    LinePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
+    LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
         mSampleRate(tSampleRate)
     {
         
