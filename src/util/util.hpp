@@ -127,6 +127,14 @@ public:
         return mSize;
     }
 
+    size_t capacity() {
+        return mCapacity;
+    }
+
+    size_t remaining() {
+        return mCapacity - mSize;
+    }
+
     void write(const T* tData, size_t tLen) {
         std::unique_lock<std::mutex> lock(mMutex);
         mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });

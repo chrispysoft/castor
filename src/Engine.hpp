@@ -71,7 +71,7 @@ public:
         mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mSampleRate, mConfig.audioFallbackPath),
+        mFallback(mSampleRate, mConfig.audioFallbackPath, mConfig.fallbackCacheTime),
         mRecorder(mSampleRate),
         mStreamOutput(mSampleRate),
         mMixBuffer(mBufferSize * 2)
@@ -92,6 +92,7 @@ public:
         mRunning = true;
         mCalendar.start();
         mAudioClient.start();
+        mFallback.run();
         for (auto& player : mPlayers) player->run();
         mWorker = std::make_unique<std::thread>([this] {
             while (this->mRunning) {
@@ -123,7 +124,7 @@ public:
         mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
-        mFallback.stop();
+        mFallback.terminate();
         mStreamOutput.stop();
         for (const auto& player : mPlayers) player->terminate();
         mAudioClient.stop();
