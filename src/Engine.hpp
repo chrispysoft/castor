@@ -26,7 +26,7 @@
 #include <mutex>
 #include "Config.hpp"
 #include "Calendar.hpp"
-#include "util/TCPServer.hpp"
+#include "io/TCPServer.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
 #include "api/APIClient.hpp"
@@ -50,8 +50,8 @@ class Engine : public audio::Client::Renderer {
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
-    TCPServer mTCPServer;
     Calendar mCalendar;
+    io::TCPServer mTCPServer;
     api::Client mAPIClient;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
@@ -66,8 +66,8 @@ class Engine : public audio::Client::Renderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
-        mTCPServer(mConfig.tcpPort),
         mCalendar(mConfig),
+        mTCPServer(mConfig.tcpPort),
         mAPIClient(mConfig),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),

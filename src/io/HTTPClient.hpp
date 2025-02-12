@@ -19,14 +19,15 @@
 
 #pragma once
 
-#include <curl/curl.h>
 #include <iostream>
 #include <string>
 #include <vector>
-#include "Log.hpp"
+#include <curl/curl.h>
+#include "../util/Log.hpp"
 #include "../third_party/json.hpp"
 
 namespace castor {
+namespace io {
 class HTTPClient {
     CURL* mCURL;
 
@@ -123,4 +124,5 @@ public:
         return realsize;
     }
 };
+}
 }

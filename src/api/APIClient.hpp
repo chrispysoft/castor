@@ -21,7 +21,7 @@
 
 #include <string>
 #include "API.hpp"
-#include "../util/HTTPClient.hpp"
+#include "../io/HTTPClient.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
 
@@ -58,7 +58,7 @@ public:
 
         log.debug() << "APIClient getProgram " << url;
         
-        auto res = HTTPClient().get(url);
+        auto res = io::HTTPClient().get(url);
         if (res.code == 200) {
             std::stringstream ss(res.response);
             nlohmann::json j;
@@ -72,7 +72,7 @@ public:
 
     api::Playlist getPlaylist(int showID) {
         auto url = mConfig.playlistURL + std::to_string(showID);
-        auto res = HTTPClient().get(url, mAuthHeaders);
+        auto res = io::HTTPClient().get(url, mAuthHeaders);
         log.debug() << "APIClient getPlaylist " << url;
         if (res.code == 200) {
             std::stringstream ss(res.response);
@@ -94,7 +94,7 @@ public:
         auto jstr = ss.str();
 
         log.debug() << "APIClient postPlaylog " << url << " " << jstr << " ";
-        auto res = HTTPClient().post(url, jstr);
+        auto res = io::HTTPClient().post(url, jstr);
         if (res.code != 204) {
             throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
         }
@@ -109,7 +109,7 @@ public:
         auto jstr = ss.str();
 
         log.debug() << "APIClient postHealth " << url << " " << jstr << " ";
-        auto res = HTTPClient().post(url, jstr);
+        auto res = io::HTTPClient().post(url, jstr);
         if (res.code != 204) {
             throw std::runtime_error("APIClient postHealth status code "+std::to_string(res.code));
         }

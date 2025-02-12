@@ -21,8 +21,8 @@
 
 #include <atomic>
 #include "Recorder.hpp"
+#include "../io/HTTPClient.hpp"
 #include "../util/Log.hpp"
-#include "../util/HTTPClient.hpp"
 
 namespace castor {
 namespace audio {
@@ -75,7 +75,7 @@ public:
     void updateMetadata(const std::string& tURL, const std::string& tMetadata) {
         log.debug() << "StreamOutput updateMetadata " << tMetadata;
         auto url = tURL + "&mode=updinfo&song=" + tMetadata;
-        auto res = HTTPClient().get(url);
+        auto res = io::HTTPClient().get(url);
         auto code = res.code;
         if (code != 200) {
             throw std::runtime_error("metadata http request failed with code: " + std::to_string(code));

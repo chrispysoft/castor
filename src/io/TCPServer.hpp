@@ -34,6 +34,7 @@
 #include "../util/Log.hpp"
 
 namespace castor {
+namespace io {
 class TCPServer {
 
     int mSocket;
@@ -202,4 +203,5 @@ private:
     }
 };
 
+}
 }
