@@ -40,6 +40,10 @@ class Config {
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kStreamOutURL = "";
     static constexpr const char* kStreamOutMetadataURL = "";
+    static constexpr const char* kStreamOutName = "Castor";
+    static constexpr const char* kStreamOutDescription = "Live Stream";
+    static constexpr const char* kStreamOutGenre = "Electronic";
+    static constexpr const char* kStreamOutHREF = "https://crispybits.app/";
     static constexpr const char* kProgramURL = "http://localhost/program";
     static constexpr const char* kPlaylistURL = "http://localhost/playlist";
     static constexpr const char* kPlaylogURL = "http://localhost/playlog";
@@ -47,7 +51,7 @@ class Config {
     static constexpr const char* kClockURL = "http://localhost/clock";
     static constexpr const char* kPlaylistToken = "castor:id";
     static constexpr const char* kTCPPort = "0";
-    static constexpr const char* kSilenceThreshold = "-80";
+    static constexpr const char* kSilenceThreshold = "-90";
     static constexpr const char* kSilenceStartDuration = "5";
     static constexpr const char* kSilenceStopDuration = "1";
     static constexpr const char* kFallbackCacheTime = "1800";
@@ -82,6 +86,10 @@ public:
     std::string oDevName;
     std::string streamOutURL;
     std::string streamOutMetadataURL;
+    std::string streamOutName;
+    std::string streamOutDescription;
+    std::string streamOutGenre;
+    std::string streamOutHREF;
     std::string programURL;
     std::string playlistURL;
     std::string playlogURL;
@@ -118,10 +126,14 @@ public:
         audioPlaylistPath = get(map, "audio_playlist_path", "AUDIO_PLAYLIST_PATH", kAudioPlaylistPath);
         audioRecordPath = get(map, "audio_record_path", "AUDIO_RECORD_PATH", kAudioRecordPath);
         audioFallbackPath = get(map, "audio_fallback_path", "AUDIO_FALLBACK_PATH", kAudioFallbackPath);
-        iDevName = get(map, "in_device_name", "INPUT_DEVICE", kDeviceName);
-        oDevName = get(map, "out_device_name", "OUTPUT_DEVICE", kDeviceName);
-        streamOutURL = get(map, "stream_out_url", "STREAM_OUTPUT_URL", kStreamOutURL);
+        iDevName = get(map, "in_device_name", "IN_DEVICE_NAME", kDeviceName);
+        oDevName = get(map, "out_device_name", "OUT_DEVICE_NAME", kDeviceName);
+        streamOutURL = get(map, "stream_out_url", "STREAM_OUT_URL", kStreamOutURL);
         streamOutMetadataURL = get(map, "stream_out_metadata_url", "STREAM_OUT_METADATA_URL", kStreamOutMetadataURL);
+        streamOutName = get(map, "stream_out_name", "STREAM_OUT_NAME", kStreamOutName);
+        streamOutDescription = get(map, "stream_out_description", "STREAM_OUT_DESCRIPTION", kStreamOutDescription);
+        streamOutGenre = get(map, "stream_out_genre", "STREAM_OUT_GENRE", kStreamOutGenre);
+        streamOutHREF = get(map, "stream_out_href", "STREAM_OUT_HREF", kStreamOutHREF);
         programURL = get(map, "program_url", "PROGRAM_URL", kProgramURL);
         playlistURL = get(map, "playlist_url", "PLAYLIST_URL", kPlaylistURL);
         playlogURL = get(map, "playlog_url", "PLAYLOG_URL", kPlaylogURL);
@@ -145,6 +157,10 @@ public:
         << "\n\t oDevName=" << oDevName 
         << "\n\t streamOutURL=" << streamOutURL 
         << "\n\t streamOutMetadataURL=" << streamOutMetadataURL
+        << "\n\t streamOutName=" << streamOutName
+        << "\n\t streamOutDescription=" << streamOutDescription
+        << "\n\t streamOutGenre=" << streamOutGenre
+        << "\n\t streamOutHREF=" << streamOutHREF
         << "\n\t programURL=" << programURL
         << "\n\t playlistURL=" << playlistURL
         << "\n\t playlogURL=" << playlogURL
