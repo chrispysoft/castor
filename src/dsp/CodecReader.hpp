@@ -19,6 +19,9 @@
 
 #pragma once
 
+#include <string>
+#include <atomic>
+#include <semaphore>
 #include "AudioProcessor.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
@@ -29,12 +32,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 }
-#include <iostream>
-#include <string>
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-
 
 namespace castor {
 namespace audio {
@@ -45,15 +42,12 @@ class CodecReader {
 
     const double mSampleRate;
     size_t mSampleCount;
+    size_t mReadSamples;
     double mDuration;
     std::vector<sam_t> mFrameBuffer;
+    std::binary_semaphore mSem;
     std::atomic<bool> mCancelled = false;
-    std::mutex mMutex;
-    std::condition_variable mCV;
-    bool mReading = false;
     
-    size_t mReadSamples = 0;
-
     AVChannelLayout mChannelLayout;
     AVFormatContext* mFormatCtx = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
@@ -67,7 +61,9 @@ public:
     CodecReader(double tSampleRate, const std::string tURL, double tSeek = 0) :
         mSampleRate(tSampleRate),
         mSampleCount(0),
-        mFrameBuffer(kFrameBufferSize)
+        mReadSamples(0),
+        mFrameBuffer(kFrameBufferSize),
+        mSem(1)
     {
         av_log_set_level(AV_LOG_ERROR);
 
@@ -177,45 +173,43 @@ public:
     void read(util::RingBuffer<sam_t>& tBuffer) {
         log.debug() << "AudioCodecReader read...";
 
-        mReading = true;
+        mSem.acquire();
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
-            if (mPacket->stream_index == mStreamIndex) {
-                if (avcodec_send_packet(mCodecCtx, mPacket) >= 0) {
-                    while (!mCancelled && avcodec_receive_frame(mCodecCtx, mFrame) >= 0) {
-                        auto maxSamples = swr_get_out_samples(mSwrCtx, mFrame->nb_samples);
-                        auto maxBufSize = maxSamples * kChannelCount;
-                        if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize);
+            if (mPacket->stream_index != mStreamIndex) continue;
+            if (avcodec_send_packet(mCodecCtx, mPacket) < 0) break;
 
-                        uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
-                        int convSamples = swr_convert(mSwrCtx, outData, maxSamples, const_cast<const uint8_t**>(mFrame->data), mFrame->nb_samples);
-                        // log.debug() << "max samples: " << maxSamples << " converted samples: " << convSamples;
+            while (!mCancelled && avcodec_receive_frame(mCodecCtx, mFrame) >= 0) {
+                auto maxSamples = swr_get_out_samples(mSwrCtx, mFrame->nb_samples);
+                auto maxBufSize = maxSamples * kChannelCount;
+                if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize);
 
-                        if (convSamples < 0) {
-                            av_packet_unref(mPacket);
-                            av_frame_unref(mFrame);
-                            throw std::runtime_error("Error during resampling.");
-                        }
+                uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
+                int convSamples = swr_convert(mSwrCtx, outData, maxSamples, const_cast<const uint8_t**>(mFrame->data), mFrame->nb_samples);
+                // log.debug() << "max samples: " << maxSamples << " converted samples: " << convSamples;
 
-                        mReadSamples += convSamples * kChannelCount;
-                        if (mSampleCount > 0 && mReadSamples >= mSampleCount) {
-                            log.warn() << "AudioCodecReader exceeded estimated sample count";
-                            break;
-                        }
-
-                        tBuffer.write(mFrameBuffer.data(), convSamples * kChannelCount);
-                    }
+                if (convSamples < 0) {
+                    av_packet_unref(mPacket);
+                    av_frame_unref(mFrame);
+                    log.error() << "AudioCodecReader resample error";
+                    break;
                 }
+
+                mReadSamples += convSamples * kChannelCount;
+                if (mSampleCount > 0 && mReadSamples >= mSampleCount) {
+                    log.warn() << "AudioCodecReader exceeded estimated sample count";
+                    break;
+                }
+
+                tBuffer.write(mFrameBuffer.data(), convSamples * kChannelCount);
             }
+
             av_packet_unref(mPacket);
             av_frame_unref(mFrame);
         }
 
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mReading = false;
-            mCV.notify_all();
-        };
+        mSem.release();
+
         log.info() << "AudioCodecReader read finished";
     }
 
@@ -223,10 +217,8 @@ public:
         if (mCancelled) return;
         log.debug() << "AudioCodecReader cancel...";
         mCancelled = true;
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [this] { return !mReading; });
-        }
+        mSem.acquire();
+        mSem.release();
         log.info() << "AudioCodecReader cancelled";
     }
 
