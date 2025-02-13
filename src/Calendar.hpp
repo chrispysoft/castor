@@ -20,14 +20,12 @@
 #pragma once
 
 #include <atomic>
-#include <iostream>
 #include <fstream>
 #include <thread>
 #include <string>
 #include <ctime>
 #include <deque>
 #include <filesystem>
-
 #include "Config.hpp"
 #include "api/API.hpp"
 #include "api/APIClient.hpp"
@@ -74,24 +72,6 @@ public:
                 log.error() << "Calendar refresh failed: " << e.what();
             }
         }
-
-        // if (mItems.empty()) {
-        //     mItems.push_back({ now +  5, now +  60, "/Users/chris/Music/Musik/Psychedelic Chillout.mp3" });
-        //     mItems.push_back({ now +  20, now + 40, "http://stream.fro.at/fro-128.ogg" });
-        //     mItems.push_back({ now +  40, now + 60, "http://stream.fro.at/oggst3.ogg" });
-        //     mItems.push_back({ now +  5, now + 10, "/Users/chris/Music/Audio-Test-Files/Key/A maj.mp3" });
-        //     mItems.push_back({ now + 10, now + 15, "/Users/chris/Music/Audio-Test-Files/Key/D maj.mp3" });
-        //     mItems.push_back({ now + 15, now + 20, "/Users/chris/Music/Audio-Test-Files/Key/G maj.mp3" });
-        //     mItems.push_back({ now + 20, now + 25, "/Users/chris/Music/Audio-Test-Files/Key/C maj.mp3" });
-        //     mItems.push_back({ now + 25, now + 30, "/Users/chris/Music/Audio-Test-Files/Key/F maj.mp3" });
-        //     mItems.push_back({ now + 30, now + 35, "/Users/chris/Music/Audio-Test-Files/Key/A# maj.mp3" });
-        //     mItems.push_back({ now + 35, now + 40, "/Users/chris/Music/Audio-Test-Files/Key/D# maj.mp3" });
-        //     mItems.push_back({ now + 40, now + 45, "/Users/chris/Music/Audio-Test-Files/Key/G# maj.mp3" });
-        //     mItems.push_back({ now + 45, now + 50, "/Users/chris/Music/Audio-Test-Files/Key/C# maj.mp3" });
-        //     mItems.push_back({ now + 50, now + 55, "/Users/chris/Music/Audio-Test-Files/Key/F# maj.mp3" });
-        //     mItems.push_back({ now + 55, now + 60, "/Users/chris/Music/Audio-Test-Files/Key/B maj.mp3" });
-        //     mItems.push_back({ now + 60, now + 65, "/Users/chris/Music/Audio-Test-Files/Key/E maj.mp3" });
-        // }
     }
     
     std::deque<PlayItem> fetchItems() {

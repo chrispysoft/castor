@@ -23,7 +23,6 @@
 #include <ranges>
 #include <atomic>
 #include <thread>
-#include <mutex>
 #include "Config.hpp"
 #include "Calendar.hpp"
 #include "io/TCPServer.hpp"
@@ -37,6 +36,7 @@
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
+#include "test/CalendarMock.hpp"
 
 namespace castor {
 class Engine : public audio::Client::Renderer {
@@ -44,13 +44,13 @@ class Engine : public audio::Client::Renderer {
     std::atomic<bool> mRunning = false;
     std::unique_ptr<std::thread> mWorker = nullptr;
     std::deque<PlayItem> mScheduledItems = {};
-    std::mutex mMutex;
 
     double mSampleRate = 44100;
     size_t mBufferSize = 1024;
 
     const Config& mConfig;
     Calendar mCalendar;
+    // test::CalendarMock mCalendar;
     io::TCPServer mTCPServer;
     api::Client mAPIClient;
     audio::Client mAudioClient;
