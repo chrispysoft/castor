@@ -33,7 +33,6 @@ class Buflet {
     const double mSampleRate;
     const std::string mURL;
     std::unique_ptr<CodecReader> mReader;
-    const double mDuration;
     const size_t mSize;
     util::RingBuffer<sam_t>& mBuffer;
 
@@ -44,7 +43,6 @@ public:
         mSampleRate(tSampleRate),
         mURL(tURL),
         mReader(std::make_unique<CodecReader>(mSampleRate, mURL)),
-        mDuration(mReader->duration()),
         mSize(mReader->sampleCount()),
         mBuffer(tBuffer)
     {}
