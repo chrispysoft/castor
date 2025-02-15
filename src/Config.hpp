@@ -54,7 +54,9 @@ class Config {
     static constexpr const char* kSilenceThreshold = "-90";
     static constexpr const char* kSilenceStartDuration = "5";
     static constexpr const char* kSilenceStopDuration = "1";
-    static constexpr const char* kFallbackCacheTime = "1800";
+    static constexpr const char* kPreloadTimeFile = "3600";
+    static constexpr const char* kPreloadTimeStream = "10";
+    static constexpr const char* kPreloadTimeFallback = "3600";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -100,9 +102,15 @@ public:
     int silenceThreshold;
     int silenceStartDuration;
     int silenceStopDuration;
-    int fallbackCacheTime;
+    int preloadTimeFile;
+    int preloadTimeStream;
+    int preloadTimeFallback;
+    float sampleRate = 44100;
+    size_t audioBufferSize = 1024;
 
-    static std::string get(Map& map, std::string mapKey, std::string envKey, std::string defaultValue) {
+    static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
+        auto envKey = mapKey;
+        std::transform(envKey.begin(), envKey.end(), envKey.begin(), [](unsigned char c){ return std::toupper(c); });
         std::string value;
         if (map.find(mapKey) != map.end()) value = map.at(mapKey);
         auto envVal = util::getEnvar(envKey);
@@ -120,31 +128,33 @@ public:
             log.error() << "Config failed to parse file: " << e.what();
         }
 
-        logPath = get(map, "log_path", "LOG_PATH", kLogPath);
-        socketPath = get(map, "socket_path", "SOCKET_PATH", kSocketPath);
-        audioSourcePath = get(map, "audio_source_path", "AUDIO_SOURCE_PATH", kAudioSourcePath);
-        audioPlaylistPath = get(map, "audio_playlist_path", "AUDIO_PLAYLIST_PATH", kAudioPlaylistPath);
-        audioRecordPath = get(map, "audio_record_path", "AUDIO_RECORD_PATH", kAudioRecordPath);
-        audioFallbackPath = get(map, "audio_fallback_path", "AUDIO_FALLBACK_PATH", kAudioFallbackPath);
-        iDevName = get(map, "in_device_name", "IN_DEVICE_NAME", kDeviceName);
-        oDevName = get(map, "out_device_name", "OUT_DEVICE_NAME", kDeviceName);
-        streamOutURL = get(map, "stream_out_url", "STREAM_OUT_URL", kStreamOutURL);
-        streamOutMetadataURL = get(map, "stream_out_metadata_url", "STREAM_OUT_METADATA_URL", kStreamOutMetadataURL);
-        streamOutName = get(map, "stream_out_name", "STREAM_OUT_NAME", kStreamOutName);
-        streamOutDescription = get(map, "stream_out_description", "STREAM_OUT_DESCRIPTION", kStreamOutDescription);
-        streamOutGenre = get(map, "stream_out_genre", "STREAM_OUT_GENRE", kStreamOutGenre);
-        streamOutHREF = get(map, "stream_out_href", "STREAM_OUT_HREF", kStreamOutHREF);
-        programURL = get(map, "program_url", "PROGRAM_URL", kProgramURL);
-        playlistURL = get(map, "playlist_url", "PLAYLIST_URL", kPlaylistURL);
-        playlogURL = get(map, "playlog_url", "PLAYLOG_URL", kPlaylogURL);
-        healthURL = get(map, "health_url", "HEALTH_URL", kHealthURL);
-        clockURL = get(map, "clock_url", "CLOCK_URL", kClockURL);
-        playlistToken = get(map, "playlist_token", "PLAYLIST_TOKEN", kPlaylistToken);
-        tcpPort = std::stoi(get(map, "tcp_port", "TCP_PORT", kTCPPort));
-        silenceThreshold = std::stoi(get(map, "silence_threshold", "SILENCE_THRESHOLD", kSilenceThreshold));
-        silenceStartDuration = std::stoi(get(map, "silence_start_duration", "SILENCE_START_DURATION", kSilenceStartDuration));
-        silenceStopDuration = std::stoi(get(map, "silence_stop_duration", "SILENCE_STOP_DURATION", kSilenceStopDuration));
-        fallbackCacheTime = std::stoi(get(map, "fallback_cache_time", "FALLBACK_CACHE_TIME", kFallbackCacheTime));
+        logPath = get(map, "log_path", kLogPath);
+        socketPath = get(map, "socket_path", kSocketPath);
+        audioSourcePath = get(map, "audio_source_path", kAudioSourcePath);
+        audioPlaylistPath = get(map, "audio_playlist_path", kAudioPlaylistPath);
+        audioRecordPath = get(map, "audio_record_path", kAudioRecordPath);
+        audioFallbackPath = get(map, "audio_fallback_path", kAudioFallbackPath);
+        iDevName = get(map, "in_device_name", kDeviceName);
+        oDevName = get(map, "out_device_name", kDeviceName);
+        streamOutURL = get(map, "stream_out_url", kStreamOutURL);
+        streamOutMetadataURL = get(map, "stream_out_metadata_url", kStreamOutMetadataURL);
+        streamOutName = get(map, "stream_out_name", kStreamOutName);
+        streamOutDescription = get(map, "stream_out_description", kStreamOutDescription);
+        streamOutGenre = get(map, "stream_out_genre", kStreamOutGenre);
+        streamOutHREF = get(map, "stream_out_href", kStreamOutHREF);
+        programURL = get(map, "program_url", kProgramURL);
+        playlistURL = get(map, "playlist_url", kPlaylistURL);
+        playlogURL = get(map, "playlog_url", kPlaylogURL);
+        healthURL = get(map, "health_url", kHealthURL);
+        clockURL = get(map, "clock_url", kClockURL);
+        playlistToken = get(map, "playlist_token", kPlaylistToken);
+        tcpPort = std::stoi(get(map, "tcp_port", kTCPPort));
+        silenceThreshold = std::stoi(get(map, "silence_threshold", kSilenceThreshold));
+        silenceStartDuration = std::stoi(get(map, "silence_start_duration", kSilenceStartDuration));
+        silenceStopDuration = std::stoi(get(map, "silence_stop_duration", kSilenceStopDuration));
+        preloadTimeFile = std::stoi(get(map, "preload_time_file", kPreloadTimeFile));
+        preloadTimeStream = std::stoi(get(map, "preload_time_stream", kPreloadTimeStream));
+        preloadTimeFallback = std::stoi(get(map, "preload_time_fallback", kPreloadTimeFallback));
 
         log.info() << "Config:"
         << "\n\t logPath=" << logPath 
@@ -171,7 +181,9 @@ public:
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration
         << "\n\t silenceStopDuration=" << silenceStopDuration
-        << "\n\t fallbackCacheTime=" << fallbackCacheTime;
+        << "\n\t preloadTimeFile=" << preloadTimeFile
+        << "\n\t preloadTimeStream=" << preloadTimeStream
+        << "\n\t preloadTimeFallback=" << preloadTimeFallback;
     }
 };
 }

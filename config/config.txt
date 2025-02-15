@@ -7,7 +7,9 @@ audio_record_path=./audio/recordings
 audio_fallback_path=./audio/test
 
 # Fallback preload time (sec.)
-fallback_cache_time=1800
+preload_time_file=3600
+preload_time_stream=10
+preload_time_fallback=3600
 
 # Silence Detector
 silence_threshold=-90
