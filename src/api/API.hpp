@@ -133,6 +133,11 @@ struct PlayItem {
         return now >= scheduleStart() && now <= scheduleEnd();
     }
 
+    bool isPriorSchedulingTime() const {
+        auto now = std::time(0);
+        return now < scheduleStart();
+    }
+
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
     }

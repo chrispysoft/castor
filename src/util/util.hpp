@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <atomic>
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <utility>
@@ -91,9 +93,27 @@ bool contains(const std::deque<T>& tDeque, const T& tItem) {
 }
 
 
+void sleepCancellable(std::time_t seconds, std::atomic<bool>& running) {
+    static constexpr time_t sleepMs = 100;
+    auto niters = seconds * 1000 / sleepMs;
+    for (auto i = 0; i < niters; ++i) {
+        if (!running) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+    }
+}
+
+
+size_t align16byte(size_t val) {
+    if (val & (16-1)) {
+        return val + (16 - (val & (16-1)));
+    }
+    return val;
+}
+
+
 template <typename T>
 class RingBuffer {
-    const size_t mCapacity;
+    size_t mCapacity;
     size_t mSize = 0;
     size_t mHead = 0;
     size_t mTail = 0;
@@ -119,16 +139,23 @@ public:
         return mCapacity - mSize;
     }
 
-    void write(const T* tData, size_t tLen) {
-        std::unique_lock<std::mutex> lock(mMutex);
-        mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
+    void resize(size_t tSize) {
+        mCapacity = tSize;
+        mBuffer.resize(mCapacity);
+    }
+
+    void write(const T* tData, size_t tLen, bool tWait = false) {
+        if (tWait) {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
+        }
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
             mTail = (mTail + 1) % mCapacity;
             if (mSize < mCapacity) {
                 ++mSize;
             } else {
-                mHead = (mHead + 1) % mCapacity; // overwrite
+                mHead = (mHead + 1) % mCapacity; // overwrite (prevented if tWait)
             }
         }
     }
@@ -159,7 +186,28 @@ public:
         mHead = 0;
         mTail = 0;
         // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
+        mBuffer = {};
         mCV.notify_all();
+    }
+};
+
+
+class Timer {
+    const time_t mTimeout;
+    time_t mLastQuery = 0;
+
+public:
+    Timer(time_t tTimeout) :
+        mTimeout(tTimeout)
+    {}
+
+    bool query() {
+        auto now = std::time(0);
+        if (now - mLastQuery > mTimeout) {
+            mLastQuery = now;
+            return true;
+        }
+        return false;
     }
 };
 

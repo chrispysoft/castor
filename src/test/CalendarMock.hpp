@@ -47,7 +47,7 @@ public:
         mItems.push_back({ now + 30, now + 35, "./audio/test/A# maj.mp3" });
         mItems.push_back({ now + 35, now + 40, "./audio/test/D# maj.mp3" });
         mItems.push_back({ now + 40, now + 45, "./audio/test/G# maj.mp3" });
-        mItems.push_back({ now + 45, now + 50, "http://stream.fro.at/fro-320.ogg" });
+        mItems.push_back({ now + 45, now + 50, "http://stream.fro.at/non-existing.ogg" });
         // mItems.push_back({ now + 45, now + 50, "./audio/test/C# maj.mp3" });
         mItems.push_back({ now + 50, now + 55, "./audio/test/F# maj.mp3" });
         mItems.push_back({ now + 55, now + 60, "./audio/test/B maj.mp3" });

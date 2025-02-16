@@ -40,16 +40,16 @@ class Config {
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kStreamOutURL = "";
     static constexpr const char* kStreamOutMetadataURL = "";
-    static constexpr const char* kStreamOutName = "Castor";
-    static constexpr const char* kStreamOutDescription = "Live Stream";
-    static constexpr const char* kStreamOutGenre = "Electronic";
-    static constexpr const char* kStreamOutHREF = "https://crispybits.app/";
-    static constexpr const char* kProgramURL = "http://localhost/program";
-    static constexpr const char* kPlaylistURL = "http://localhost/playlist";
-    static constexpr const char* kPlaylogURL = "http://localhost/playlog";
-    static constexpr const char* kHealthURL = "http://localhost/health";
-    static constexpr const char* kClockURL = "http://localhost/clock";
-    static constexpr const char* kPlaylistToken = "castor:id";
+    static constexpr const char* kStreamOutName = "";
+    static constexpr const char* kStreamOutDescription = "";
+    static constexpr const char* kStreamOutGenre = "";
+    static constexpr const char* kStreamOutHREF = "";
+    static constexpr const char* kProgramURL = "";
+    static constexpr const char* kPlaylistURL = "";
+    static constexpr const char* kPlaylogURL = "";
+    static constexpr const char* kHealthURL = "";
+    static constexpr const char* kClockURL = "";
+    static constexpr const char* kPlaylistToken = "";
     static constexpr const char* kTCPPort = "0";
     static constexpr const char* kSilenceThreshold = "-90";
     static constexpr const char* kSilenceStartDuration = "5";
@@ -107,6 +107,7 @@ public:
     int preloadTimeFallback;
     float sampleRate = 44100;
     size_t audioBufferSize = 1024;
+    time_t reportInterval = 10;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
         auto envKey = mapKey;

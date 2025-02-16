@@ -31,12 +31,13 @@ namespace audio {
 class SilenceDetector {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRMSCycleCount = 8;
+    static constexpr size_t kRMSCycleCount = 4;
     
     const float mThreshold;
     const time_t mStartDuration;
     const time_t mStopDuration;
     RMS mRMS;
+    std::atomic<float> mCurrRMS = -std::numeric_limits<float>::infinity();
     std::atomic<time_t> mSilenceStart = 0;
     std::atomic<time_t> mSilenceStop = 0;
     
@@ -50,9 +51,9 @@ public:
 
     
     void process(const sam_t* in, size_t nframes) {
-        float rms = mRMS.process(in, nframes);
-        // std::cout << rms << "\n";
-        bool silence = rms <= mThreshold;
+        mCurrRMS = mRMS.process(in, nframes);
+        // std::cout << mCurrRMS << std::endl;
+        bool silence = mCurrRMS <= mThreshold;
         if (silence) {
             if (mSilenceStart == 0) {
                 mSilenceStart = std::time(0);
@@ -67,6 +68,10 @@ public:
         auto now = std::time(0);
         auto duration = now - mSilenceStart;
         return duration > mStartDuration;
+    }
+
+    float currentRMS() {
+        return mCurrRMS;
     }
 
 };

@@ -19,11 +19,9 @@
 
 #pragma once
 
-#include <iostream>
-#include <string>
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
+#include <string>
+#include <thread>
 #include "AudioProcessor.hpp"
 #include "CodecReader.hpp"
 #include "../util/Log.hpp"
@@ -33,93 +31,60 @@ namespace castor {
 namespace audio {
 class StreamPlayer : public Player {
 
-    static size_t align16byte(size_t val) {
-        if (val & (16-1)) {
-            return val + (16 - (val & (16-1)));
-        }
-        return val;
-    }
-
     static constexpr size_t kChannelCount = 2;
-    const size_t kRingBufferSize = align16byte(44100 * 2 * 3600);
+    const size_t kRingBufferSize = util::align16byte(44100 * 2 * 60);
 
     const double mSampleRate;
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mSampleCount = 0;
     std::string mCurrURL = "";
-    double mDuration;
-    std::mutex mMutex;
-    std::condition_variable mCondition;
-    std::atomic<bool> mLoading = false;
+    std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
     util::RingBuffer<sam_t> mRingBuffer;
-    
 
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
         mRingBuffer(kRingBufferSize)
-    {
-
-    }
+    {}
     
     ~StreamPlayer() {
+        log.debug() << "StreamPlayer " << name << " dealloc...";
         if (state != IDLE) stop();
-    }
-    
-    std::string currentURL() {
-        return mCurrURL;
-    }
-
-    bool canPlay(const PlayItem& item) override {
-        return item.uri.starts_with("http") || item.uri.starts_with("/") || item.uri.starts_with("./");
+        log.debug() << "StreamPlayer " << name << " dealloced";
     }
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "StreamPlayer load " << tURL << " position " << seek;
         // eject();
-        state = LOAD;
-        mLoading = true;
-        try {
-            if (mReader) mReader->cancel();
-            mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
-            mSampleCount = mReader->sampleCount();
-            std::thread([this] {
-                this->mReader->read(this->mRingBuffer);
-                this->mReader = nullptr;
-            }).detach();
-            state = CUE;
-            mLoading = false;
-            mCondition.notify_one();
+
+        if (mReader) mReader->cancel();
+        mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
+
+        auto sampleCount = mReader->sampleCount();
+        if (sampleCount > 0) {
+            mSampleCount = sampleCount;
+            mRingBuffer.resize(mSampleCount * 2);
         }
-        catch (const std::runtime_error& e) {
-            eject();
-            mLoading = false;
-            mCondition.notify_one();
-            throw e;
-        }
+
+        if (mLoadWorker.joinable()) mLoadWorker.join();
+        mLoadWorker = std::thread([this] {
+            mReader->read(mRingBuffer);
+            mReader = nullptr;
+        });
     }
 
     void stop() override {
-        eject();
-    }
-
-    void eject() {
-        log.debug() << "StreamPlayer eject...";
-        state = IDLE;
+        log.debug() << "StreamPlayer stop...";
+        scheduling = false;
         if (mReader) mReader->cancel();
+        if (mLoadWorker.joinable()) mLoadWorker.join();
+        state = IDLE;
         mReader = nullptr;
-        //std::lock_guard lock(mMutex);
         mReadPos = 0;
         mCurrURL = "";
         mRingBuffer.flush();
-        log.info() << "StreamPlayer ejected";
-    }
-
-
-    bool isIdle() {
-        // log.debug() << mReadPos << " " << mSampleCount;
-        return state == IDLE || mReadPos >= mSampleCount;
+        log.debug() << "StreamPlayer stopped";
     }
 
     
@@ -137,7 +102,7 @@ public:
         } else {
             memset(tBuffer, 0, sampleCount * sizeof(sam_t));
         }
-        calcRMS(tBuffer, sampleCount);
+        // calcRMS(tBuffer, sampleCount);
     }
 };
 }

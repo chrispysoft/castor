@@ -36,7 +36,7 @@
 namespace castor {
 class Calendar {
     std::atomic<bool> mRunning = false;
-    std::unique_ptr<std::thread> mWorker = nullptr;
+    std::thread mWorker;
     const Config& mConfig;
     api::Client mAPIClient;
     time_t mLastRefreshTime = 0;
@@ -61,6 +61,24 @@ public:
         return items;
     }
 
+    void start() {
+        mRunning = true;
+        mWorker = std::thread([this] {
+            while (mRunning) {
+                work();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        });
+    }
+
+    void stop() {
+        mRunning = false;
+        if (mWorker.joinable()) mWorker.join();
+    }
+
+
+private:
+
     void work() {
         auto now = std::time(0);
         if (now - mLastRefreshTime > mRefreshInterval) {
@@ -71,6 +89,22 @@ public:
             catch (const std::exception& e) {
                 log.error() << "Calendar refresh failed: " << e.what();
             }
+        }
+    }
+
+    void refresh() {
+        log.debug() << "Calendar refresh";
+
+        auto items = fetchItems();
+        if ( items != mItems) {
+            mItems = items;
+            log.debug(Log::Yellow) << "Calendar changed";
+            // for (const auto& itm : items) {
+            //     static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
+            //     log.debug() << util::timefmt(itm.start, fmt) << " - " << util::timefmt(itm.end, fmt) << " " << itm.program.showName << " " << itm.uri;
+            // }
+        } else {
+            log.debug() << "Calendar not changed";
         }
     }
     
@@ -138,39 +172,5 @@ public:
         }
         return items;
     }
-
-    void refresh() {
-        log.debug() << "Calendar refresh";
-
-        auto items = fetchItems();
-        if ( items != mItems) {
-            mItems = items;
-            log.info() << "Calendar changed";
-            for (const auto& itm : items) {
-                static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
-                log.debug() << util::timefmt(itm.start, fmt) << " - " << util::timefmt(itm.end, fmt) << " " << itm.program.showName << " " << itm.uri;
-            }
-        } else {
-            log.debug() << "Calendar not changed";
-        }
-    }
-
-    void start() {
-        mRunning = true;
-        mWorker = std::make_unique<std::thread>([this] {
-            while (this->mRunning) {
-                this->work();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-        });
-    }
-
-    void stop() {
-        mRunning = false;
-        if (mWorker->joinable()) {
-            mWorker->join();
-        }
-    }
-
 };
 }

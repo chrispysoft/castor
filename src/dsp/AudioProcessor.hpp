@@ -21,6 +21,8 @@
 
 #include <string>
 #include <iomanip>
+#include <chrono>
+#include <ctime>
 #include "audio.hpp"
 #include "RMS.hpp"
 #include "../util/Log.hpp"
@@ -33,7 +35,7 @@ public:
 
     const std::string name;
     
-    Input(const std::string& name = "") :
+    Input(const std::string name = "") :
         name(name)
     {}
     
@@ -42,42 +44,21 @@ public:
 };
 
 
-class Runner {
-    std::atomic<bool> mRunning = false;
-    std::unique_ptr<std::thread> mWorker = nullptr;
-
-public:
-    void run() {
-        mRunning = true;
-        mWorker = std::make_unique<std::thread>([this] {
-            while (this->mRunning) {
-                this->work();
-            }
-        });
-    }
-
-    void terminate() {
-        mRunning = false;
-        if (mWorker && mWorker->joinable()) mWorker->join();
-    }
-
-    void sleep(time_t millis) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(millis));
-    }
-
-    virtual void work() = 0;
-};
-
-
-class Player : public Input, public Runner {
+class Player : public Input {
 public:
 
-    Player(const std::string& name = "") : Input(name), Runner() {}
+    Player(const std::string& name = "") : Input(name) {}
 
-    bool isActive(const time_t& now = time(0)) { return state == PLAY; }
+    bool isPlaying() const {
+        return state == PLAY;
+    }
+
+    bool isFinished() const {
+        return std::time(0) > (playItem.end + 1);
+    }
 
     enum State {
-        IDLE, LOAD, CUE, PLAY
+        IDLE, WAIT, LOAD, CUED, PLAY, FAIL
     };
 
     State state = IDLE;
@@ -87,15 +68,13 @@ public:
     }
 
     const char* stateStr() {
-        static constexpr const char* Idle = "IDLE";
-        static constexpr const char* Load = "LOAD";
-        static constexpr const char* Cue  = "CUE";
-        static constexpr const char* Play = "PLAY";
         switch (state) {
-            case IDLE: return Idle;
-            case LOAD: return Load;
-            case CUE:  return Cue;
-            case PLAY: return Play;
+            case IDLE: return "IDLE";
+            case WAIT: return "WAIT";
+            case LOAD: return "LOAD";
+            case CUED: return "CUED";
+            case PLAY: return "PLAY";
+            case FAIL: return "FAIL";
             default: throw std::runtime_error("Unknown default");
         }
     }
@@ -105,38 +84,43 @@ public:
     }
 
     virtual void stop() {}
-
-    virtual bool canPlay(const PlayItem& item) = 0;
-
     virtual void load(const std::string& url, double position = 0) = 0;
 
-    std::shared_ptr<PlayItem> playItem = nullptr;
-    std::unique_ptr<std::thread> schedulingThread = nullptr;
+    PlayItem playItem = {};
+    std::thread schedulingThread;
+    std::atomic<bool> scheduling = true;
+
+    std::time_t loadTime = 0;
 
     void schedule(const PlayItem& item) {
-        playItem = std::make_shared<PlayItem>(item);
-        state = LOAD;
-        if (schedulingThread && schedulingThread->joinable()) schedulingThread->join();
-        schedulingThread = std::make_unique<std::thread>([this] {
-            while (playItem && playItem->isInScheduleTime() && state != CUE) {
-                auto pos = std::time(0) - playItem->start;
-                if (pos < 0) pos = 0;
+        playItem = std::move(item);
+
+        if (schedulingThread.joinable()) schedulingThread.join();
+        schedulingThread = std::thread([this] {
+            state = WAIT;
+            while (scheduling && playItem.isPriorSchedulingTime()) {
+                util::sleepCancellable(1, scheduling);
+            }
+
+            state = LOAD;
+            while (scheduling && playItem.isInScheduleTime() && state != CUED) {
+                time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
                 try {
-                    auto uri = playItem->uri;
-                    load(uri, pos);
-                    state = CUE;
+                    load(playItem.uri, pos);
+                    state = CUED;
                 }
-                catch (std::exception& e) {
-                    log.error() << "AudioProcessor failed to load '" << playItem->uri << "': " << e.what();
-                    std::this_thread::sleep_for(std::chrono::seconds(playItem->retryInterval));
+                catch (const std::exception& e) {
+                    state = FAIL;
+                    log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
+                    util::sleepCancellable(playItem.retryInterval, scheduling);
                 }
             }
         });
     }
 
     ~Player() {
-        playItem = nullptr;
-        if (schedulingThread && schedulingThread->joinable()) schedulingThread->join();
+        scheduling = false;
+        if (schedulingThread.joinable()) schedulingThread.join();
     }
 
 
@@ -155,11 +139,11 @@ public:
     }
 
     void fadeIn() {
-        fade(true, playItem->fadeInTime);
+        fade(true, playItem.fadeInTime);
     }
 
     void fadeOut() {
-        fade(false, playItem->fadeOutTime);
+        fade(false, playItem.fadeOutTime);
     }
 
     void fade(bool increase, double duration) {
@@ -194,33 +178,25 @@ public:
     }
 
 
-    std::function<void(const std::shared_ptr<PlayItem>& item)> playItemDidStartCallback;
+    std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
 
-    void work() override {
-        if (playItem) {
-            auto item = *playItem;
-            time_t now = std::time(0);
-            
-            if (now >= item.start && now <= item.end && state == CUE) {
-                log.info(Log::Magenta) << name << " PLAY";
-                play();
-                log.info(Log::Magenta) << name << " FADE IN";
-                fadeIn();
-                if (playItemDidStartCallback) playItemDidStartCallback(std::make_shared<PlayItem>(item));
-            }
-            else if (now >= item.end - item.fadeOutTime && now < item.end && state == PLAY && !isFading) {
-                log.info(Log::Magenta) << name << " FADE OUT";
-                fadeOut();
-            }
-            else if (now >= item.end + item.ejectTime && state != IDLE) {
-                log.info(Log::Magenta) << name << " STOP";
-                stop();
-                state = IDLE;
-            }
-
-            sleep(10);
-        } else {
-            sleep(100);
+    void work() {
+        auto now = std::time(0);
+        
+        if (now >= playItem.start && now <= playItem.end && state == CUED) {
+            log.info(Log::Magenta) << name << " PLAY";
+            play();
+            log.info(Log::Magenta) << name << " FADE IN";
+            fadeIn();
+            if (playItemDidStartCallback) playItemDidStartCallback(playItem);
+        }
+        else if (now >= playItem.end - playItem.fadeOutTime && now < playItem.end && state == PLAY && !isFading) {
+            log.info(Log::Magenta) << name << " FADE OUT";
+            fadeOut();
+        }
+        else if (now >= playItem.end + playItem.ejectTime && state != IDLE) {
+            log.info(Log::Magenta) << name << " STOP";
+            stop();
         }
     }
 };

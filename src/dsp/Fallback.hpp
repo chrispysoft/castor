@@ -69,7 +69,7 @@ class Fallback : public Input {
     SineOscillator mOscR;
     std::string mFallbackURL;
     size_t mBufferTime;
-    std::unique_ptr<std::thread> mWorker = nullptr;
+    std::thread mWorker;
     std::atomic<bool> mRunning = false;
     std::deque<std::unique_ptr<Buflet>> mQueueItems = {};
     util::RingBuffer<sam_t> mBuffer;
@@ -82,7 +82,7 @@ public:
         mOscR(mSampleRate),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
-        mBuffer(mSampleRate * 2 * mBufferTime)
+        mBuffer(0)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
@@ -91,33 +91,38 @@ public:
     
     void run() {
         mRunning = true;
-        mWorker = std::make_unique<std::thread>([this] {
-            log.info(Log::Yellow) << "Fallback loading queue...";
-            for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
-                if (!entry.is_regular_file()) continue;
-                const auto& file = entry.path().string();
-                try {
-                    auto buflet = std::make_unique<Buflet>(mSampleRate, file, mBuffer);
-                    while (mRunning && mBuffer.remaining() < buflet->size()) {
-                        // log.debug() << Waiting for buffer space...";
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    }
-                    if (!mRunning) return;
-                    buflet->load();
-                    mQueueItems.push_back(std::move(buflet));
+        mWorker = std::thread(&Fallback::runSync, this);
+    }
+
+    void runSync() {
+        log.debug(Log::Yellow) << "Fallback allocating buffer...";
+        mBuffer.resize(mSampleRate * 2 * mBufferTime);
+        log.debug(Log::Yellow) << "Fallback loading queue...";
+        for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
+            if (!entry.is_regular_file()) continue;
+            const auto& file = entry.path().string();
+            try {
+                auto buflet = std::make_unique<Buflet>(mSampleRate, file, mBuffer);
+                while (mRunning && mBuffer.remaining() < buflet->size()) {
+                    // log.debug() << Waiting for buffer space...";
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 }
-                catch (const std::exception& e) {
-                    log.error() << "Fallback failed to load '" << file << "': " << e.what();
-                }
+                if (!mRunning) return;
+                buflet->load();
+                mQueueItems.push_back(std::move(buflet));
             }
-            log.info(Log::Yellow) << "Fallback load queue done size: " << mQueueItems.size();
-        });
+            catch (const std::exception& e) {
+                log.error() << "Fallback failed to load '" << file << "': " << e.what();
+            }
+        }
+        log.debug(Log::Yellow) << "Fallback load queue done size: " << mQueueItems.size();
     }
 
     void terminate() {
         log.debug() << "Fallback terminate...";
         mRunning = false;
-        if (mWorker->joinable()) mWorker->join();
+        if (mWorker.joinable()) mWorker.join();
+        mBuffer.flush();
         log.info() << "Fallback terminated";
     }
 

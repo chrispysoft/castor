@@ -17,12 +17,10 @@
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <atomic>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <thread>
+#include <condition_variable>
 #include <csignal>
+#include <mutex>
+#include <string>
 #include "Engine.hpp"
 #include "Config.hpp"
 #include "util/Log.hpp"
@@ -65,20 +63,20 @@ public:
     void run() {
         mRunning = true;
         mEngine.start();
-        std::unique_lock<std::mutex> lock(mMutex);
-        while (mRunning) {
-            mCV.wait(lock);
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return !mRunning; });
         }
     }
 
     void terminate() {
         log.debug() << "Castor terminating...";
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
-            mRunning = false;
-        }
-        mCV.notify_all();
         mEngine.stop();
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mRunning = false;
+            mCV.notify_all();
+        }
         log.info() << "Castor terminated";
     }
 };

@@ -9,12 +9,13 @@ services:
     environment:
       TZ: ${TIMEZONE}
       LOG_PATH: "/srv/logs/castor.log"
-      SOCKET_PATH: "/srv/socket/castor.sock"
       AUDIO_SOURCE_PATH: ${AUDIO_SOURCE_PATH}
       AUDIO_PLAYLIST_PATH: ${AUDIO_PLAYLIST_PATH}
       AUDIO_RECORD_PATH: ${AUDIO_RECORD_PATH}
       AUDIO_FALLBACK_PATH: ${AUDIO_FALLBACK_PATH}
-      FALLBACK_CACHE_TIME: ${FALLBACK_CACHE_TIME}
+      PRELOAD_TIME_FILE: ${PRELOAD_TIME_FILE}
+      PRELOAD_TIME_STREAM: ${PRELOAD_TIME_STREAM}
+      PRELOAD_TIME_FALLBACK: ${PRELOAD_TIME_FALLBACK}
       SILENCE_THRESHOLD: ${SILENCE_THRESHOLD}
       SILENCE_START_DURATION: ${SILENCE_START_DURATION}
       SILENCE_STOP_DURATION: ${SILENCE_STOP_DURATION}
@@ -34,8 +35,6 @@ services:
     volumes:
       - ./audio:/srv/audio
       - ./logs:/srv/logs
-      - /opt/aura/audio:/opt/aura/audio
-      - /opt/MP3:/opt/MP3
     devices:
       - /dev/snd:/dev/snd
     ports:

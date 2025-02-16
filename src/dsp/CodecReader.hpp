@@ -78,25 +78,25 @@ public:
         av_dict_set(&options, "reconnect_delay_max", "2", 0); // max delay 2s
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
-        log.debug() << "AudioCodecReader open file...";
+        log.info() << "CodecReader open " << tURL;
         auto res = avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options);
         av_dict_free(&options);
         if (res < 0) {
             throw std::runtime_error("Could not open input file: " + AVErrorString(res));
         }
 
-        // log.debug() << "AudioCodecReader find stream info...";
+        // log.debug() << "CodecReader find stream info...";
         if (avformat_find_stream_info(mFormatCtx, nullptr) < 0) {
             throw std::runtime_error("Could not find stream information.");
         }
 
-        // log.debug() << "AudioCodecReader find best stream...";
+        // log.debug() << "CodecReader find best stream...";
         mStreamIndex = av_find_best_stream(mFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
         if (mStreamIndex < 0) {
             throw std::runtime_error("Could not find audio stream.");
         }
         
-        // log.debug() << "AudioCodecReader find decoder...";
+        // log.debug() << "CodecReader find decoder...";
         AVStream* audioStream = mFormatCtx->streams[mStreamIndex];
         AVCodecParameters* codecParams = audioStream->codecpar;
         const AVCodec* codec = avcodec_find_decoder(codecParams->codec_id);
@@ -104,7 +104,7 @@ public:
             throw std::runtime_error("Unsupported codec.");
         }
 
-        // log.debug() << "AudioCodecReader alloc codec context...";
+        // log.debug() << "CodecReader alloc codec context...";
         mCodecCtx = avcodec_alloc_context3(codec);
         if (!mCodecCtx) {
             throw std::runtime_error("Could not allocate codec context.");
@@ -114,23 +114,23 @@ public:
             throw std::runtime_error("Could not fill codec context.");
         }
 
-        // log.debug() << "AudioCodecReader open codec...";
+        // log.debug() << "CodecReader open codec...";
         if (avcodec_open2(mCodecCtx, codec, nullptr) < 0) {
             throw std::runtime_error("Could not open codec.");
         }
 
-        // log.debug() << "AudioCodecReader alloc resampler...";
+        // log.debug() << "CodecReader alloc resampler...";
         mSwrCtx = swr_alloc();
         swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_S16, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr);
         if (!mSwrCtx) {
             throw std::runtime_error("swr_alloc failed");
         }
-        // log.debug() << "AudioCodecReader init resampler...";
+        // log.debug() << "CodecReader init resampler...";
         if (swr_init(mSwrCtx) < 0) {
             throw std::runtime_error("swr_init failed");
         }
 
-        // log.debug() << "AudioCodecReader alloc mPacket and frame...";
+        // log.debug() << "CodecReader alloc mPacket and frame...";
         mPacket = av_packet_alloc();
         if (!mPacket) {
             throw std::runtime_error("Could not allocate packet.");
@@ -144,7 +144,7 @@ public:
 
         if (!tURL.starts_with("http") && tSeek > 0) {
             auto ts = tSeek * AV_TIME_BASE;
-            log.debug() << "AudioCodecReader seek frame " << std::to_string(ts);
+            log.debug() << "CodecReader seek frame " << ts;
             av_seek_frame(mFormatCtx, -1, ts, 0);
         }
 
@@ -154,7 +154,7 @@ public:
             mDuration = mFormatCtx->duration / (double) AV_TIME_BASE;
             mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
         }
-        log.debug() << "AudioCodecReader sample count " << std::to_string(mSampleCount);
+        log.debug() << "CodecReader estimated num samples: " << mSampleCount;
     }
 
     ~CodecReader() {
@@ -171,7 +171,7 @@ public:
     double duration() { return mDuration; }
 
     void read(util::RingBuffer<sam_t>& tBuffer) {
-        log.debug() << "AudioCodecReader read...";
+        log.info() << "CodecReader read...";
 
         mSem.acquire();
 
@@ -191,13 +191,13 @@ public:
                 if (convSamples < 0) {
                     av_packet_unref(mPacket);
                     av_frame_unref(mFrame);
-                    log.error() << "AudioCodecReader resample error";
+                    log.error() << "CodecReader resample error";
                     break;
                 }
 
                 mReadSamples += convSamples * kChannelCount;
                 if (mSampleCount > 0 && mReadSamples >= mSampleCount) {
-                    log.warn() << "AudioCodecReader exceeded estimated sample count";
+                    log.warn() << "CodecReader exceeded estimated sample count";
                     break;
                 }
 
@@ -210,16 +210,16 @@ public:
 
         mSem.release();
 
-        log.info() << "AudioCodecReader read finished";
+        log.info() << "CodecReader read finished";
     }
 
     void cancel() {
         if (mCancelled) return;
-        log.debug() << "AudioCodecReader cancel...";
+        log.debug() << "CodecReader cancel...";
         mCancelled = true;
         mSem.acquire();
         mSem.release();
-        log.info() << "AudioCodecReader cancelled";
+        log.debug() << "CodecReader cancelled";
     }
 
     static std::string AVErrorString(int error) {

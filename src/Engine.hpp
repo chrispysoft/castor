@@ -39,18 +39,30 @@
 #include "test/CalendarMock.hpp"
 
 namespace castor {
+
+struct PlayerFactory {
+    static std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem, double tSampleRate) {
+        auto name = tPlayItem.uri.substr(tPlayItem.uri.rfind('/')+1);
+        log.info(Log::Magenta) << "PlayerFactory createPlayer " << name;
+        if (tPlayItem.uri.starts_with("line"))
+            return std::make_shared<audio::LinePlayer>(tSampleRate, name);
+        else
+            return std::make_shared<audio::StreamPlayer>(tSampleRate, name);
+    }
+};
+
+// #define TEST_CALENDAR 1
+
+#ifdef TEST_CALENDAR
+using Calendar_t = test::CalendarMock;
+#else
+using Calendar_t = Calendar;
+#endif
+
 class Engine : public audio::Client::Renderer {
 
-    std::atomic<bool> mRunning = false;
-    std::unique_ptr<std::thread> mWorker = nullptr;
-    std::deque<PlayItem> mScheduledItems = {};
-
-    double mSampleRate = 44100;
-    size_t mBufferSize = 1024;
-
     const Config& mConfig;
-    Calendar mCalendar;
-    // test::CalendarMock mCalendar;
+    Calendar_t mCalendar;
     io::TCPServer mTCPServer;
     api::Client mAPIClient;
     audio::Client mAudioClient;
@@ -60,8 +72,10 @@ class Engine : public audio::Client::Renderer {
     audio::StreamOutput mStreamOutput;
     std::vector<audio::sam_t> mMixBuffer;
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
-    time_t mLastReportTime = 0;
-    time_t mReportInterval = 10;
+    std::thread mWorker;
+    std::atomic<bool> mRunning = false;
+    util::Timer mReportTimer;
+    api::Program mCurrProgram = {};
     
 public:
     Engine(const Config& tConfig) :
@@ -69,21 +83,14 @@ public:
         mCalendar(mConfig),
         mTCPServer(mConfig.tcpPort),
         mAPIClient(mConfig),
-        mAudioClient(mConfig.iDevName, mConfig.oDevName, mSampleRate, mBufferSize),
+        mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mSampleRate, mConfig.audioFallbackPath, mConfig.fallbackCacheTime),
-        mRecorder(mSampleRate),
-        mStreamOutput(mSampleRate),
-        mMixBuffer(mBufferSize * 2)
+        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
+        mRecorder(mConfig.sampleRate),
+        mStreamOutput(mConfig.sampleRate),
+        mMixBuffer(mConfig.audioBufferSize * 2),
+        mReportTimer(mConfig.reportInterval)
     {
-        mPlayers.push_back(std::make_shared<audio::StreamPlayer>(mSampleRate, "Player 1"));
-        mPlayers.push_back(std::make_shared<audio::StreamPlayer>(mSampleRate, "Player 2"));
-        mPlayers.push_back(std::make_shared<audio::LinePlayer>(mSampleRate, "Line 1"));
-
-        for (auto& player : mPlayers) {
-            player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
-        }
-
         mAudioClient.setRenderer(this);
     }
 
@@ -93,8 +100,7 @@ public:
         mCalendar.start();
         mAudioClient.start();
         mFallback.run();
-        for (auto& player : mPlayers) player->run();
-        mWorker = std::make_unique<std::thread>([this] {
+        mWorker = std::thread([this] {
             while (this->mRunning) {
                 this->work();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -120,13 +126,13 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
-        if (mWorker && mWorker->joinable()) mWorker->join();
+        if (mWorker.joinable()) mWorker.join();
+        for (auto player : mPlayers) if (!player->isPlaying()) player->stop();
         mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
         mFallback.terminate();
         mStreamOutput.stop();
-        for (const auto& player : mPlayers) player->terminate();
         mAudioClient.stop();
         log.info() << "Engine stopped";
     }
@@ -137,31 +143,56 @@ public:
         } else {
             mFallback.stop();
         }
-
-        // std::lock_guard lock(mMutex);
-        const auto items = mCalendar.items();
+        
+        auto items = mCalendar.items();
         for (auto& item : items) {
-            if (item.isInScheduleTime()) {
-                if (util::contains(mScheduledItems, item)) continue;
-                
-                auto sources = mPlayers | std::ranges::views::filter([&](auto v){ return v->canPlay(item); });
-                if (sources.empty()) {
-                    log.error() << "No processor registered for uri " << item.uri;
-                    mScheduledItems.push_back(item);
+            if (std::time(0) > item.end) continue;
+
+            enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;
+            
+            for (auto pi = 0 ; pi < mPlayers.size(); ++pi) {
+                auto player = mPlayers[pi];
+                auto plItm = player->playItem;
+                if (item.start >= plItm.start && item.end <= plItm.end) {
+                    if (plItm == item) action = EXISTS;
+                    else action = REPLACE;
+                    break;
+                }
+            }
+
+            switch (action) {
+                case EXISTS: {
                     continue;
                 }
-                auto freeSources = sources | std::ranges::views::filter([&](auto v){ return v->getState() == audio::Player::State::IDLE; });
-                if (!freeSources.empty()) {
-                    auto source = freeSources.front();
-                    source->schedule(item);
-                    mScheduledItems.push_back(item);
+                case REPLACE: {
+                    // mPlayers.erase(0);
+                    break;
                 }
+                default: break;
+            }
+
+            if (item.uri.starts_with("http")) item.loadTime = mConfig.preloadTimeStream;
+            else if (item.uri.starts_with("line")) item.loadTime = 5;
+            else item.loadTime = mConfig.preloadTimeFile;
+            
+            auto player = PlayerFactory::createPlayer(item, mConfig.sampleRate);
+            player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
+            player->schedule(item);
+
+            mPlayers.push_back(player);
+        }
+
+        for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
+            auto player = *it;
+            if (player->isFinished()) {
+                it = mPlayers.erase(it); // erase() returns next valid iterator
+            } else {
+                player->work();
+                ++it;
             }
         }
 
-        auto now = std::time(0);
-        if (now - mLastReportTime > mReportInterval) {
-            mLastReportTime = now;
+        if (mReportTimer.query()) {
             postHealth();
         }
 
@@ -170,16 +201,13 @@ public:
         }
     }
 
-
-    api::Program mCurrProgram = {};
-
-    void playItemDidStart(const std::shared_ptr<PlayItem>& item) {
+    void playItemDidStart(const PlayItem& item) {
         log.info() << "Engine playItemDidStart";
 
         if (mStreamOutput.isRunning() && !mConfig.streamOutMetadataURL.empty()) {
             // log.debug() << "Engine updating stream metadata";
             try {
-                auto songName = (item) ? item->program.showName : "";
+                auto songName = item.program.showName;
                 std::replace(songName.begin(), songName.end(), ' ', '+');
                 mStreamOutput.updateMetadata(mConfig.streamOutMetadataURL, songName);
             }
@@ -188,8 +216,8 @@ public:
             }
         }
     
-        if (mCurrProgram != item->program) {
-            mCurrProgram = item->program;
+        if (mCurrProgram != item.program) {
+            mCurrProgram = item.program;
             log.info() << "Engine program changed to " << mCurrProgram.showName;
 
             if (mConfig.audioRecordPath.size() > 0) {
@@ -198,7 +226,7 @@ public:
                 if (mCurrProgram.showId > 1) {
                     auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".mp3";
                     try {
-                        std::unordered_map<std::string, std::string> metadata = {{"artist", item->program.showName }, {"title", item->program.episodeTitle}};
+                        std::unordered_map<std::string, std::string> metadata = {{"artist", item.program.showName }, {"title", item.program.episodeTitle}};
                         mRecorder.start(recURL, metadata);
                     }
                     catch (const std::runtime_error& e) {
@@ -207,8 +235,14 @@ public:
                 }
             }
         }
+        
+        postPlaylog(item);
+    }
+
+    void postPlaylog(const PlayItem& tPlayItem) {
+        if (mConfig.playlogURL.empty()) return;
         try {
-            mAPIClient.postPlaylog({*item});
+            mAPIClient.postPlaylog({tPlayItem});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
@@ -216,6 +250,7 @@ public:
     }
 
     void postHealth() {
+        if (mConfig.healthURL.empty()) return;
         try {
             // nlohmann::json j = mCalendar.items();
             // std::stringstream s;
@@ -228,18 +263,20 @@ public:
     }
 
     void updateStatus() {
-        std::ostringstream statusSS;
-        statusSS << "\x1b[5A";
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->name << ' ';
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << player->stateStr() << ' ';
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->volume << ' ';
-        statusSS << '\n';
-        for (auto player : mPlayers) statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
-        statusSS << '\n';
-        mTCPServer.statusString = statusSS.str();
+        std::ostringstream strstr;
+        // strstr << "\x1b[5A";
+        strstr << "________________________________________________________________\n";
+        strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << '\n';
+        strstr << "Fallback: " << (mFallback.isActive() ? "ON" : "OFF") << '\n';
+        strstr << "Player queue (" << mPlayers.size() << " items):\n";
+        for (auto player : mPlayers) {
+            strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16) << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(16) << player->stateStr() << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->volume << ' ';
+            // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
+            strstr << '\n';
+        }
+        mTCPServer.statusString = strstr.str();
         // log.debug() << statusSS.str();
     }
     
@@ -248,11 +285,12 @@ public:
         auto nsamples = nframes * 2;
         memset(out, 0, nsamples * sizeof(audio::sam_t));
 
-        for (auto& source : mPlayers) {
-            if (!source->isActive()) continue;
-            source->process(in, mMixBuffer.data(), nframes);
+        auto players = mPlayers;
+        for (const auto& player : players) {
+            if (!player->isPlaying()) continue;
+            player->process(in, mMixBuffer.data(), nframes);
             for (auto i = 0; i < mMixBuffer.size(); ++i) {
-                out[i] += mMixBuffer[i] * source->volume;
+                out[i] += mMixBuffer[i] * player->volume;
             }
         }
 
