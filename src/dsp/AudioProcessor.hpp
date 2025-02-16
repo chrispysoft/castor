@@ -44,10 +44,91 @@ public:
 };
 
 
-class Player : public Input {
+template <typename T>
+class PlayBuffer {
+    std::atomic<size_t> mCapacity = 0;
+    std::atomic<size_t> mWritePos = 0;
+    std::atomic<size_t> mReadPos = 0;
+    std::atomic<bool> mOverwrite = false;
+    std::vector<T> mBuffer = {};
+
+public:
+    size_t readPosition() { return mReadPos; }
+    size_t writePosition() { return mWritePos; }
+    size_t capacity() { return mCapacity; }
+
+    float memorySizeMB() {
+        static constexpr float denum = 1024;
+        float bytesz = mCapacity * sizeof(T);
+        float mb = bytesz / denum / denum;
+        return mb;
+    }
+
+    size_t remaining() {
+        return mCapacity - mWritePos;
+    }
+
+    void resize(size_t tCapacity, bool tOverwrite) {
+        mBuffer.resize(tCapacity);
+        mCapacity = tCapacity;
+        mOverwrite = tOverwrite;
+    }
+
+    size_t write(const T* tData, size_t tLen) {
+        if (mWritePos + tLen > mCapacity) {
+            if (mOverwrite) {
+                mWritePos = 0;
+                if (tLen > mCapacity) return 0;
+            }
+            else return 0;
+        }
+
+        T* dst = &mBuffer[mWritePos];
+        memcpy(dst, tData, tLen * sizeof(T));
+
+        mWritePos += tLen;
+
+        return tLen;
+    }
+
+    size_t read(T* tData, size_t tLen) {
+        if (mReadPos + tLen > mCapacity) {
+            if (mOverwrite) {
+                mReadPos = 0;
+                if (tLen > mCapacity) return 0;
+            }
+            else return 0;
+        }
+
+        T* src = &mBuffer[mReadPos];
+        memcpy(tData, src, tLen * sizeof(T));
+
+        mReadPos += tLen;
+
+        return tLen;
+    }
+
+    void flush() {
+        // std::unique_lock<std::mutex> lock(mMutex);
+        mWritePos = 0;
+        mReadPos = 0;
+        // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
+        mBuffer = {};
+        //mCV.notify_all();
+    }
+};
+
+
+class BufferedSource {
+public:
+    PlayBuffer<sam_t> mBuffer;
+};
+
+
+class Player : public Input, public BufferedSource {
 public:
 
-    Player(const std::string& name = "") : Input(name) {}
+    Player(const std::string& name = "") : Input(name), BufferedSource() {}
 
     bool isPlaying() const {
         return state == PLAY;
@@ -57,8 +138,12 @@ public:
         return std::time(0) > (playItem.end + 1);
     }
 
-    virtual float progress() {
-        return 0;
+    float readProgress() {
+        return static_cast<float>(mBuffer.readPosition()) / static_cast<float>(mBuffer.capacity());
+    }
+
+    float writeProgress() {
+        return static_cast<float>(mBuffer.writePosition()) / static_cast<float>(mBuffer.capacity());
     }
 
     enum State {

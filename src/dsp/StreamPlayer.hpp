@@ -32,20 +32,17 @@ namespace audio {
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
-    const size_t kRingBufferSize = util::align16byte(44100 * 2 * 60);
-
+    static constexpr size_t kRingBufferTimeHint = 10;
+    
     const double mSampleRate;
-    std::atomic<size_t> mReadPos = 0;
-    std::atomic<size_t> mSampleCount = 0;
-    std::string mCurrURL = "";
+    const size_t mRingBufferSize;
     std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
-    util::RingBuffer<sam_t> mRingBuffer;
 
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
-        mRingBuffer(kRingBufferSize)
+        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 1024))
     {}
     
     ~StreamPlayer() {
@@ -63,13 +60,15 @@ public:
 
         auto sampleCount = mReader->sampleCount();
         if (sampleCount > 0) {
-            mSampleCount = sampleCount;
-            mRingBuffer.resize(mSampleCount * 2);
+            auto alignsz = util::nextMultiple(sampleCount, 1024);
+            mBuffer.resize(alignsz, false);
+        } else {
+            mBuffer.resize(mRingBufferSize, true);
         }
 
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mLoadWorker = std::thread([this] {
-            mReader->read(mRingBuffer);
+            mReader->read(mBuffer);
             mReader = nullptr;
         });
     }
@@ -81,30 +80,17 @@ public:
         if (mLoadWorker.joinable()) mLoadWorker.join();
         state = IDLE;
         mReader = nullptr;
-        mReadPos = 0;
-        mCurrURL = "";
-        mRingBuffer.flush();
+        mBuffer.flush();
         log.debug() << "StreamPlayer stopped";
-    }
-
-    float progress() override {
-        return static_cast<float>(mReadPos) / static_cast<float>(mSampleCount);
     }
 
     
     void process(const sam_t*, sam_t* tBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
-        if (sampleCount <= mRingBuffer.size()) {
-            auto samplesRead = mRingBuffer.read(tBuffer, sampleCount);
-            mReadPos += samplesRead;
-            if (samplesRead == sampleCount) {
-                // log.debug() << "read " << samplesRead << " from ringbuffer";
-            } else {
-                // log.debug() << "0 bytes read"; 
-                memset(tBuffer, 0, sampleCount * sizeof(sam_t));
-            }
-        } else {
-            memset(tBuffer, 0, sampleCount * sizeof(sam_t));
+        auto samplesRead = mBuffer.read(tBuffer, sampleCount);
+        auto samplesLeft = sampleCount - samplesRead;
+        if (samplesLeft > 0) {
+            memset(tBuffer + samplesRead, 0, samplesLeft * sizeof(sam_t));
         }
         // calcRMS(tBuffer, sampleCount);
     }

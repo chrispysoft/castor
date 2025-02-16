@@ -103,11 +103,9 @@ void sleepCancellable(std::time_t seconds, std::atomic<bool>& running) {
 }
 
 
-size_t align16byte(size_t val) {
-    if (val & (16-1)) {
-        return val + (16 - (val & (16-1)));
-    }
-    return val;
+size_t nextMultiple(size_t value, size_t multiplier) {
+    const auto prevMul = multiplier - 1;
+    return (value + prevMul) & ~prevMul;
 }
 
 
@@ -133,6 +131,13 @@ public:
 
     size_t capacity() {
         return mCapacity;
+    }
+
+    float memorySizeMB() {
+        static constexpr float denum = 1024;
+        float bytesz = mCapacity * sizeof(T);
+        float mb = bytesz / denum / denum;
+        return mb;
     }
 
     size_t remaining() {

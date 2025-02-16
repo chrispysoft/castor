@@ -29,60 +29,28 @@
 namespace castor {
 namespace audio {
 
-class Buflet {
-    const double mSampleRate;
-    const std::string mURL;
-    std::unique_ptr<CodecReader> mReader;
-    const size_t mSize;
-    util::RingBuffer<sam_t>& mBuffer;
-
-    enum State { IDLE, LOADING, DONE } state = IDLE;
-
-public:
-    Buflet(double tSampleRate, const std::string& tURL, util::RingBuffer<sam_t>& tBuffer) :
-        mSampleRate(tSampleRate),
-        mURL(tURL),
-        mReader(std::make_unique<CodecReader>(mSampleRate, mURL)),
-        mSize(mReader->sampleCount()),
-        mBuffer(tBuffer)
-    {}
-
-    size_t size() {
-        return mSize;
-    }
-
-    void load() {
-        state = LOADING;
-        mReader->read(mBuffer);
-        mReader = nullptr;
-        state = DONE;
-    }
-};
-
-
 class Fallback : public Input {
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
 
     const double mSampleRate;
+    const std::string mFallbackURL;
     SineOscillator mOscL;
     SineOscillator mOscR;
-    std::string mFallbackURL;
     size_t mBufferTime;
     std::thread mWorker;
     std::atomic<bool> mRunning = false;
-    std::deque<std::unique_ptr<Buflet>> mQueueItems = {};
-    util::RingBuffer<sam_t> mBuffer;
-    bool mActive;
+    std::atomic<bool> mActive = false;
+    std::deque<std::shared_ptr<StreamPlayer>> mPlayers = {};
+    std::shared_ptr<StreamPlayer> mCurrPlayer = nullptr;
 
 public:
     Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime) : Input(),
         mSampleRate(tSampleRate),
+        mFallbackURL(tFallbackURL),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mFallbackURL(tFallbackURL),
-        mBufferTime(tBufferTime),
-        mBuffer(0)
+        mBufferTime(tBufferTime)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
@@ -92,44 +60,73 @@ public:
     void run() {
         mRunning = true;
         mWorker = std::thread(&Fallback::runSync, this);
-    }
-
-    void runSync() {
-        log.debug(Log::Yellow) << "Fallback allocating buffer...";
-        mBuffer.resize(mSampleRate * 2 * mBufferTime);
-        log.debug(Log::Yellow) << "Fallback loading queue...";
-        for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
-            if (!entry.is_regular_file()) continue;
-            const auto& file = entry.path().string();
-            try {
-                auto buflet = std::make_unique<Buflet>(mSampleRate, file, mBuffer);
-                while (mRunning && mBuffer.remaining() < buflet->size()) {
-                    // log.debug() << Waiting for buffer space...";
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                }
-                if (!mRunning) return;
-                buflet->load();
-                mQueueItems.push_back(std::move(buflet));
-            }
-            catch (const std::exception& e) {
-                log.error() << "Fallback failed to load '" << file << "': " << e.what();
-            }
-        }
-        log.debug(Log::Yellow) << "Fallback load queue done size: " << mQueueItems.size();
+        log.debug() << "Fallback running";
     }
 
     void terminate() {
         log.debug() << "Fallback terminate...";
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
-        mBuffer.flush();
+        for (auto player : mPlayers) player->stop();
         log.info() << "Fallback terminated";
     }
+
+
+    void runSync() {
+        while (mRunning) {
+            if (mPlayers.empty()) {
+                loadQueue();
+            }
+
+            for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
+                auto player = *it;
+                if (player->mBuffer.readPosition() >= player->mBuffer.capacity()) {
+                    player->stop();
+                    it = mPlayers.erase(it); // erase() returns next valid iterator
+                } else {
+                    // player->work();
+                    ++it;
+                }
+            }
+
+            if (!mPlayers.empty()) mCurrPlayer = mPlayers.front();
+            else mCurrPlayer = nullptr;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
+
+    void loadQueue() {
+        log.debug(Log::Yellow) << "Fallback loading queue...";
+        
+        size_t maxSamples = mSampleRate * mBufferTime * 2;
+        size_t sumSamples = 0;
+
+        for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
+            if (!entry.is_regular_file()) continue;
+            const auto& file = entry.path().string();
+            try {
+                auto player = std::make_shared<StreamPlayer>(mSampleRate, file);
+                player->load(file);
+                sumSamples += player->mBuffer.capacity();
+                if (sumSamples > maxSamples) {
+                    log.warn() << "Fallback buffer size reached";
+                    player->stop();
+                    break;
+                }
+                mPlayers.push_back(player);
+            }
+            catch (const std::exception& e) {
+                log.error() << "Fallback failed to load '" << file << "': " << e.what();
+            }
+        }
+        log.debug(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
+    }
+
 
     void start() {
         if (mActive) return;
         log.info(Log::Yellow) << "Fallback start";
-        mBuffer.resetHead();
         mActive = true;
     }
 
@@ -145,9 +142,14 @@ public:
 
     void process(const sam_t* in, sam_t* out, size_t nframes) {
         auto nsamples = nframes * 2;
-        auto nread = mBuffer.read(out, nsamples);
+        auto nread = 0;
+        
+        auto player = mCurrPlayer;
+        if (player) {
+            nread = player->mBuffer.read(out, nsamples);
+        }
 
-        if (nread < nsamples) {
+        if (nread == 0) {
             for (auto i = 0; i < nframes; ++i) {
                 out[i*2]   += mOscL.process() * kGain;
                 out[i*2+1] += mOscR.process() * kGain;

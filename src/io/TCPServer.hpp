@@ -177,7 +177,7 @@ private:
         try {
             setNonBlocking(clientSocket);
 
-            static constexpr size_t rxBufSz = 1024;
+            static constexpr size_t rxBufSz = 128;
             char rxBuf[rxBufSz];
             while (mRunning) {
                 memset(rxBuf, 0, rxBufSz);
@@ -191,7 +191,7 @@ private:
                     throw std::runtime_error("send failed");
                 }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
         }
         catch (const std::exception& e) {

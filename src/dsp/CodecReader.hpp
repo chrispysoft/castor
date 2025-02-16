@@ -19,9 +19,10 @@
 
 #pragma once
 
-#include <string>
 #include <atomic>
-#include <semaphore>
+#include <condition_variable>
+#include <mutex>
+#include <string>
 #include "AudioProcessor.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
@@ -42,11 +43,12 @@ class CodecReader {
 
     const double mSampleRate;
     size_t mSampleCount;
-    size_t mReadSamples;
     double mDuration;
     std::vector<sam_t> mFrameBuffer;
-    std::binary_semaphore mSem;
+    std::mutex mMutex;
+    std::condition_variable mCV;
     std::atomic<bool> mCancelled = false;
+    bool mReading = false;
     
     AVChannelLayout mChannelLayout;
     AVFormatContext* mFormatCtx = nullptr;
@@ -61,9 +63,7 @@ public:
     CodecReader(double tSampleRate, const std::string tURL, double tSeek = 0) :
         mSampleRate(tSampleRate),
         mSampleCount(0),
-        mReadSamples(0),
-        mFrameBuffer(kFrameBufferSize),
-        mSem(1)
+        mFrameBuffer(kFrameBufferSize)
     {
         av_log_set_level(AV_LOG_ERROR);
 
@@ -170,10 +170,14 @@ public:
 
     double duration() { return mDuration; }
 
-    void read(util::RingBuffer<sam_t>& tBuffer) {
+    void read(PlayBuffer<sam_t>& tBuffer) {
         log.info() << "CodecReader read...";
 
-        mSem.acquire();
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mReading = true;
+            mCV.notify_one();
+        }
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
@@ -195,20 +199,23 @@ public:
                     break;
                 }
 
-                mReadSamples += convSamples * kChannelCount;
-                if (mSampleCount > 0 && mReadSamples >= mSampleCount) {
-                    log.warn() << "CodecReader exceeded estimated sample count";
+                auto toWrite = convSamples * kChannelCount;
+                auto written = tBuffer.write(mFrameBuffer.data(), toWrite);
+                if ( written != toWrite) {
+                    log.warn() << "CocecReader could not write all samples";
                     break;
                 }
-
-                tBuffer.write(mFrameBuffer.data(), convSamples * kChannelCount);
             }
 
             av_packet_unref(mPacket);
             av_frame_unref(mFrame);
         }
 
-        mSem.release();
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mReading = false;
+            mCV.notify_one();
+        }
 
         log.info() << "CodecReader read finished";
     }
@@ -217,8 +224,10 @@ public:
         if (mCancelled) return;
         log.debug() << "CodecReader cancel...";
         mCancelled = true;
-        mSem.acquire();
-        mSem.release();
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [this]{ return !mReading; });
+        }
         log.debug() << "CodecReader cancelled";
     }
 

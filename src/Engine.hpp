@@ -270,17 +270,21 @@ public:
         strstr << "Fallback: " << (mFallback.isActive() ? "ON" : "OFF") << '\n';
         strstr << "Player queue (" << mPlayers.size() << " items):\n";
 
-        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID" << ' ';
-        strstr << std::left << std::setfill(' ') << std::setw(8) << "Status";
-        strstr << std::left << std::setfill(' ') << std::setw(8) << "Volume";
-        strstr << std::left << std::setfill(' ') << std::setw(8) << "Progress";
+        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Status";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Buffered";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
         strstr << '\n';
 
         for (auto player : mPlayers) {
-            strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16) << ' ';
-            strstr << std::left << std::setfill(' ') << std::setw(8) << player->stateStr() << ' ';
-            strstr << std::left << std::setfill(' ') << std::setw(8) << std::fixed << std::setprecision(2) << player->volume << ' ';
-            strstr << std::left << std::setfill(' ') << std::setw(8) << std::fixed << std::setprecision(2) << player->progress() << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16);
+            strstr << std::right << std::setfill(' ') << std::setw(12) << player->stateStr();
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer.memorySizeMB();
             // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
             strstr << '\n';
         }
