@@ -269,10 +269,18 @@ public:
         strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << '\n';
         strstr << "Fallback: " << (mFallback.isActive() ? "ON" : "OFF") << '\n';
         strstr << "Player queue (" << mPlayers.size() << " items):\n";
+
+        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID" << ' ';
+        strstr << std::left << std::setfill(' ') << std::setw(8) << "Status";
+        strstr << std::left << std::setfill(' ') << std::setw(8) << "Volume";
+        strstr << std::left << std::setfill(' ') << std::setw(8) << "Progress";
+        strstr << '\n';
+
         for (auto player : mPlayers) {
             strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16) << ' ';
-            strstr << std::left << std::setfill(' ') << std::setw(16) << player->stateStr() << ' ';
-            strstr << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->volume << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(8) << player->stateStr() << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(8) << std::fixed << std::setprecision(2) << player->volume << ' ';
+            strstr << std::left << std::setfill(' ') << std::setw(8) << std::fixed << std::setprecision(2) << player->progress() << ' ';
             // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
             strstr << '\n';
         }

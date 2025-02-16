@@ -87,6 +87,10 @@ public:
         log.debug() << "StreamPlayer stopped";
     }
 
+    float progress() override {
+        return static_cast<float>(mReadPos) / static_cast<float>(mSampleCount);
+    }
+
     
     void process(const sam_t*, sam_t* tBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;

@@ -57,6 +57,10 @@ public:
         return std::time(0) > (playItem.end + 1);
     }
 
+    virtual float progress() {
+        return 0;
+    }
+
     enum State {
         IDLE, WAIT, LOAD, CUED, PLAY, FAIL
     };
