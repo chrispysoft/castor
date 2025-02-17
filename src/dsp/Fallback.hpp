@@ -120,6 +120,8 @@ public:
             return true;
         };
 
+        bool loadNext = false;
+
         for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
             if (!entry.is_regular_file()) continue;
             const auto& url = entry.path().string();
@@ -132,15 +134,16 @@ public:
                 while (getline(file, line)) {
                     if (line.starts_with("#")) continue;
                     util::stripM3ULine(line);
-                    auto continueLoading = pushPlayer(line);
-                    if (!continueLoading) break;
+                    loadNext = pushPlayer(line);
+                    if (!loadNext) break;
                     log.debug() << "Fallback added m3u entry " << line;
                 }
                 file.close();
                 log.debug() << "Fallback closed m3u file " << url;
+                if (!loadNext) break;
             } else {
-                auto continueLoading = pushPlayer(url);
-                if (!continueLoading) break;
+                loadNext = pushPlayer(url);
+                if (!loadNext) break;
             }
         }
         log.debug(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
