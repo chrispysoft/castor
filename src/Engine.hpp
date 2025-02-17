@@ -271,8 +271,8 @@ public:
         strstr << "Player queue (" << mPlayers.size() << " items):\n";
 
         strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Status";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Buffered";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "State";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";

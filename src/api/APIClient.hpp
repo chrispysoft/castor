@@ -33,19 +33,14 @@ class Client {
     const std::vector<std::string> mAuthHeaders;
 
 public:
-
     Client(const Config& tConfig) :
         mConfig(tConfig),
         mAuthHeaders {
             "Authorization: Bearer " + mConfig.playlistToken,
             "content-type: application/json"
         }
-    {
-        
-    }
+    {}
 
-    ~Client() {
-    }
 
     std::vector<api::Program> getProgram(time_t duration = 3600) {
         auto url = std::string(mConfig.programURL);

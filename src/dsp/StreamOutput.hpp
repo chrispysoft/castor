@@ -32,11 +32,9 @@ class StreamOutput {
     Recorder mRecorder;
 
 public:
-
     StreamOutput(double tSampleRate) :
         mRecorder(tSampleRate)
-    {
-    }
+    {}
 
     bool isRunning() {
         return mRecorder.isRunning();

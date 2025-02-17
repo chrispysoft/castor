@@ -19,24 +19,23 @@
 
 #pragma once
 
-#include <numbers>
 #include <cmath>
 #include <limits>
+#include <numbers>
 #include "audio.hpp"
 
 namespace castor {
 namespace audio {
 class SineOscillator {
 
-    static constexpr double k2Pi = 2 * M_PI;
+    static constexpr double k2Pi = 2.0 * M_PI;
     
     const double mSampleRate;
     double mOmega = 0.0;
     double mDeltaOmega = 0.0;
     
 public:
-    
-    SineOscillator(double tSampleRate = 44100.0) :
+    SineOscillator(double tSampleRate) :
         mSampleRate(tSampleRate)
     {}
 

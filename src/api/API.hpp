@@ -24,8 +24,6 @@
 namespace castor {
 namespace api {
 
-using json = nlohmann::json;
-
 struct Program {
     int timeslotId = -1;
     int showId = -1;
@@ -41,8 +39,7 @@ struct Program {
     }
 };
 
-
-void from_json(const json& j, Program& t) {
+void from_json(const nlohmann::json& j, Program& t) {
     j.at("showId").get_to(t.showId);
     j.at("id").get_to(t.id);
     j.at("start").get_to(t.start);
@@ -96,7 +93,7 @@ struct Playlist {
     std::vector<Entry> entries;
 };
 
-void from_json(const json& j, Playlist::Entry& e) {
+void from_json(const nlohmann::json& j, Playlist::Entry& e) {
     j.at("uri").get_to(e.uri);
     try {
         j.at("duration").get_to(e.duration);
@@ -106,7 +103,7 @@ void from_json(const json& j, Playlist::Entry& e) {
     }
 }
 
-void from_json(const json& j, Playlist& p) {
+void from_json(const nlohmann::json& j, Playlist& p) {
     j.at("id").get_to(p.id);
     j.at("entries").get_to(p.entries);
 }
@@ -151,6 +148,7 @@ void to_json(nlohmann::json& j, const PlayItem& p) {
         {"program", p.program}
     };
 }
+
 
 struct PlayLog {
     std::string trackStart;

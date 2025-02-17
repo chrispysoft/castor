@@ -19,6 +19,10 @@
 
 #pragma once
 
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <string>
 #include "AudioProcessor.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
@@ -29,11 +33,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 }
-#include <iostream>
-#include <string>
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
 
 namespace castor {
 namespace audio {
@@ -62,7 +61,6 @@ class CodecWriter {
     SwrContext* mSwrCtx = nullptr;
     
 public:
-
     CodecWriter(double tSampleRate, const std::string& tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) :
         mSampleRate(tSampleRate),
         mURL(tURL),

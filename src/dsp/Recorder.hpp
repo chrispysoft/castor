@@ -19,11 +19,10 @@
 
 #pragma once
 
-#include <iostream>
+#include <atomic>
 #include <fstream>
 #include <vector>
 #include <stdexcept>
-#include <atomic>
 #include "CodecWriter.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
@@ -42,13 +41,10 @@ class Recorder {
     std::atomic<bool> mRunning = false;
 
 public:
-
     Recorder(double tSampleRate) :
         mSampleRate(tSampleRate),
         mRingBuffer(kRingBufferSize)
-    {
-        
-    }
+    {}
 
     void start(const std::string tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) {
         log.info(Log::Magenta) << "Recorder start";
@@ -93,11 +89,6 @@ public:
 
     void process(const sam_t* in, size_t nframes) {
         auto nsamples = nframes * kChannelCount;
-        // if (mRingBuffer.size() + nsamples > kRingBufferSize) {
-        //     log.warn() << "Recorder ring buffer overflow";
-        //     mRingBuffer.flush();
-        //     return;
-        // }
         mRingBuffer.write(in, nsamples);
     }
 };

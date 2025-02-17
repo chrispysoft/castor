@@ -102,22 +102,45 @@ public:
         size_t maxSamples = mSampleRate * mBufferTime * 2;
         size_t sumSamples = 0;
 
-        for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
-            if (!entry.is_regular_file()) continue;
-            const auto& file = entry.path().string();
+        auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<StreamPlayer>(mSampleRate, file);
-                player->load(file);
+                auto player = std::make_shared<StreamPlayer>(mSampleRate, url);
+                player->load(url);
                 sumSamples += player->mBuffer.capacity();
                 if (sumSamples > maxSamples) {
                     log.warn() << "Fallback buffer size reached";
                     player->stop();
-                    break;
+                    return false; // break case
                 }
                 mPlayers.push_back(player);
             }
             catch (const std::exception& e) {
-                log.error() << "Fallback failed to load '" << file << "': " << e.what();
+                log.error() << "Fallback failed to load '" << url << "': " << e.what();
+            }
+            return true;
+        };
+
+        for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
+            if (!entry.is_regular_file()) continue;
+            const auto& url = entry.path().string();
+
+            if (url.ends_with(".m3u")) {
+                log.debug() << "Fallback opening m3u file " << url;
+                std::ifstream file(url);
+                if (!file.is_open()) throw std::runtime_error("Failed to open file");
+                std::string line;
+                while (getline(file, line)) {
+                    if (line.starts_with("#")) continue;
+                    util::stripM3ULine(line);
+                    auto continueLoading = pushPlayer(line);
+                    if (!continueLoading) break;
+                    log.debug() << "Fallback added m3u entry " << line;
+                }
+                file.close();
+                log.debug() << "Fallback closed m3u file " << url;
+            } else {
+                auto continueLoading = pushPlayer(url);
+                if (!continueLoading) break;
             }
         }
         log.debug(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
