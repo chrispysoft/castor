@@ -143,7 +143,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem.end + 1);
+        return std::time(0) > (playItem.end + playItem.ejectTime + 1);
     }
 
     float readProgress() {
