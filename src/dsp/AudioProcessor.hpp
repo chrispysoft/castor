@@ -158,7 +158,7 @@ public:
         IDLE, WAIT, LOAD, CUED, PLAY, FAIL
     };
 
-    State state = IDLE;
+    std::atomic<State> state = IDLE;
 
     State getState(const time_t& now = std::time(0)) const {
         return state;
@@ -219,7 +219,7 @@ public:
 
 
     std::atomic<bool> isFading = false;
-    float volume = 0;
+    std::atomic<float> volume = 0;
 
     void setVolume(float vol, bool exp) {
         if (vol < 0) {
