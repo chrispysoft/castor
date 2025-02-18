@@ -19,38 +19,19 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
-#include <string>
+#include "CodecBase.hpp"
 #include "AudioProcessor.hpp"
-#include "../util/Log.hpp"
-#include "../util/util.hpp"
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-#include <libavutil/opt.h>
-#include <libswresample/swresample.h>
-}
 
 namespace castor {
 namespace audio {
-class CodecReader {
 
-    static constexpr size_t kChannelCount = 2;
+class CodecReader : public CodecBase {
+
     static constexpr size_t kFrameBufferSize = 4096; // 128 - 2048
 
-    const double mSampleRate;
     size_t mSampleCount;
     double mDuration;
-    std::vector<sam_t> mFrameBuffer;
-    std::mutex mMutex;
-    std::condition_variable mCV;
-    std::atomic<bool> mCancelled = false;
-    bool mReading = false;
-    
-    AVChannelLayout mChannelLayout;
+
     AVFormatContext* mFormatCtx = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
     SwrContext* mSwrCtx = nullptr;
@@ -58,17 +39,11 @@ class CodecReader {
     AVFrame* mFrame = nullptr;
     int mStreamIndex = -1;
     
-
 public:
-    CodecReader(double tSampleRate, const std::string tURL, double tSeek = 0) :
-        mSampleRate(tSampleRate),
-        mSampleCount(0),
-        mFrameBuffer(kFrameBufferSize)
+    CodecReader(double tSampleRate, const std::string& tURL, double tSeek = 0) :
+        CodecBase(tSampleRate, kFrameBufferSize, tURL),
+        mSampleCount(0)
     {
-        av_log_set_level(AV_LOG_ERROR);
-
-        av_channel_layout_default(&mChannelLayout, kChannelCount);
-
         AVDictionary *options = NULL;
         av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
         av_dict_set(&options, "buffer_size", "65536", 0); // 64KB buffer
@@ -151,7 +126,7 @@ public:
         if (mCancelled) throw std::runtime_error("Cancelled");
 
         if (mFormatCtx->duration > 0) {
-            mDuration = mFormatCtx->duration / (double) AV_TIME_BASE;
+            mDuration = mFormatCtx->duration / (double) AV_TIME_BASE - tSeek;
             mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
         }
         log.debug() << "CodecReader estimated num samples: " << mSampleCount;
@@ -175,7 +150,7 @@ public:
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mReading = true;
+            mActive = true;
             mCV.notify_one();
         }
 
@@ -213,31 +188,12 @@ public:
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mReading = false;
+            mActive = false;
             mCV.notify_one();
         }
 
         log.info() << "CodecReader read finished";
     }
-
-    void cancel() {
-        if (mCancelled) return;
-        log.debug() << "CodecReader cancel...";
-        mCancelled = true;
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [this]{ return !mReading; });
-        }
-        log.debug() << "CodecReader cancelled";
-    }
-
-    static std::string AVErrorString(int error) {
-        char errbuf[256];
-        av_strerror(error, errbuf, 256);
-        std::string errstr(errbuf);
-        return errstr;
-    }
-    
 };
 }
 }
