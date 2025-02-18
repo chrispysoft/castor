@@ -128,7 +128,15 @@ public:
 class Player : public Input, public BufferedSource {
 public:
 
-    Player(const std::string& name = "") : Input(name), BufferedSource() {}
+    Player(const std::string& name = "") :
+        Input(name),
+        BufferedSource()
+    {}
+
+    ~Player() {
+        scheduling = false;
+        if (schedulingThread.joinable()) schedulingThread.join();
+    }
 
     bool isPlaying() const {
         return state == PLAY;
@@ -178,8 +186,7 @@ public:
     PlayItem playItem = {};
     std::thread schedulingThread;
     std::atomic<bool> scheduling = true;
-
-    std::time_t loadTime = 0;
+    std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
 
     virtual void schedule(const PlayItem& item) {
         playItem = std::move(item);
@@ -205,11 +212,6 @@ public:
                 }
             }
         });
-    }
-
-    ~Player() {
-        scheduling = false;
-        if (schedulingThread.joinable()) schedulingThread.join();
     }
 
 
@@ -267,9 +269,7 @@ public:
     }
 
 
-    std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
-
-    void work() {
+    void update() {
         auto now = std::time(0);
         
         if (now >= playItem.start && now <= playItem.end && state == CUED) {

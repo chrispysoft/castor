@@ -152,7 +152,7 @@ public:
             if (player->isFinished()) {
                 it = mPlayers.erase(it); // erase() returns next valid iterator
             } else {
-                player->work();
+                player->update();
                 ++it;
             }
         }
