@@ -25,6 +25,8 @@
 #include "../dsp/CodecReader.hpp"
 
 namespace castor {
+namespace util {
+
 class M3UParser {
 public:
 
@@ -120,4 +122,6 @@ public:
         return items;
     }
 };
+
+}
 }

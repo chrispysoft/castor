@@ -19,41 +19,35 @@
 
 #pragma once
 
+#include <fstream>
 #include <string>
-#include "AudioProcessor.hpp"
+#include <vector>
+#include "Log.hpp"
 
 namespace castor {
-namespace audio {
-class LinePlayer : public Player {
+namespace util {
 
-    static constexpr size_t kChannelCount = 2;
-    const double mSampleRate;
-    
-
+class CSVParser {
+    std::vector<std::vector<std::string>> mRows;
 public:
-    LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
-        mSampleRate(tSampleRate)
-    {
-        
-    }
-
-    ~LinePlayer() {
-
-    }
-
-    void schedule(const PlayItem& item) override {
-        playItem = std::move(item);
-        state = CUED;
-    }
-
-    void load(const std::string& tURL, double seek = 0) override {}
-
-    void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
-        auto sampleCount = tFrameCount * kChannelCount;
-        auto byteSize = sampleCount * sizeof(sam_t);
-        memcpy(tOutBuffer, tInBuffer, byteSize);
-        // calcRMS(tOutBuffer, sampleCount);
+    const auto& rows() { return mRows; }
+    
+    CSVParser(const std::string& tURL) {
+        log.debug() << "CSVParser open " << tURL;
+        std::ifstream file(tURL);
+        if (!file) throw std::runtime_error("Failed to open " + tURL);
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream iss(line);
+            std::vector<std::string> cells;
+            std::string cell;
+            while (std::getline(iss, cell, ',')) cells.emplace_back(cell);
+            mRows.emplace_back(cells);
+        }
+        file.close();
+        log.debug() << "CSVParser closed " << tURL;
     }
 };
+
 }
 }

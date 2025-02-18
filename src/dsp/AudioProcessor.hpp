@@ -181,7 +181,7 @@ public:
 
     std::time_t loadTime = 0;
 
-    void schedule(const PlayItem& item) {
+    virtual void schedule(const PlayItem& item) {
         playItem = std::move(item);
 
         if (schedulingThread.joinable()) schedulingThread.join();

@@ -23,6 +23,8 @@
 #include <string>
 #include "Engine.hpp"
 #include "Config.hpp"
+#include "util/util.hpp"
+#include "util/ArgumentParser.hpp"
 #include "util/Log.hpp"
 
 namespace castor {
@@ -60,8 +62,9 @@ public:
         return instance;
     }
 
-    void run() {
+    void run(int argc, char* argv[]) {
         mRunning = true;
+        mEngine.parseArgs(util::ArgumentParser(argc, argv).args());
         mEngine.start();
         {
             std::unique_lock<std::mutex> lock(mMutex);

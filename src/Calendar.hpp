@@ -29,6 +29,7 @@
 #include "Config.hpp"
 #include "api/API.hpp"
 #include "api/APIClient.hpp"
+#include "util/CSVParser.hpp"
 #include "util/M3UParser.hpp"
 #include "util/util.hpp"
 #include "third_party/json.hpp"
@@ -42,7 +43,7 @@ class Calendar {
     time_t mLastRefreshTime = 0;
     time_t mRefreshInterval = 60;
     std::deque<PlayItem> mItems;
-    M3UParser m3uParser;
+    util::M3UParser m3uParser;
 
     const std::string m3uPrefix = "m3u://";
     const std::string filePrefix = "file://";
@@ -50,16 +51,14 @@ class Calendar {
 
 public:
 
+    std::function<void(const std::deque<PlayItem>& items)> calendarChangedCallback;
+
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
         mAPIClient(tConfig),
         m3uParser()
     {}
 
-    std::deque<PlayItem> items() {
-        const auto items = std::deque(mItems.begin(), mItems.end());
-        return items;
-    }
 
     void start() {
         mRunning = true;
@@ -76,6 +75,21 @@ public:
         if (mWorker.joinable()) mWorker.join();
     }
 
+
+    void load(const std::string& tURL) {
+        auto rows = util::CSVParser(tURL).rows();
+        auto now = std::time(0);
+        for (const auto& row : rows) {
+            if (row.size() != 3) continue;
+            auto start = now + std::stoi(row[0]);
+            auto end   = now + std::stoi(row[1]);
+            auto url   = row[2];
+            auto item = PlayItem{start, end, url};
+            mItems.push_back(item);
+            // log.info(Log::Red) << start << " " << end << " " << url;
+        }
+        if (calendarChangedCallback) calendarChangedCallback(mItems);
+    }
 
 private:
 
@@ -103,6 +117,7 @@ private:
             //     static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
             //     log.debug() << util::timefmt(itm.start, fmt) << " - " << util::timefmt(itm.end, fmt) << " " << itm.program.showName << " " << itm.uri;
             // }
+            if (calendarChangedCallback) calendarChangedCallback(mItems);
         } else {
             log.debug() << "Calendar not changed";
         }

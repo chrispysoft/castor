@@ -20,40 +20,25 @@
 #pragma once
 
 #include <string>
-#include "AudioProcessor.hpp"
+#include <unordered_map>
+#include "Log.hpp"
 
 namespace castor {
-namespace audio {
-class LinePlayer : public Player {
+namespace util {
 
-    static constexpr size_t kChannelCount = 2;
-    const double mSampleRate;
-    
-
+class ArgumentParser {
+    std::unordered_map<std::string, std::string> mArgs;
 public:
-    LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
-        mSampleRate(tSampleRate)
-    {
-        
-    }
-
-    ~LinePlayer() {
-
-    }
-
-    void schedule(const PlayItem& item) override {
-        playItem = std::move(item);
-        state = CUED;
-    }
-
-    void load(const std::string& tURL, double seek = 0) override {}
-
-    void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
-        auto sampleCount = tFrameCount * kChannelCount;
-        auto byteSize = sampleCount * sizeof(sam_t);
-        memcpy(tOutBuffer, tInBuffer, byteSize);
-        // calcRMS(tOutBuffer, sampleCount);
+    const auto& args() const { return mArgs; }
+    
+    ArgumentParser(int argc, char* argv[]) {
+        for (auto i = 1; i+1 < argc; i += 2) {
+            auto key = std::string(argv[i]);
+            auto val = std::string(argv[i+1]);
+            mArgs[key] = val;
+        }
     }
 };
+
 }
 }

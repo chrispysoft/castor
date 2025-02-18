@@ -19,7 +19,7 @@
 
 #include "Castor.hpp"
 
-int main() {
-    castor::Castor::instance().run();
+int main(int argc, char* argv[]) {
+    castor::Castor::instance().run(argc, argv);
     return 0;
 }

@@ -115,14 +115,14 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
     api::Program program = {};
-    std::time_t lastTry = 0;
+    std::time_t loadTime = 0;
     std::time_t retryInterval = 2;
-    std::time_t loadTime = 30;
+    std::time_t ejectTime = 5;
     double fadeInTime = 0.5;
     double fadeOutTime = 1.5;
-    std::time_t ejectTime = 1;
+    
 
-    std::time_t scheduleStart() const { return start - loadTime; }
+    std::time_t scheduleStart() const { return (loadTime > 0) ? (start - loadTime) : std::time(0); }
     std::time_t scheduleEnd() const { return end - 5; }
 
     bool isInScheduleTime() const {

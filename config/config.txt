@@ -13,8 +13,8 @@ preload_time_fallback=3600
 
 # Silence Detector
 silence_threshold=-90
-silence_start_duration=15
-silence_stop_duration=2
+silence_start_duration=10
+silence_stop_duration=1
 
 # Audio Device
 in_device_name=Soundcraft Signature 12 MTK: USB Audio

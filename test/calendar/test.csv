@@ -1,0 +1,12 @@
+05,10,audio/test/A.mp3
+10,15,audio/test/E.mp3
+15,20,audio/test/B.mp3
+20,25,audio/test/F#.mp3
+25,30,audio/test/C#.mp3
+30,35,audio/test/G#.mp3
+35,40,audio/test/D#.mp3
+40,45,audio/test/A#.mp3
+45,50,audio/test/F.mp3
+50,55,audio/test/C.mp3
+55,60,audio/test/G.mp3
+60,65,audio/test/D.mp3

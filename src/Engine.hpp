@@ -36,7 +36,6 @@
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
-#include "test/CalendarMock.hpp"
 
 namespace castor {
 
@@ -51,18 +50,11 @@ struct PlayerFactory {
     }
 };
 
-// #define TEST_CALENDAR 1
-
-#ifdef TEST_CALENDAR
-using Calendar_t = test::CalendarMock;
-#else
-using Calendar_t = Calendar;
-#endif
 
 class Engine : public audio::Client::Renderer {
 
     const Config& mConfig;
-    Calendar_t mCalendar;
+    Calendar mCalendar;
     io::TCPServer mTCPServer;
     api::Client mAPIClient;
     audio::Client mAudioClient;
@@ -91,7 +83,18 @@ public:
         mMixBuffer(mConfig.audioBufferSize * 2),
         mReportTimer(mConfig.reportInterval)
     {
+        mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
+    }
+
+    void parseArgs(const std::unordered_map<std::string,std::string>& tArgs) {
+        try {
+            auto calFile = tArgs.at("--calendar");
+            if (!calFile.empty()) mCalendar.load(calFile);
+        }
+        catch (const std::exception& e) {
+            log.error() << "Engine failed to load calendar test file: " << e.what();
+        }
     }
 
     void start() {
@@ -144,7 +147,27 @@ public:
             mFallback.stop();
         }
         
-        auto items = mCalendar.items();
+        for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
+            auto player = *it;
+            if (player->isFinished()) {
+                it = mPlayers.erase(it); // erase() returns next valid iterator
+            } else {
+                player->work();
+                ++it;
+            }
+        }
+
+        if (mReportTimer.query()) {
+            postHealth();
+        }
+
+        if (mTCPServer.connected()) {
+            updateStatus();
+        }
+    }
+
+    void calendarChanged(const std::deque<PlayItem>& playItems) {
+        auto items = playItems;
         for (auto& item : items) {
             if (std::time(0) > item.end) continue;
 
@@ -172,7 +195,7 @@ public:
             }
 
             if (item.uri.starts_with("http")) item.loadTime = mConfig.preloadTimeStream;
-            else if (item.uri.starts_with("line")) item.loadTime = 5;
+            else if (item.uri.starts_with("line")) {}
             else item.loadTime = mConfig.preloadTimeFile;
             
             auto player = PlayerFactory::createPlayer(item, mConfig.sampleRate);
@@ -180,24 +203,6 @@ public:
             player->schedule(item);
 
             mPlayers.push_back(player);
-        }
-
-        for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
-            auto player = *it;
-            if (player->isFinished()) {
-                it = mPlayers.erase(it); // erase() returns next valid iterator
-            } else {
-                player->work();
-                ++it;
-            }
-        }
-
-        if (mReportTimer.query()) {
-            postHealth();
-        }
-
-        if (mTCPServer.connected()) {
-            updateStatus();
         }
     }
 

@@ -133,22 +133,6 @@ public:
         return mCapacity;
     }
 
-    float memorySizeMB() {
-        static constexpr float denum = 1024;
-        float bytesz = mCapacity * sizeof(T);
-        float mb = bytesz / denum / denum;
-        return mb;
-    }
-
-    size_t remaining() {
-        return mCapacity - mSize;
-    }
-
-    void resize(size_t tSize) {
-        mCapacity = tSize;
-        mBuffer.resize(mCapacity);
-    }
-
     void write(const T* tData, size_t tLen, bool tWait = false) {
         if (tWait) {
             std::unique_lock<std::mutex> lock(mMutex);
@@ -179,10 +163,6 @@ public:
         }
         mCV.notify_all();
         return read;
-    }
-
-    void resetHead() {
-        mHead = 0;
     }
 
     void flush() {
