@@ -127,7 +127,7 @@ private:
         std::deque<PlayItem> items;
         // m3uParser.reset();
         const auto now = std::time(0);
-        const auto program = mAPIClient.getProgram();
+        const auto program = mAPIClient.getProgram(mConfig.preloadTimeFile);
         for (const auto& pr : program) {
             // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
             if (pr.playlistId <= 0) {

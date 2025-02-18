@@ -42,13 +42,13 @@ public:
     {}
 
 
-    std::vector<api::Program> getProgram(time_t duration = 3600) {
-        auto url = std::string(mConfig.programURL);
+    std::vector<api::Program> getProgram(time_t duration = 0) {
+        auto url = mConfig.programURL + "?includeVirtual=true";
         if (duration > 0) {
             auto now = std::time(nullptr);
             auto end = now + duration;
             auto endfmt = util::utcFmt(end);
-            url += "?includeVirtual=true&end="+endfmt;
+            url += "&end="+endfmt;
         }
 
         log.debug() << "APIClient getProgram " << url;
