@@ -180,7 +180,10 @@ public:
         state = PLAY;
     }
 
-    virtual void stop() {}
+    virtual void stop() {
+        state = IDLE;
+    }
+
     virtual void load(const std::string& url, double position = 0) = 0;
 
     PlayItem playItem = {};

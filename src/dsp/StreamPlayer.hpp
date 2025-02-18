@@ -75,10 +75,10 @@ public:
 
     void stop() override {
         log.debug() << "StreamPlayer stop...";
+        Player::stop();
         scheduling = false;
         if (mReader) mReader->cancel();
         if (mLoadWorker.joinable()) mLoadWorker.join();
-        state = IDLE;
         mReader = nullptr;
         mBuffer.flush();
         log.debug() << "StreamPlayer stopped";
