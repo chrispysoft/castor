@@ -27,13 +27,14 @@ namespace audio {
 
 template <typename T>
 inline float rms(const T* tBlock, size_t tNumSamples, size_t tSampleMax = 1) {
-    float rms = 0;
-    float divisor = (typeid(T) == typeid(float) || typeid(T) == typeid(double)) ? 1.0 : std::numeric_limits<T>::max();
+    if (tNumSamples == 0) return 0.0f;
+    const float divisor = std::is_floating_point<T>::value ? 1.0f : static_cast<float>(std::numeric_limits<T>::max());
+    float rms = 0.0f;
     for (auto i = 0; i < tNumSamples; ++i) {
-        float sam = static_cast<float>(tBlock[i]) / divisor;
+        const float sam = static_cast<float>(tBlock[i]) / divisor;
         rms += sam * sam;
     }
-    if (rms == 0) return 0;
+    if (rms == 0) return 0.0f;
     rms = sqrt(rms / tNumSamples);
     return rms;
 }
