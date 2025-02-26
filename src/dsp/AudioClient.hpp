@@ -62,7 +62,7 @@ public:
     }
 
 
-    void start() {
+    void start(bool tRealtime = false) {
         log.debug() << "AudioClient start";
         auto numDevices = Pa_GetDeviceCount();
         auto iDevID = paNoDevice;
@@ -99,7 +99,10 @@ public:
 
         PaStreamParameters iParams(iDevID, 2, paInt16, iDevInfo->defaultLowInputLatency, NULL);
         PaStreamParameters oParams(oDevID, 2, paInt16, oDevInfo->defaultLowOutputLatency, NULL);
-        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, &Client::paCallback, this);
+
+        PaStreamCallback* streamCallback = tRealtime ? &Client::paCallback : NULL;
+
+        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, streamCallback, this);
         if (res != paNoError) {
             throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res)+" ("+Pa_GetErrorText(res)+")");
         }
@@ -134,6 +137,18 @@ public:
 
     void setRenderer(Renderer* tRenderer) {
         mRenderer = tRenderer;
+    }
+
+    bool readyToRender(size_t nframes) {
+        if (!mStream) return false;
+        auto availableIn  = Pa_GetStreamReadAvailable(mStream);
+        auto availableOut = Pa_GetStreamWriteAvailable(mStream);
+        return availableIn >= nframes && availableOut >= nframes;
+    }
+
+    void render(sam_t* in, const sam_t* out, size_t nframes) {
+        Pa_ReadStream(mStream, in, nframes);
+        Pa_WriteStream(mStream, out, nframes);
     }
 
     void printDeviceNames() {
