@@ -32,7 +32,7 @@ namespace audio {
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferTimeHint = 10;
+    static constexpr size_t kRingBufferTimeHint = 30;
     
     const double mSampleRate;
     const size_t mRingBufferSize;

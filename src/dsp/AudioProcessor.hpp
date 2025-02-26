@@ -182,6 +182,7 @@ public:
 
     virtual void stop() {
         state = IDLE;
+        if (fadeThread.joinable()) fadeThread.join();
     }
 
     virtual void load(const std::string& url, double position = 0) = 0;
@@ -230,6 +231,7 @@ public:
             vol = 1;
         }
         volume = exp ? vol*vol : vol;
+        // log.debug() << "AudioProcessor " << name << " setVolume " << volume;
     }
 
     void fadeIn() {
@@ -240,27 +242,31 @@ public:
         fade(false, playItem.fadeOutTime);
     }
 
+    std::thread fadeThread;
+
     void fade(bool increase, double duration) {
+        if (isFading) {
+            log.error() << "Player is already fading";
+            return;
+        }
         isFading = true;
-        log.debug() << name << " fade start " << duration << " sec.";
-        std::thread([increase, duration, this] {
-            auto niters = duration * 100;
-            float incr = 1.0 / 100.0 / duration;
-            float vol = 0;
-            if (!increase) {
-                incr *= -1;
-                vol = 1;
-            }
+        // log.debug() << name << " fade start " << duration << " sec.";
+        if (fadeThread.joinable()) fadeThread.join();
+        fadeThread = std::thread([increase, duration, this] {
+            auto niters = static_cast<int>(duration * 100);
+            float incr = 1.0f / niters;
+            if (!increase) incr *= -1;
+            float vol = increase ? 0.0f : 1.0f;
             for (auto i = 0; i < niters; ++i) {
-                vol += incr;
-                this->setVolume(vol, true);
+                setVolume(vol, true);
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                vol += incr;
                 // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
             }
-            this->setVolume(std::round(vol), false);
+            setVolume(increase ? 1 : 0, false);
             isFading = false;
-            log.debug() << name << " fade done";
-        }).detach();
+            // log.debug() << name << " fade done";
+        });
     }
 
 
@@ -286,10 +292,11 @@ public:
             log.info(Log::Magenta) << name << " FADE OUT";
             fadeOut();
         }
-        else if (now >= playItem.end + playItem.ejectTime && state != IDLE) {
+        else if (now >= playItem.end && state != IDLE) {
             log.info(Log::Magenta) << name << " STOP";
             stop();
         }
+  
     }
 };
 }
