@@ -1,8 +1,8 @@
-02,05,audio/test/A.mp3
-05,25,https://stream.fro.at/fro-128.ogg
+05,10,audio/test/A.mp3
+10,25,https://stream.fro.at/fro-128.ogg
 25,45,https://stream.freirad.at/live.ogg
 45,50,audio/test/E.mp3
 50,60,line://0
-60,80,https://does-not-exist.stream/
-80,75,audio/test/G#.mp3
-85,90,audio/test/D#.mp3
+60,70,https://does-not-exist.stream/
+70,75,audio/test/G#.mp3
+75,80,audio/test/D#.mp3
