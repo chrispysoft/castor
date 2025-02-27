@@ -51,16 +51,11 @@ public:
         av_dict_set(&mOptions, "fflags", "+discardcorrupt+genpts", 0);
 
         av_dict_set(&mOptions, "content_type", "audio/mpeg", 0);
-        av_dict_set(&mOptions, "user_agent", "castor/0.0.5", 0);
-        av_dict_set(&mOptions, "ice_name", "Castor live stream", 0);
-        av_dict_set(&mOptions, "ice_description", "Castor developed by Chris Pastl", 0);
-        av_dict_set(&mOptions, "ice_genre", "Earth", 0);
-        av_dict_set(&mOptions, "ice_url", "https://crispybits.app", 0);
+        av_dict_set(&mOptions, "user_agent", "ffmpeg", 0);
 
         for (const auto& m : tMetadata) {
             av_dict_set(&mMetadata, m.first.c_str(), m.second.c_str(), 0);
         }
-        av_dict_set(&mMetadata, "copyright", "Recorded with castor", 0);
         
         auto codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
         if (!codec) {
