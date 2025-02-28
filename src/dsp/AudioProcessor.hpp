@@ -169,7 +169,7 @@ public:
             case IDLE: return "IDLE";
             case WAIT: return "WAIT";
             case LOAD: return "LOAD";
-            case CUED: return "CUED";
+            case CUED: return "CUE ";
             case PLAY: return "PLAY";
             case FAIL: return "FAIL";
             default: throw std::runtime_error("Unknown default");
@@ -190,32 +190,33 @@ public:
     PlayItem playItem = {};
     std::thread schedulingThread;
     std::atomic<bool> scheduling = true;
+    std::atomic<bool> isLoaded = false;
     std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
 
     virtual void schedule(const PlayItem& item) {
         playItem = std::move(item);
-
-        if (schedulingThread.joinable()) schedulingThread.join();
-        schedulingThread = std::thread([this] {
             state = WAIT;
-            while (scheduling && playItem.isPriorSchedulingTime()) {
-                util::sleepCancellable(1, scheduling);
+    }
+
+
+    bool needsLoad() {
+        return !isLoaded && playItem.isInScheduleTime();
             }
 
+
+    void tryLoad() {
             state = LOAD;
-            while (scheduling && playItem.isInScheduleTime() && state != CUED) {
                 time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
                 try {
                     load(playItem.uri, pos);
                     state = CUED;
+            isLoaded = true;
                 }
                 catch (const std::exception& e) {
                     state = FAIL;
                     log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
-                    util::sleepCancellable(playItem.retryInterval, scheduling);
-                }
+            // util::sleepCancellable(playItem.retryInterval, scheduling);
             }
-        });
     }
 
 

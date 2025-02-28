@@ -42,7 +42,7 @@ class StreamPlayer : public Player {
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
-        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 1024))
+        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 4096))
     {}
     
     ~StreamPlayer() {
@@ -60,7 +60,7 @@ public:
 
         auto sampleCount = mReader->sampleCount();
         if (sampleCount > 0) {
-            auto alignsz = util::nextMultiple(sampleCount, 1024);
+            auto alignsz = util::nextMultiple(sampleCount, 4096);
             mBuffer.resize(alignsz, false);
         } else {
             mBuffer.resize(mRingBufferSize, true);
@@ -71,6 +71,10 @@ public:
             mReader->read(mBuffer);
             mReader = nullptr;
         });
+
+        if (sampleCount > 0) {
+            mLoadWorker.join();
+        }
     }
 
     void stop() override {
@@ -80,7 +84,7 @@ public:
         if (mReader) mReader->cancel();
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
-        mBuffer.flush();
+        // mBuffer.reset();
         log.debug() << "StreamPlayer stopped";
     }
 

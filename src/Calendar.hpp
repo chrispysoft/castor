@@ -111,7 +111,7 @@ private:
 
         auto items = fetchItems();
         if ( items != mItems) {
-            mItems = items;
+            mItems = std::move(items);
             log.debug(Log::Yellow) << "Calendar changed";
             // for (const auto& itm : items) {
             //     static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
