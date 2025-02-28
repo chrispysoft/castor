@@ -209,7 +209,6 @@ public:
 
     PlayItem playItem = {};
     std::thread schedulingThread;
-    std::atomic<bool> scheduling = true;
     std::atomic<bool> isLoaded = false;
     std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
 
