@@ -81,15 +81,12 @@ class Engine : public audio::Client::Renderer {
     util::Timer mReportTimer;
     api::Program mCurrProgram = {};
     PlayerFactory mFactory;
-    dispatch_queue mScheduleQueue;
-    dispatch_queue mLoadQueue;
-    std::queue<PlayItem> mScheduleItems = {};
+    // std::queue<PlayItem> mScheduleItems = {};
     std::mutex mScheduleItemsMutex;
     std::mutex mPlayersMutex;
 
     std::vector<audio::sam_t> mInputBuffer;
     std::vector<audio::sam_t> mOutputBuffer;
-    std::mutex mMutex;
     
     
 public:
@@ -106,9 +103,7 @@ public:
         mMixBuffer(mConfig.audioBufferSize * 2),
         mReportTimer(mConfig.reportInterval),
         mInputBuffer(mConfig.audioBufferSize * 2),
-        mOutputBuffer(mConfig.audioBufferSize * 2),
-        mScheduleQueue("schedule queue", 1),
-        mLoadQueue("load queue", 1)
+        mOutputBuffer(mConfig.audioBufferSize * 2)
     {
         mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
@@ -201,11 +196,11 @@ public:
     }
 
     void calendarChanged(std::deque<PlayItem> playItems) {
-        // std::unique_lock<std::mutex> lock(mScheduleItemsMutex);
+        std::unique_lock<std::mutex> lock(mScheduleItemsMutex);
         for (auto item : playItems) {
-            mScheduleQueue.dispatch([item, this] {
+            // mScheduleQueue.dispatch([item, this] {
                 schedule(item);
-            });
+            // });
         }
     }
 
