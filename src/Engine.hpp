@@ -195,9 +195,9 @@ public:
         }
     }
 
-    void calendarChanged(std::deque<PlayItem> playItems) {
+    void calendarChanged(const std::deque<PlayItem>& playItems) {
         std::unique_lock<std::mutex> lock(mScheduleItemsMutex);
-        for (auto item : playItems) {
+        for (const auto& item : playItems) {
             // mScheduleQueue.dispatch([item, this] {
                 schedule(item);
             // });
@@ -212,7 +212,7 @@ public:
         enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;
         
         {
-            std::lock_guard<std::mutex> lock(mPlayersMutex);
+            // std::lock_guard<std::mutex> lock(mPlayersMutex);
             for (auto pi = 0 ; pi < mPlayers.size(); ++pi) {
                 auto player = mPlayers[pi];
                 if (!player) continue;
@@ -245,7 +245,7 @@ public:
         player->schedule(item);
         
         {
-            // std::lock_guard<std::mutex> lock(mPlayersMutex);
+            std::lock_guard<std::mutex> lock(mPlayersMutex);
             mPlayers.push_back(player);
         }
     }
@@ -318,6 +318,7 @@ public:
                         if (player && player->isPlaying()) {
                             // log.error() << player->name;
                             mActivePlayer = player;
+                            break;
                         }
                     }
                 }
@@ -326,7 +327,7 @@ public:
                 mAudioClient.render(mInputBuffer.data(), mOutputBuffer.data(), bufsz);
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
     
