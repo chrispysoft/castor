@@ -163,11 +163,15 @@ public:
     }
 
     float readProgress() {
-        return static_cast<float>(mBuffer.readPosition()) / static_cast<float>(mBuffer.capacity());
+        auto capacity = static_cast<float>(mBuffer.capacity());
+        if (capacity == 0) return 0;
+        return static_cast<float>(mBuffer.readPosition()) / capacity;
     }
 
     float writeProgress() {
-        return static_cast<float>(mBuffer.writePosition()) / static_cast<float>(mBuffer.capacity());
+        auto capacity = static_cast<float>(mBuffer.capacity());
+        if (capacity == 0) return 0;
+        return static_cast<float>(mBuffer.writePosition()) / capacity;
     }
 
     enum State {
