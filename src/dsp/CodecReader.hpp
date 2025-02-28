@@ -117,7 +117,7 @@ public:
 
         if (mCancelled) throw std::runtime_error("Cancelled");
 
-        if (!tURL.starts_with("http") && tSeek > 0) {
+        if (!mURL.starts_with("http") && tSeek > 0) {
             auto ts = tSeek * AV_TIME_BASE;
             log.debug() << "CodecReader seek frame " << ts;
             av_seek_frame(mFormatCtx, -1, ts, 0);
@@ -146,13 +146,7 @@ public:
     double duration() { return mDuration; }
 
     void read(PlayBuffer<sam_t>& tBuffer) {
-        log.info() << "CodecReader read...";
-
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mActive = true;
-            mCV.notify_one();
-        }
+        log.debug() << "CodecReader read " << mURL;
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
@@ -186,13 +180,7 @@ public:
             av_frame_unref(mFrame);
         }
 
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mActive = false;
-            mCV.notify_one();
-        }
-
-        log.info() << "CodecReader read finished";
+        log.debug() << "CodecReader read finished " << mURL;
     }
 };
 }
