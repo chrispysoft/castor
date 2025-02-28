@@ -73,7 +73,7 @@ public:
     }
 
     void terminate() {
-        log.debug() << "Castor terminating...";
+        log.info() << "Castor terminating...";
         mEngine.stop();
         {
             std::unique_lock<std::mutex> lock(mMutex);

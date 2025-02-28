@@ -154,11 +154,6 @@ public:
         BufferedSource()
     {}
 
-    ~Player() {
-        scheduling = false;
-        if (schedulingThread.joinable()) schedulingThread.join();
-    }
-
     bool isPlaying() const {
         return state == PLAY;
     }

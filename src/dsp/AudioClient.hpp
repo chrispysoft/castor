@@ -169,7 +169,7 @@ private:
     }
 
     void paStreamFinishedMethod() {
-        log.debug() << "AudioClient stream finished";
+        log.info() << "AudioClient stream finished";
     }
 
     static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {

@@ -47,7 +47,7 @@ public:
     std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem, double tSampleRate) {
         // std::lock_guard<std::mutex> lock(mMutex);
         auto name = tPlayItem.uri.substr(tPlayItem.uri.rfind('/')+1);
-        log.info(Log::Magenta) << "PlayerFactory createPlayer " << name;
+        // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (tPlayItem.uri.starts_with("line"))
             return std::make_shared<audio::LinePlayer>(tSampleRate, name);
         else
@@ -206,7 +206,7 @@ public:
 
 
     void schedule(PlayItem item) {
-        log.debug(Log::Yellow) << "Engine schedule " << item.start;
+        // log.debug(Log::Yellow) << "Engine schedule " << item.start;
         if (std::time(0) > item.end) return;
 
         enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;

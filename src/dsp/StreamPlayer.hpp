@@ -46,9 +46,9 @@ public:
     {}
     
     ~StreamPlayer() {
-        log.debug() << "StreamPlayer " << name << " dealloc...";
-        if (state != IDLE) stop();
-        log.debug() << "StreamPlayer " << name << " dealloced";
+        // log.debug() << "StreamPlayer " << name << " dealloc...";
+        // if (state != IDLE) stop();
+        // log.debug() << "StreamPlayer " << name << " dealloced";
     }
 
     void load(const std::string& tURL, double seek = 0) override {
@@ -80,7 +80,6 @@ public:
     void stop() override {
         log.debug() << "StreamPlayer stop...";
         Player::stop();
-        scheduling = false;
         if (mReader) mReader->cancel();
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;

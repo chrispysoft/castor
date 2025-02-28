@@ -53,8 +53,8 @@ public:
         av_dict_set(&options, "reconnect_delay_max", "2", 0); // max delay 2s
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
-        log.info() << "CodecReader open " << tURL;
-        auto res = avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options);
+        log.debug() << "CodecReader init " << mURL;
+        auto res = avformat_open_input(&mFormatCtx, mURL.c_str(), nullptr, &options);
         av_dict_free(&options);
         if (res < 0) {
             throw std::runtime_error("Could not open input file: " + AVErrorString(res));
