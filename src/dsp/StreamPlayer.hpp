@@ -69,7 +69,7 @@ public:
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mLoadWorker = std::thread([this] {
             mReader->read(mBuffer);
-            mReader = nullptr;
+            // mReader = nullptr;
         });
 
         if (sampleCount > 0) {

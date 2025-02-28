@@ -46,11 +46,14 @@ public:
 
 template <typename T>
 class PlayBuffer {
-    std::atomic<size_t> mCapacity = 0;
     std::atomic<size_t> mWritePos = 0;
     std::atomic<size_t> mReadPos = 0;
-    std::atomic<bool> mOverwrite = false;
-    std::vector<T> mBuffer = {};
+    std::atomic<size_t> mSize = 0;
+    size_t mCapacity = 0;
+    bool mOverwrite = false;
+    std::vector<T> mBuffer;
+    std::mutex mMutex;
+    std::condition_variable mCV;
 
 public:
     size_t readPosition() { return mReadPos; }
@@ -58,63 +61,81 @@ public:
     size_t capacity() { return mCapacity; }
 
     float memorySizeMB() {
-        static constexpr float denum = 1024;
+        static constexpr float kibi = 1024.0f;
+        static constexpr float mibi = kibi * kibi;
         float bytesz = mCapacity * sizeof(T);
-        float mb = bytesz / denum / denum;
-        return mb;
-    }
-
-    size_t remaining() {
-        return mCapacity - mWritePos;
+        return bytesz / mibi;
     }
 
     void resize(size_t tCapacity, bool tOverwrite) {
-        mBuffer.resize(tCapacity);
-        mCapacity = tCapacity;
+        std::unique_lock<std::mutex> lock(mMutex);
+        mBuffer = std::vector<sam_t>(tCapacity);
         mOverwrite = tOverwrite;
+        mReadPos = 0;
+        mWritePos = 0;
+        mSize = 0;
+        mCapacity = tCapacity;
+        mCV.notify_all();
     }
 
     size_t write(const T* tData, size_t tLen) {
-        if (mWritePos + tLen > mCapacity) {
-            if (mOverwrite) {
-                mWritePos = 0;
-                if (tLen > mCapacity) return 0;
-            }
-            else return 0;
+        if (!tData || tLen == 0) return 0;
+        if (tLen > mCapacity) return 0;
+
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
         }
 
-        T* dst = &mBuffer[mWritePos];
-        memcpy(dst, tData, tLen * sizeof(T));
+        size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
+        if (tLen > freeSpace) {
+            if (!mOverwrite) return 0;
+            mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
+            mSize -= tLen;
+        }
 
-        mWritePos += tLen;
+        auto writable = std::min(tLen, mCapacity - mWritePos);
+        memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
 
+        auto overlap = tLen - writable;
+        if (overlap > 0) {
+            log.debug() << "Expected overlap in write of " << overlap;
+            memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
+        }
+
+        mWritePos.store((mWritePos + tLen) % mCapacity, std::memory_order_relaxed);
+        mSize += tLen;
         return tLen;
     }
 
     size_t read(T* tData, size_t tLen) {
-        if (mReadPos + tLen > mCapacity) {
-            if (mOverwrite) {
-                mReadPos = 0;
-                if (tLen > mCapacity) return 0;
-            }
-            else return 0;
+        if (!tData || tLen == 0) return 0;
+
+        // std::unique_lock<std::mutex> lock(mMutex); // NB if realtime thread
+
+        auto available = mSize.load(std::memory_order_relaxed);
+        if (tLen > available) return 0;
+
+        auto readable = std::min(tLen, mCapacity - mReadPos);
+        memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
+
+        auto overlap = tLen - readable;
+        if (overlap > 0) {
+            memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
+            log.debug() << "Unexpected overlap in read";
         }
 
-        T* src = &mBuffer[mReadPos];
-        memcpy(tData, src, tLen * sizeof(T));
+        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
+        mSize -= tLen;
 
-        mReadPos += tLen;
+        // mCV.notify_all();
 
         return tLen;
     }
 
-    void flush() {
-        // std::unique_lock<std::mutex> lock(mMutex);
-        mWritePos = 0;
-        mReadPos = 0;
-        // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
-        mBuffer = {};
-        //mCV.notify_all();
+    void reset() {
+        // mSize = 0;
+        mCapacity = 0;
     }
 };
 
@@ -195,28 +216,27 @@ public:
 
     virtual void schedule(const PlayItem& item) {
         playItem = std::move(item);
-            state = WAIT;
+        state = WAIT;
     }
 
 
     bool needsLoad() {
         return !isLoaded && playItem.isInScheduleTime();
-            }
+    }
 
 
     void tryLoad() {
-            state = LOAD;
-                time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
-                try {
-                    load(playItem.uri, pos);
-                    state = CUED;
+        state = LOAD;
+        time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
+        try {
+            load(playItem.uri, pos);
+            state = CUED;
             isLoaded = true;
-                }
-                catch (const std::exception& e) {
-                    state = FAIL;
-                    log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
-            // util::sleepCancellable(playItem.retryInterval, scheduling);
-            }
+        }
+        catch (const std::exception& e) {
+            state = FAIL;
+            log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
+        }
     }
 
 
