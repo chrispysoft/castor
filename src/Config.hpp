@@ -108,6 +108,7 @@ public:
     float sampleRate = 44100;
     size_t audioBufferSize = 1024;
     time_t reportInterval = 10;
+    bool realtimeRendering = false;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
         auto envKey = mapKey;

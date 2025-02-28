@@ -48,16 +48,6 @@ public:
         }
         catch (const std::exception& e) {
             log.error() << "StreamOutput failed to start: " << e.what();
-            if (tRetryInterval > 0) {
-                std::thread([this, url=tURL, interval=tRetryInterval] {
-                    if (!this->mRunning) return;
-                    log.warn() << "StreamOutput retrying to start in " <<  interval << " seconds...";
-                    std::this_thread::sleep_for(std::chrono::seconds(interval));
-                    if (!this->mRunning) return;
-                    log.warn() << "StreamOutput restarting...";
-                    this->start(url, interval);
-                }).detach();
-            }
         }
     }
 

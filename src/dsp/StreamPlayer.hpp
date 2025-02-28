@@ -32,7 +32,7 @@ namespace audio {
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferTimeHint = 10;
+    static constexpr size_t kRingBufferTimeHint = 30;
     
     const double mSampleRate;
     const size_t mRingBufferSize;
@@ -42,7 +42,7 @@ class StreamPlayer : public Player {
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
-        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 1024))
+        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 4096))
     {}
     
     ~StreamPlayer() {
@@ -60,7 +60,7 @@ public:
 
         auto sampleCount = mReader->sampleCount();
         if (sampleCount > 0) {
-            auto alignsz = util::nextMultiple(sampleCount, 1024);
+            auto alignsz = util::nextMultiple(sampleCount, 4096);
             mBuffer.resize(alignsz, false);
         } else {
             mBuffer.resize(mRingBufferSize, true);
@@ -69,29 +69,48 @@ public:
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mLoadWorker = std::thread([this] {
             mReader->read(mBuffer);
-            mReader = nullptr;
+            // mReader = nullptr;
         });
+
+        if (sampleCount > 0) {
+            mLoadWorker.join();
+        }
     }
 
     void stop() override {
         log.debug() << "StreamPlayer stop...";
+        Player::stop();
         scheduling = false;
         if (mReader) mReader->cancel();
         if (mLoadWorker.joinable()) mLoadWorker.join();
-        state = IDLE;
         mReader = nullptr;
-        mBuffer.flush();
+        // mBuffer.reset();
         log.debug() << "StreamPlayer stopped";
     }
 
-    
+    std::vector<sam_t> mMixBuffer = std::vector<sam_t>(2048);
+
     void process(const sam_t*, sam_t* tBuffer, size_t tFrameCount) override {
+        // if (volume == 0) return; // render cycle might start when vol is still 0
+
         auto sampleCount = tFrameCount * kChannelCount;
-        auto samplesRead = mBuffer.read(tBuffer, sampleCount);
+        auto samplesRead = mBuffer.read(mMixBuffer.data(), sampleCount);
         auto samplesLeft = sampleCount - samplesRead;
         if (samplesLeft > 0) {
-            memset(tBuffer + samplesRead, 0, samplesLeft * sizeof(sam_t));
+            memset(mMixBuffer.data() + samplesRead, 0, samplesLeft * sizeof(sam_t));
         }
+
+        if (volume == 1) {
+            memcpy(tBuffer, mMixBuffer.data(), sampleCount * sizeof(sam_t));
+        } else {
+            for (auto i = 0; i < sampleCount; ++i) {
+                float s = static_cast<float>(mMixBuffer[i]) * volume;
+                if      (s > std::numeric_limits<sam_t>::max()) s = std::numeric_limits<sam_t>::max();
+                else if (s < std::numeric_limits<sam_t>::min()) s = std::numeric_limits<sam_t>::min();
+                tBuffer[i] = static_cast<sam_t>(s); 
+            }
+        }
+
         // calcRMS(tBuffer, sampleCount);
     }
 };

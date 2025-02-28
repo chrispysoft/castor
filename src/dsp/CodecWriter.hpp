@@ -19,38 +19,16 @@
 
 #pragma once
 
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <string>
-#include "AudioProcessor.hpp"
-#include "../util/Log.hpp"
-#include "../util/util.hpp"
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-#include <libavutil/opt.h>
-#include <libswresample/swresample.h>
-}
+#include "CodecBase.hpp"
 
 namespace castor {
 namespace audio {
-class CodecWriter {
 
-    static constexpr size_t kChannelCount = 2;
+class CodecWriter : public CodecBase {
+
     static constexpr size_t kFrameBufferSize = 16384;
     static constexpr int64_t kBitRate = 192000;
-
-    const double mSampleRate;
-    const std::string mURL;
-    std::vector<sam_t> mFrameBuffer;
-    std::atomic<bool> mCancelled = false;
-    std::mutex mMutex;
-    std::condition_variable mCV;
-    bool mWriting = false;
-
-    AVChannelLayout mChannelLayout;
+    
     AVDictionary* mOptions = nullptr;
     AVDictionary* mMetadata = nullptr;
     AVCodecContext* mCodecCtx = nullptr;
@@ -62,14 +40,8 @@ class CodecWriter {
     
 public:
     CodecWriter(double tSampleRate, const std::string& tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) :
-        mSampleRate(tSampleRate),
-        mURL(tURL),
-        mFrameBuffer(kFrameBufferSize)
+        CodecBase(tSampleRate, kFrameBufferSize, tURL)
     {
-        av_log_set_level(AV_LOG_INFO);
-
-        av_channel_layout_default(&mChannelLayout, kChannelCount);
-
         av_dict_set(&mOptions, "timeout", "5000000", 0); // 5 seconds
         av_dict_set(&mOptions, "buffer_size", "65536", 0); // 64 kB
         av_dict_set(&mOptions, "reconnect", "1", 0);
@@ -79,16 +51,11 @@ public:
         av_dict_set(&mOptions, "fflags", "+discardcorrupt+genpts", 0);
 
         av_dict_set(&mOptions, "content_type", "audio/mpeg", 0);
-        av_dict_set(&mOptions, "user_agent", "castor/0.0.5", 0);
-        av_dict_set(&mOptions, "ice_name", "Castor live stream", 0);
-        av_dict_set(&mOptions, "ice_description", "Castor developed by Chris Pastl", 0);
-        av_dict_set(&mOptions, "ice_genre", "Earth", 0);
-        av_dict_set(&mOptions, "ice_url", "https://crispybits.app", 0);
+        av_dict_set(&mOptions, "user_agent", "ffmpeg", 0);
 
         for (const auto& m : tMetadata) {
             av_dict_set(&mMetadata, m.first.c_str(), m.second.c_str(), 0);
         }
-        av_dict_set(&mMetadata, "copyright", "Recorded with castor", 0);
         
         auto codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
         if (!codec) {
@@ -195,7 +162,7 @@ public:
             }
         };
 
-        mWriting = true;
+        mActive = true;
 
         auto samplesPerFrame = mCodecCtx->frame_size * kChannelCount;
         auto framesWritten = 0;
@@ -240,21 +207,10 @@ public:
         
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mWriting = false;
+            mActive = false;
             mCV.notify_all();
         }
         log.info() << "AudioCodecWriter wrote " << framesWritten << " frames";
-    }
-
-    void cancel() {
-        if (mCancelled || !mWriting) return;
-        log.debug() << "AudioCodecWriter cancel...";
-        mCancelled = true;
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [this] { return !mWriting; });
-        }
-        log.info() << "AudioCodecWriter cancelled";
     }
 };
 }

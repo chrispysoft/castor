@@ -118,8 +118,8 @@ struct PlayItem {
     std::time_t loadTime = 0;
     std::time_t retryInterval = 2;
     std::time_t ejectTime = 5;
-    double fadeInTime = 0.5;
-    double fadeOutTime = 1.5;
+    double fadeInTime = 1;
+    double fadeOutTime = 1;
     
 
     std::time_t scheduleStart() const { return (loadTime > 0) ? (start - loadTime) : std::time(0); }
