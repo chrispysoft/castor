@@ -99,7 +99,7 @@ public:
 
         auto overlap = tLen - writable;
         if (overlap > 0) {
-            log.debug() << "Expected overlap in write of " << overlap;
+            // log.debug() << "Expected overlap in write of " << overlap;
             memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
         }
 
@@ -122,7 +122,7 @@ public:
         auto overlap = tLen - readable;
         if (overlap > 0) {
             memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
-            log.debug() << "Unexpected overlap in read";
+            // log.debug() << "Unexpected overlap in read";
         }
 
         mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
