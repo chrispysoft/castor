@@ -82,7 +82,7 @@ public:
         if (!tData || tLen == 0) return 0;
         if (tLen > mCapacity) return 0;
 
-        {
+        if (mOverwrite) {
             std::unique_lock<std::mutex> lock(mMutex);
             mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
         }
