@@ -23,7 +23,7 @@
 #include <thread>
 #include <future>
 #include "SineOscillator.hpp"
-#include "QueuePlayer.hpp"
+#include "FilePlayer.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -41,8 +41,8 @@ class Fallback : public Input {
     std::thread mWorker;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mActive = false;
-    std::deque<std::shared_ptr<StreamPlayer>> mPlayers = {};
-    std::shared_ptr<StreamPlayer> mCurrPlayer = nullptr;
+    std::deque<std::shared_ptr<FilePlayer>> mPlayers = {};
+    std::shared_ptr<FilePlayer> mCurrPlayer = nullptr;
 
 public:
     Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime) : Input(),
@@ -104,7 +104,7 @@ public:
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<StreamPlayer>(mSampleRate, url);
+                auto player = std::make_shared<FilePlayer>(mSampleRate, url);
                 player->load(url);
                 sumSamples += player->mBuffer.capacity();
                 if (sumSamples > maxSamples) {

@@ -31,6 +31,7 @@
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
+#include "dsp/FilePlayer.hpp"
 #include "dsp/StreamPlayer.hpp"
 #include "dsp/Fallback.hpp"
 #include "dsp/SilenceDetector.hpp"
@@ -50,8 +51,10 @@ public:
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (tPlayItem.uri.starts_with("line"))
             return std::make_shared<audio::LinePlayer>(tSampleRate, name);
-        else
+        else if (tPlayItem.uri.starts_with("http"))
             return std::make_shared<audio::StreamPlayer>(tSampleRate, name);
+        else
+            return std::make_shared<audio::FilePlayer>(tSampleRate, name);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
