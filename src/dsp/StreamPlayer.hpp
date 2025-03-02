@@ -32,17 +32,17 @@ namespace audio {
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kRingBufferTimeHint = 30;
+    static constexpr size_t kBufferTimeHint = 15;
     
     const double mSampleRate;
-    const size_t mRingBufferSize;
+    const size_t mBufferSize;
     std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
-        mRingBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kRingBufferTimeHint, 4096))
+        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
     {}
     
     ~StreamPlayer() {
@@ -51,30 +51,25 @@ public:
         // log.debug() << "StreamPlayer " << name << " dealloced";
     }
 
-    void load(const std::string& tURL, double seek = 0) override {
-        log.info() << "StreamPlayer load " << tURL << " position " << seek;
+    void load(const std::string& tURL, double tSeek = 0) override {
+        log.info() << "StreamPlayer load " << tURL;
         // eject();
 
-        if (mReader) mReader->cancel();
-        mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
+        mBuffer.resize(mBufferSize, true);
 
-        auto sampleCount = mReader->sampleCount();
-        if (sampleCount > 0) {
-            auto alignsz = util::nextMultiple(sampleCount, 4096);
-            mBuffer.resize(alignsz, false);
-        } else {
-            mBuffer.resize(mRingBufferSize, true);
-        }
-
-        if (mLoadWorker.joinable()) mLoadWorker.join();
-        mLoadWorker = std::thread([this] {
+        //if (mLoadWorker.joinable()) mLoadWorker.join();
+        
+        mLoadWorker = std::thread([this, url=tURL, seek=tSeek] {
+            if (mReader) mReader->cancel();
+            mReader = std::make_unique<CodecReader>(mSampleRate, url, seek);
             mReader->read(mBuffer);
-            // mReader = nullptr;
+            mReader = nullptr;
         });
+    }
 
-        if (sampleCount > 0) {
-            mLoadWorker.join();
-        }
+    void play() override {
+        mBuffer.align();
+        Player::play();
     }
 
     void stop() override {
