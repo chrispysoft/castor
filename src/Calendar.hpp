@@ -77,7 +77,8 @@ public:
 
 
     void load(const std::string& tURL) {
-        auto rows = util::CSVParser(tURL).rows();
+        auto parser = util::CSVParser(tURL);
+        auto rows = parser.rows();
         auto now = std::time(0);
         for (const auto& row : rows) {
             if (row.size() != 3) continue;
