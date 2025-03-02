@@ -31,6 +31,8 @@ class Client {
 
     const Config& mConfig;
     const std::vector<std::string> mAuthHeaders;
+    io::HTTPClient mHTTPClientProgram;
+    io::HTTPClient mHTTPClientPlaylog;
 
 public:
     Client(const Config& tConfig) :
@@ -53,7 +55,7 @@ public:
 
         log.debug() << "APIClient getProgram " << url;
         
-        auto res = io::HTTPClient().get(url);
+        auto res = mHTTPClientProgram.get(url);
         if (res.code == 200) {
             std::stringstream ss(res.response);
             nlohmann::json j;
@@ -61,13 +63,13 @@ public:
             auto p = j.template get<std::vector<api::Program>>();
             return p;
         } else {
-            throw std::runtime_error("APIClient getProgram status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient getProgram failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 
     api::Playlist getPlaylist(int showID) {
         auto url = mConfig.playlistURL + std::to_string(showID);
-        auto res = io::HTTPClient().get(url, mAuthHeaders);
+        auto res = mHTTPClientProgram.get(url, mConfig.playlistToken);
         log.debug() << "APIClient getPlaylist " << url;
         if (res.code == 200) {
             std::stringstream ss(res.response);
@@ -76,7 +78,7 @@ public:
             auto p = j.template get<api::Playlist>();
             return p;
         } else {
-            throw std::runtime_error("APIClient getPlaylist status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient getPlaylist failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 
@@ -89,9 +91,9 @@ public:
         auto jstr = ss.str();
 
         log.debug() << "APIClient postPlaylog " << url << " " << jstr << " ";
-        auto res = io::HTTPClient().post(url, jstr);
+        auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient postPlaylog failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 
@@ -104,9 +106,9 @@ public:
         auto jstr = ss.str();
 
         log.debug() << "APIClient postHealth " << url << " " << jstr << " ";
-        auto res = io::HTTPClient().post(url, jstr);
+        auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postHealth status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient postHealth failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 };
