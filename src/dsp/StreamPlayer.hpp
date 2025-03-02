@@ -82,31 +82,6 @@ public:
         log.debug() << "StreamPlayer stopped";
     }
 
-    std::vector<sam_t> mMixBuffer = std::vector<sam_t>(2048);
-
-    void process(const sam_t*, sam_t* tBuffer, size_t tFrameCount) override {
-        // if (volume == 0) return; // render cycle might start when vol is still 0
-
-        auto sampleCount = tFrameCount * kChannelCount;
-        auto samplesRead = mBuffer.read(mMixBuffer.data(), sampleCount);
-        auto samplesLeft = sampleCount - samplesRead;
-        if (samplesLeft > 0) {
-            memset(mMixBuffer.data() + samplesRead, 0, samplesLeft * sizeof(sam_t));
-        }
-
-        if (volume == 1) {
-            memcpy(tBuffer, mMixBuffer.data(), sampleCount * sizeof(sam_t));
-        } else {
-            for (auto i = 0; i < sampleCount; ++i) {
-                float s = static_cast<float>(mMixBuffer[i]) * volume;
-                if      (s > std::numeric_limits<sam_t>::max()) s = std::numeric_limits<sam_t>::max();
-                else if (s < std::numeric_limits<sam_t>::min()) s = std::numeric_limits<sam_t>::min();
-                tBuffer[i] = static_cast<sam_t>(s); 
-            }
-        }
-
-        // calcRMS(tBuffer, sampleCount);
-    }
 };
 }
 }
