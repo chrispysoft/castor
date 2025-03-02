@@ -201,8 +201,8 @@ public:
     }
 
     virtual void stop() {
-        state = IDLE;
         if (fadeThread.joinable()) fadeThread.join();
+        state = IDLE;
     }
 
     virtual void load(const std::string& url, double position = 0) = 0;
@@ -215,11 +215,53 @@ public:
     virtual void schedule(const PlayItem& item) {
         playItem = std::move(item);
         state = WAIT;
+
+        // schedulingThread = std::thread([] {
+        //     std::this_thread::sleep_until(std::chrono::system_clock::from_time_t(playItem.start));
+        // });
+    }
+
+    
+    time_t preloadTime = 10;
+    time_t loadRetryInterval = 3;
+    time_t lastLoadAttempt = 0;
+
+    bool isInLoadTime() {
+        auto now = std::time(0);
+        auto min = playItem.start - preloadTime;
+        auto max = playItem.end - 5;
+        return now >= min && now <= max;
+    }
+
+    bool needsLoad() {
+        return !isLoaded && isInLoadTime() && (std::time(0) > lastLoadAttempt+loadRetryInterval);
+    }
+
+    bool isInPlayTime() const {
+        auto now = std::time(0);
+        return now >= playItem.start && now < playItem.end; 
     }
 
 
-    bool needsLoad() {
-        return !isLoaded && playItem.isInScheduleTime();
+    bool isPlaying() const {
+        return isLoaded && isInPlayTime(); // state == PLAY;
+    }
+
+    bool isFinished() const {
+        return std::time(0) > (playItem.end + 5);
+    }
+
+
+    float readProgress() {
+        auto capacity = static_cast<float>(mBuffer.capacity());
+        if (capacity == 0) return 0;
+        return static_cast<float>(mBuffer.readPosition()) / capacity;
+    }
+
+    float writeProgress() {
+        auto capacity = static_cast<float>(mBuffer.capacity());
+        if (capacity == 0) return 0;
+        return static_cast<float>(mBuffer.writePosition()) / capacity;
     }
 
 
@@ -233,6 +275,7 @@ public:
         }
         catch (const std::exception& e) {
             state = FAIL;
+            lastLoadAttempt = std::time(0);
             log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
         }
     }
@@ -286,14 +329,6 @@ public:
             isFading = false;
             // log.debug() << name << " fade done";
         });
-    }
-
-
-    std::atomic<float> rms = -INFINITY;
-    RMS mRMS = RMS(1, 2);
-
-    void calcRMS(const sam_t* buffer, size_t sampleCount) {
-        rms = mRMS.process(buffer, sampleCount);
     }
 
 
