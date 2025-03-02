@@ -129,7 +129,8 @@ public:
             mDuration = mFormatCtx->duration / (double) AV_TIME_BASE - tSeek;
             mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
         }
-        log.debug() << "CodecReader estimated num samples: " << mSampleCount;
+
+        log.debug() << "CodecReader inited with estimated num samples: " << mSampleCount;
     }
 
     ~CodecReader() {

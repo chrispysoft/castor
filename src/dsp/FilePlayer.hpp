@@ -48,7 +48,7 @@ public:
     }
 
     void load(const std::string& tURL, double seek = 0) override {
-        log.debug() << "FilePlayer load " << tURL << " position " << seek;
+        log.info() << "FilePlayer load " << tURL << " position " << seek;
         // eject();
 
         if (mReader) mReader->cancel();
