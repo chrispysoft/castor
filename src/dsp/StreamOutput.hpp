@@ -30,6 +30,7 @@ class StreamOutput {
 
     std::atomic<bool> mRunning = false;
     Recorder mRecorder;
+    io::HTTPClient mHTTPClient;
 
 public:
     StreamOutput(double tSampleRate) :
@@ -63,7 +64,7 @@ public:
     void updateMetadata(const std::string& tURL, const std::string& tMetadata) {
         log.debug() << "StreamOutput updateMetadata " << tMetadata;
         auto url = tURL + "&mode=updinfo&song=" + tMetadata;
-        auto res = io::HTTPClient().get(url);
+        auto res = mHTTPClient.get(url);
         auto code = res.code;
         if (code != 200) {
             throw std::runtime_error("metadata http request failed with code: " + std::to_string(code));
