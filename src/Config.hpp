@@ -50,6 +50,8 @@ class Config {
     static constexpr const char* kHealthURL = "";
     static constexpr const char* kClockURL = "";
     static constexpr const char* kPlaylistToken = "";
+    static constexpr const char* kCalendarRefreshInterval = "60";
+    static constexpr const char* kHealthReportInterval = "60";
     static constexpr const char* kTCPPort = "0";
     static constexpr const char* kSilenceThreshold = "-90";
     static constexpr const char* kSilenceStartDuration = "5";
@@ -98,6 +100,8 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string playlistToken;
+    int calendarRefreshInterval;
+    int healthReportInterval;
     int tcpPort;
     int silenceThreshold;
     int silenceStartDuration;
@@ -105,9 +109,9 @@ public:
     int preloadTimeFile;
     int preloadTimeStream;
     int preloadTimeFallback;
-    float sampleRate = 44100;
-    size_t audioBufferSize = 1024;
-    time_t reportInterval = 10;
+
+    int sampleRate = 44100;
+    int audioBufferSize = 1024;
     bool realtimeRendering = true;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
@@ -150,6 +154,8 @@ public:
         healthURL = get(map, "health_url", kHealthURL);
         clockURL = get(map, "clock_url", kClockURL);
         playlistToken = get(map, "playlist_token", kPlaylistToken);
+        calendarRefreshInterval = std::stoi(get(map, "calendar_refresh_interval", kCalendarRefreshInterval));
+        healthReportInterval = std::stoi(get(map, "health_report_interval", kHealthReportInterval));
         tcpPort = std::stoi(get(map, "tcp_port", kTCPPort));
         silenceThreshold = std::stoi(get(map, "silence_threshold", kSilenceThreshold));
         silenceStartDuration = std::stoi(get(map, "silence_start_duration", kSilenceStartDuration));
@@ -157,7 +163,7 @@ public:
         preloadTimeFile = std::stoi(get(map, "preload_time_file", kPreloadTimeFile));
         preloadTimeStream = std::stoi(get(map, "preload_time_stream", kPreloadTimeStream));
         preloadTimeFallback = std::stoi(get(map, "preload_time_fallback", kPreloadTimeFallback));
-
+        
         log.info() << "Config:"
         << "\n\t logPath=" << logPath 
         << "\n\t socketPath=" << socketPath 
@@ -179,6 +185,8 @@ public:
         << "\n\t healthURL=" << healthURL
         << "\n\t clockURL=" << clockURL
         << "\n\t playlistToken=<hidden>"
+        << "\n\t calendarRefreshInterval=" << calendarRefreshInterval
+        << "\n\t healthReportInterval=" << healthReportInterval
         << "\n\t tcpPort=" << tcpPort
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration

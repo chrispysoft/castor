@@ -36,18 +36,18 @@
 
 namespace castor {
 class Calendar {
-    std::atomic<bool> mRunning = false;
-    std::thread mWorker;
-    const Config& mConfig;
-    api::Client mAPIClient;
-    time_t mLastRefreshTime = 0;
-    time_t mRefreshInterval = 60;
-    std::deque<PlayItem> mItems;
-    util::M3UParser m3uParser;
 
     const std::string m3uPrefix = "m3u://";
     const std::string filePrefix = "file://";
     const std::string defaultFileSuffix = ".flac";
+    
+    const Config& mConfig;
+    std::atomic<bool> mRunning = false;
+    std::thread mWorker;
+    std::deque<PlayItem> mItems;
+    api::Client mAPIClient;
+    util::M3UParser m3uParser;
+    time_t mLastRefreshTime = 0;
 
 public:
 
@@ -55,7 +55,7 @@ public:
 
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
-        mAPIClient(tConfig),
+        mAPIClient(mConfig),
         m3uParser()
     {}
 
@@ -95,7 +95,7 @@ private:
 
     void work() {
         auto now = std::time(0);
-        if (now - mLastRefreshTime > mRefreshInterval) {
+        if (now - mLastRefreshTime > mConfig.calendarRefreshInterval) {
             mLastRefreshTime = now;
             try {
                 refresh();
@@ -184,6 +184,12 @@ private:
             //     log.error() << "Calendar item '" << uri << "' does not exist";
             //     continue;
             // }
+        }
+
+        for (auto& item : items) {
+            if (item.uri.starts_with("http")) item.loadTime = mConfig.preloadTimeStream;
+            else if (item.uri.starts_with("line")) {}
+            else item.loadTime = mConfig.preloadTimeFile;
         }
         return items;
     }

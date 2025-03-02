@@ -104,7 +104,7 @@ public:
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
         mMixBuffer(mConfig.audioBufferSize * 2),
-        mReportTimer(mConfig.reportInterval),
+        mReportTimer(mConfig.healthReportInterval),
         mInputBuffer(mConfig.audioBufferSize * 2),
         mOutputBuffer(mConfig.audioBufferSize * 2)
     {

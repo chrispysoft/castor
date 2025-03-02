@@ -146,7 +146,7 @@ public:
                 if (!loadNext) break;
             }
         }
-        log.debug(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
+        log.info(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
     }
 
 
