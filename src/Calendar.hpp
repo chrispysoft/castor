@@ -20,11 +20,10 @@
 #pragma once
 
 #include <atomic>
-#include <fstream>
-#include <thread>
-#include <string>
-#include <ctime>
+#include <condition_variable>
 #include <deque>
+#include <mutex>
+#include <thread>
 #include <filesystem>
 #include "Config.hpp"
 #include "api/API.hpp"
@@ -44,6 +43,9 @@ class Calendar {
     const Config& mConfig;
     std::atomic<bool> mRunning = false;
     std::thread mWorker;
+    std::mutex mItemsMutex;
+    std::mutex mWorkMutex;
+    std::condition_variable mWorkCV;
     std::deque<PlayItem> mItems;
     api::Client mAPIClient;
     util::M3UParser m3uParser;
@@ -61,22 +63,40 @@ public:
 
 
     void start() {
-        mRunning = true;
+        if (mConfig.programURL.empty()) {
+            log.warn() << "Calendar can't start - missing config";
+            return;
+        }
+
+        if (mRunning.exchange(true)) return;
         mWorker = std::thread([this] {
             while (mRunning) {
-                work();
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                try {
+                    refresh();
+                }
+                catch (const std::exception& e) {
+                    log.error() << "Calendar refresh failed: " << e.what();
+                }
+                auto refreshTime = std::chrono::seconds(mConfig.calendarRefreshInterval);
+                std::unique_lock<std::mutex> lock(mWorkMutex);
+                mWorkCV.wait_for(lock, refreshTime, [this] { return !mRunning; });
             }
         });
+        log.debug() << "Calendar started";
     }
 
     void stop() {
-        mRunning = false;
+        if (!mRunning.exchange(false)) return;
+        {
+            std::lock_guard<std::mutex> lock(mWorkMutex);
+            mRunning = false;
+            mWorkCV.notify_all();
+        }
         if (mWorker.joinable()) mWorker.join();
+        log.debug() << "Calendar stopped";
     }
 
-
-    void load(const std::string& tURL) {
+    void load(std::string tURL) {
         auto parser = util::CSVParser(tURL);
         auto rows = parser.rows();
         auto now = std::time(0);
@@ -85,40 +105,29 @@ public:
             auto start = now + std::stoi(row[0]);
             auto end   = now + std::stoi(row[1]);
             auto url   = row[2];
-            auto item = PlayItem{start, end, url};
-            mItems.push_back(item);
+            mItems.push_back({start, end, url});
             // log.info(Log::Red) << start << " " << end << " " << url;
         }
-        if (calendarChangedCallback) calendarChangedCallback(mItems);
+
+        if (calendarChangedCallback) {
+            calendarChangedCallback(mItems);
+        }
     }
 
 private:
-
-    void work() {
-        auto now = std::time(0);
-        if (now - mLastRefreshTime > mConfig.calendarRefreshInterval) {
-            mLastRefreshTime = now;
-            try {
-                refresh();
-            }
-            catch (const std::exception& e) {
-                log.error() << "Calendar refresh failed: " << e.what();
-            }
-        }
-    }
 
     void refresh() {
         log.debug() << "Calendar refresh";
 
         auto items = fetchItems();
-        if ( items != mItems) {
+
+        if (items != mItems) {
+            std::lock_guard<std::mutex> lock(mItemsMutex);
             mItems = std::move(items);
             log.debug(Log::Yellow) << "Calendar changed";
-            // for (const auto& itm : items) {
-            //     static constexpr const char* fmt = "%Y-%m-%d %H:%M:%S";
-            //     log.debug() << util::timefmt(itm.start, fmt) << " - " << util::timefmt(itm.end, fmt) << " " << itm.program.showName << " " << itm.uri;
-            // }
-            if (calendarChangedCallback) calendarChangedCallback(mItems);
+            if (calendarChangedCallback) {
+                calendarChangedCallback(mItems);
+            }
         } else {
             log.debug() << "Calendar not changed";
         }
