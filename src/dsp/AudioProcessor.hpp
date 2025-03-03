@@ -67,13 +67,17 @@ public:
         return bytesz / mibi;
     }
 
+    void align() {
+        // mReadPos = (mWritePos + mCapacity/2) % mCapacity;
+    }
+
     void resize(size_t tCapacity, bool tOverwrite) {
-        std::unique_lock<std::mutex> lock(mMutex);
-        mBuffer = std::vector<sam_t>(tCapacity);
         mOverwrite = tOverwrite;
         mReadPos = 0;
-        mWritePos = 0;
+        mWritePos = 0; // mOverwrite ? tCapacity / 2 : 0;
         mSize = 0;
+        mBuffer = std::vector<T>(tCapacity);
+        std::lock_guard<std::mutex> lock(mMutex);
         mCapacity = tCapacity;
         mCV.notify_all();
     }
@@ -82,10 +86,10 @@ public:
         if (!tData || tLen == 0) return 0;
         if (tLen > mCapacity) return 0;
 
-        if (mOverwrite) {
+        //if (mOverwrite) {
             std::unique_lock<std::mutex> lock(mMutex);
             mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
-        }
+        //}
 
         size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
         if (tLen > freeSpace) {
@@ -125,17 +129,14 @@ public:
             // log.debug() << "Unexpected overlap in read";
         }
 
+        std::lock_guard<std::mutex> lock(mMutex);
+
         mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
         mSize -= tLen;
 
-        // mCV.notify_all();
+        mCV.notify_all();
 
         return tLen;
-    }
-
-    void reset() {
-        // mSize = 0;
-        mCapacity = 0;
     }
 };
 
