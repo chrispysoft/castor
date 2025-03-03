@@ -32,10 +32,12 @@ inline float rms(const T* tBlock, size_t tNumSamples, size_t tSampleMax = 1) {
     float rms = 0.0f;
     for (auto i = 0; i < tNumSamples; ++i) {
         const float sam = static_cast<float>(tBlock[i]) / divisor;
-        rms += sam * sam;
+        // rms += sam * sam;
+        rms += abs(sam);
     }
     if (rms == 0) return 0.0f;
-    rms = sqrt(rms / tNumSamples);
+    // rms = sqrt(rms / tNumSamples);
+    rms = rms / tNumSamples;
     return rms;
 }
 
