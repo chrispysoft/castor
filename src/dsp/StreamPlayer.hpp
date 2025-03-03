@@ -54,16 +54,12 @@ public:
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;
         // eject();
-
         mBuffer.resize(mBufferSize, true);
 
-        //if (mLoadWorker.joinable()) mLoadWorker.join();
-        
-        mLoadWorker = std::thread([this, url=tURL, seek=tSeek] {
-            if (mReader) mReader->cancel();
-            mReader = std::make_unique<CodecReader>(mSampleRate, url, seek);
+        if (mReader) mReader->cancel();
+        mReader = std::make_unique<CodecReader>(mSampleRate, tURL);
+        mLoadWorker = std::thread([this] {
             mReader->read(mBuffer);
-            mReader = nullptr;
         });
     }
 
@@ -76,9 +72,10 @@ public:
         log.debug() << "StreamPlayer stop...";
         Player::stop();
         if (mReader) mReader->cancel();
+        mBuffer.resize(0, false);
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
-        // mBuffer.reset();
+        
         log.debug() << "StreamPlayer stopped";
     }
 
