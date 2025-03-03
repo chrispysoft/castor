@@ -115,8 +115,8 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
     api::Program program = {};
-    double fadeInTime = 1;
-    double fadeOutTime = 1;
+    float fadeInTime = 1;
+    float fadeOutTime = 1;
 
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
