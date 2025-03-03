@@ -146,32 +146,51 @@ public:
 };
 
 
-class Player : public Input, public BufferedSource {
+class Fader {
+public:
+    std::vector<float> fadeInCurve;
+    std::vector<float> fadeOutCurve;
+    std::atomic<int> fadeInCurveIndex = -1;
+    std::atomic<int> fadeOutCurveIndex = -1;
+
+    Fader(float fadeInTime, float fadeOutTime, float sampleRate) :
+        fadeInCurve(fadeInTime * sampleRate),
+        fadeOutCurve(fadeOutTime * sampleRate)
+    {
+        generateFadeCurves();
+    }
+
+    void generateFadeCurves() {
+        auto size = fadeOutCurve.size();
+        float denum = size - 1;
+        for (auto i = 0; i < size; ++i) {
+            float vol = i / denum;
+            fadeInCurve[i] = vol * vol;
+        }
+
+        size = fadeOutCurve.size();
+        denum = size - 1;
+        for (auto i = 0; i < fadeOutCurve.size(); ++i) {
+            float vol = (denum-i) / denum;
+            fadeOutCurve[i] = vol * vol;
+        }
+    }
+};
+
+
+class Player : public Input, public BufferedSource, public Fader {
 public:
 
     Player(const std::string& name = "") :
         Input(name),
-        BufferedSource()
-    {}
-
-    bool isPlaying() const {
-        return state == PLAY;
+        BufferedSource(),
+        Fader(2, 2, 44100)
+    {
+        generateFadeCurves();
     }
 
-    bool isFinished() const {
-        return std::time(0) > (playItem.end + playItem.ejectTime + 1);
-    }
-
-    float readProgress() {
-        auto capacity = static_cast<float>(mBuffer.capacity());
-        if (capacity == 0) return 0;
-        return static_cast<float>(mBuffer.readPosition()) / capacity;
-    }
-
-    float writeProgress() {
-        auto capacity = static_cast<float>(mBuffer.capacity());
-        if (capacity == 0) return 0;
-        return static_cast<float>(mBuffer.writePosition()) / capacity;
+    ~Player() {
+        if (schedulingThread.joinable()) schedulingThread.join();
     }
 
     enum State {
@@ -196,13 +215,14 @@ public:
         }
     }
 
-    void play() {
+    virtual void play() {
         state = PLAY;
     }
 
     virtual void stop() {
-        if (fadeThread.joinable()) fadeThread.join();
+        std::unique_lock<std::mutex> lock(scheduleMutex);
         state = IDLE;
+        scheduleCV.notify_all();
     }
 
     virtual void load(const std::string& url, double position = 0) = 0;
@@ -212,17 +232,36 @@ public:
     std::atomic<bool> isLoaded = false;
     std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
 
-    virtual void schedule(const PlayItem& item) {
-        playItem = std::move(item);
-        state = WAIT;
+    std::mutex scheduleMutex;
+    std::condition_variable scheduleCV;
 
-        // schedulingThread = std::thread([] {
-        //     std::this_thread::sleep_until(std::chrono::system_clock::from_time_t(playItem.start));
-        // });
+    virtual void schedule(const PlayItem& item) {
+        playItem = item;
+        state = WAIT;
+        schedulingThread = std::thread(&Player::waitForEvents, this);
+    }
+
+    void waitForEvents() {
+        auto unlockTime1 = std::chrono::system_clock::from_time_t(playItem.start);
+        auto unlockTime2 = std::chrono::system_clock::from_time_t(playItem.end - 2);
+        
+        {
+            std::unique_lock<std::mutex> lock(scheduleMutex);
+            scheduleCV.wait_until(lock, unlockTime1, [this] { return state == IDLE; });
+            log.debug(Log::Magenta) << "FADE IN " << name;
+            fadeInCurveIndex = 0;
+        }
+
+        {
+            std::unique_lock<std::mutex> lock(scheduleMutex);
+            scheduleCV.wait_until(lock, unlockTime2, [this] { return state == IDLE; });
+            log.debug(Log::Magenta) << "FADE OUT " << name;
+            fadeOutCurveIndex = 0;
+        }
     }
 
     
-    time_t preloadTime = 10;
+    time_t preloadTime = 0;
     time_t loadRetryInterval = 3;
     time_t lastLoadAttempt = 0;
 
@@ -248,7 +287,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem.end + 5);
+        return std::time(0) > (playItem.end + 1);
     }
 
 
@@ -280,99 +319,64 @@ public:
         }
     }
 
-
-    std::atomic<bool> isFading = false;
-    std::atomic<float> volume = 0;
-
-    void setVolume(float vol, bool exp) {
-        if (vol < 0) {
-            log.debug() << "AudioProcessor " << name << " volume < 0";
-            vol = 0;
-        } else if (vol > 1) {
-            log.debug() << "AudioProcessor " << name << " volume > 1";
-            vol = 1;
-        }
-        volume = exp ? vol*vol : vol;
-        // log.debug() << "AudioProcessor " << name << " setVolume " << volume;
-    }
-
-    void fadeIn() {
-        fade(true, playItem.fadeInTime);
-    }
-
-    void fadeOut() {
-        fade(false, playItem.fadeOutTime);
-    }
-
-    std::thread fadeThread;
-
-    void fade(bool increase, double duration) {
-        if (isFading) {
-            log.error() << "Player is already fading";
-            return;
-        }
-        isFading = true;
-        // log.debug() << name << " fade start " << duration << " sec.";
-        if (fadeThread.joinable()) fadeThread.join();
-        fadeThread = std::thread([increase, duration, this] {
-            auto niters = static_cast<int>(duration * 100);
-            float incr = 1.0f / niters;
-            if (!increase) incr *= -1;
-            float vol = increase ? 0.0f : 1.0f;
-            for (auto i = 0; i < niters; ++i) {
-                setVolume(vol, true);
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                vol += incr;
-                // log.debug() << "AudioProcessor " << name << " fade vol " << this->volume;
-            }
-            setVolume(increase ? 1 : 0, false);
-            isFading = false;
-            // log.debug() << name << " fade done";
-        });
-    }
-
-
     void update() {
-        auto now = std::time(0);
+        // auto now = std::time(0);
         
-        if (now >= playItem.start && now <= playItem.end && state == CUED) {
-            log.info(Log::Magenta) << name << " PLAY";
-            play();
-            log.info(Log::Magenta) << name << " FADE IN";
-            fadeIn();
-            if (playItemDidStartCallback) playItemDidStartCallback(playItem);
-        }
-        else if (now >= playItem.end - playItem.fadeOutTime && now < playItem.end && state == PLAY && !isFading) {
-            log.info(Log::Magenta) << name << " FADE OUT";
-            fadeOut();
-        }
-        else if (now >= playItem.end && state != IDLE) {
-            log.info(Log::Magenta) << name << " STOP";
-            stop();
-        }
+        // if (now >= playItem.start && now <= playItem.end && fadeInCurveIndex == -1) { // && state == CUED) {
+        //     //log.info(Log::Magenta) << name << " PLAY";
+        //     //play();
+        //     log.info(Log::Magenta) << name << " FADE IN";
+        //     fadeInCurveIndex = 0;
+        //     // if (playItemDidStartCallback) playItemDidStartCallback(playItem);
+        // }
+        // else if (now >= playItem.end - playItem.fadeOutTime && now < playItem.end && fadeOutCurveIndex == -1) { // && state == PLAY && !isFading) {
+        //     log.info(Log::Magenta) << name << " FADE OUT";
+        //     fadeOutCurveIndex = 0;
+        // }
+        // else if (now >= playItem.end && state != IDLE) {
+        //     log.info(Log::Magenta) << name << " STOP";
+        //     stop();
+        // }
   
     }
 
-    std::vector<sam_t> mMixBuffer = std::vector<sam_t>(2048);
+
+    
+
 
     virtual void process(const sam_t* in, sam_t* out, size_t nframes) override {
-        // if (volume == 0) return; // render cycle might start when vol is still 0
+
+        if (fadeOutCurveIndex == -2) return; // don't process if fade out done
 
         auto sampleCount = nframes * 2;
-        auto samplesRead = mBuffer.read(mMixBuffer.data(), sampleCount);
+        auto samplesRead = mBuffer.read(out, sampleCount);
         auto samplesLeft = sampleCount - samplesRead;
-        if (samplesLeft > 0) {
-            memset(mMixBuffer.data() + samplesRead, 0, samplesLeft * sizeof(sam_t));
+
+        if (fadeInCurveIndex >= 0) {
+            // log.debug() << "fade in";
+            for (auto i = 0; i < samplesRead/2 && fadeInCurveIndex < fadeInCurve.size(); ++i) {
+                out[i*2+0] *= fadeInCurve[fadeInCurveIndex]; 
+                out[i*2+1] *= fadeInCurve[fadeInCurveIndex++]; 
+            }
+
+            if (fadeInCurveIndex >= fadeInCurve.size()) fadeInCurveIndex = -2;
         }
 
-        if (volume == 1) {
-            memcpy(out, mMixBuffer.data(), sampleCount * sizeof(sam_t));
-        } else {
-            for (auto i = 0; i < sampleCount; ++i) {
-                float s = static_cast<float>(mMixBuffer[i]) * volume;
-                if      (s > std::numeric_limits<sam_t>::max()) s = std::numeric_limits<sam_t>::max();
-                else if (s < std::numeric_limits<sam_t>::min()) s = std::numeric_limits<sam_t>::min();
-                out[i] = static_cast<sam_t>(s); 
+        else if (fadeOutCurveIndex >= 0) {
+            // log.debug() << "fade out";
+            size_t i;
+            for (i = 0; i < samplesRead/2 && fadeOutCurveIndex < fadeOutCurve.size(); ++i) {
+                out[i*2+0] *= fadeOutCurve[fadeOutCurveIndex]; 
+                out[i*2+1] *= fadeOutCurve[fadeOutCurveIndex++]; 
+            }
+
+            if (fadeOutCurveIndex >= fadeOutCurve.size()) {
+                while (i < samplesRead/2) {
+                    out[i*2+0] = 0;
+                    out[i*2+1] = 0;
+                    ++i;
+                }
+                fadeOutCurveIndex = -2;
             }
         }
     }

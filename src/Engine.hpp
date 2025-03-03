@@ -184,7 +184,6 @@ public:
         }
 
         for (auto player : mPlayers) {
-            player->update();
             if (player->isPlaying() && player != mActivePlayer) {
                 // std::lock_guard<std::mutex> lock(mPlayersMutex);
                 mActivePlayer = player;
@@ -192,6 +191,7 @@ public:
         }
 
         while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
+            mPlayers.front()->stop();
             std::lock_guard<std::mutex> lock(mPlayersMutex);
             mPlayers.pop_front();
         }
