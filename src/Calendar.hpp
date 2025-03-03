@@ -186,12 +186,6 @@ private:
             //     continue;
             // }
         }
-
-        for (auto& item : items) {
-            if (item.uri.starts_with("http")) item.loadTime = mConfig.preloadTimeStream;
-            else if (item.uri.starts_with("line")) {}
-            else item.loadTime = mConfig.preloadTimeFile;
-        }
         return items;
     }
 };

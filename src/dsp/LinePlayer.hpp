@@ -34,7 +34,7 @@ public:
     LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
         mSampleRate(tSampleRate)
     {
-        
+        preloadTime = 5;
     }
 
     ~LinePlayer() {

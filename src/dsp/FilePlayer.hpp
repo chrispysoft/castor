@@ -39,7 +39,9 @@ class FilePlayer : public Player {
 public:
     FilePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate)
-    {}
+    {
+        preloadTime = 3600;
+    }
     
     ~FilePlayer() {
         // log.debug() << "FilePlayer " << name << " dealloc...";

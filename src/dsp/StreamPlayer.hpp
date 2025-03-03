@@ -42,8 +42,10 @@ class StreamPlayer : public Player {
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
-        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
-    {}
+        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 16))
+    {
+        preloadTime = 10;
+    }
     
     ~StreamPlayer() {
         // log.debug() << "StreamPlayer " << name << " dealloc...";
