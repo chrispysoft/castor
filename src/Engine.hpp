@@ -117,9 +117,9 @@ public:
         mAudioClient.setRenderer(this);
     }
 
-    void parseArgs(const std::unordered_map<std::string,std::string>& tArgs) {
+    void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
         try {
-            auto calFile = tArgs.at("--calendar");
+            auto calFile = tArgs["--calendar"];
             if (!calFile.empty()) mCalendar.load(calFile);
         }
         catch (const std::exception& e) {
