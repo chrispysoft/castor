@@ -31,15 +31,16 @@ class LinePlayer : public Player {
     
 
 public:
-    LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
+    LinePlayer(double tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
+        Player(tName, tPreloadTime),
         mSampleRate(tSampleRate)
-    {
-        preloadTime = 5;
-    }
+    {}
 
-    ~LinePlayer() {
-
-    }
+    // ~LinePlayer() {
+    //     log.debug() << "LinePlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "LinePlayer " << name << " dealloced";
+    // }
 
     void schedule(const PlayItem& item) override {
         playItem = std::move(item);

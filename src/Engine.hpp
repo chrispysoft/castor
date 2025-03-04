@@ -43,18 +43,30 @@ namespace castor {
 
 class PlayerFactory {
     // std::mutex mMutex;
+    float mSampleRate;
+    time_t mPreloadTimeFile;
+    time_t mPreloadTimeStream;
+    time_t mPreloadTimeLine;
     
 public:
-    std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem, double tSampleRate) {
+    PlayerFactory(const Config& tConfig) :
+        mSampleRate(tConfig.sampleRate),
+        mPreloadTimeFile(tConfig.preloadTimeFile),
+        mPreloadTimeStream(tConfig.preloadTimeStream),
+        mPreloadTimeLine(tConfig.preloadTimeLine)
+    {}
+
+    std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem) {
+        auto uri = tPlayItem.uri;
+        auto name = uri.substr(uri.rfind('/')+1);
         // std::lock_guard<std::mutex> lock(mMutex);
-        auto name = tPlayItem.uri.substr(tPlayItem.uri.rfind('/')+1);
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
-        if (tPlayItem.uri.starts_with("line"))
-            return std::make_shared<audio::LinePlayer>(tSampleRate, name);
-        else if (tPlayItem.uri.starts_with("http"))
-            return std::make_shared<audio::StreamPlayer>(tSampleRate, name);
+        if (uri.starts_with("line"))
+            return std::make_shared<audio::LinePlayer>(mSampleRate, name, mPreloadTimeLine);
+        else if (uri.starts_with("http"))
+            return std::make_shared<audio::StreamPlayer>(mSampleRate, name, mPreloadTimeStream);
         else
-            return std::make_shared<audio::FilePlayer>(tSampleRate, name);
+            return std::make_shared<audio::FilePlayer>(mSampleRate, name, mPreloadTimeFile);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -74,8 +86,8 @@ class Engine : public audio::Client::Renderer {
     audio::Fallback mFallback;
     audio::Recorder mRecorder;
     audio::StreamOutput mStreamOutput;
-    std::vector<audio::sam_t> mMixBuffer;
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
+    std::unique_ptr<PlayerFactory> mPlayerFactory = nullptr;
     std::shared_ptr<audio::Player> mActivePlayer = nullptr;
     std::thread mWorker;
     std::thread mLoadThread;
@@ -84,15 +96,11 @@ class Engine : public audio::Client::Renderer {
     util::Timer mReportTimer;
     util::Timer mTCPUpdateTimer;
     api::Program mCurrProgram = {};
-    PlayerFactory mFactory;
     // std::queue<PlayItem> mScheduleItems = {};
     std::mutex mScheduleItemsMutex;
     std::mutex mPlayersMutex;
     dispatch_queue mScheduleQueue;
     dispatch_queue mAPIReportQueue;
-
-    std::vector<audio::sam_t> mInputBuffer;
-    std::vector<audio::sam_t> mOutputBuffer;
     
     
 public:
@@ -106,17 +114,15 @@ public:
         mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
-        mMixBuffer(mConfig.audioBufferSize * 2),
         mReportTimer(mConfig.healthReportInterval),
         mTCPUpdateTimer(1),
-        mInputBuffer(mConfig.audioBufferSize * 2),
-        mOutputBuffer(mConfig.audioBufferSize * 2),
         mScheduleQueue("schedule queue", 1),
         mAPIReportQueue("report queue", 1)
         // mLoadQueue("load queue", 2)
     {
         mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
+        mPlayerFactory = std::make_unique<PlayerFactory>(mConfig);
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -251,7 +257,7 @@ public:
         }
 
         
-        auto player = mFactory.createPlayer(item, mConfig.sampleRate);
+        auto player = mPlayerFactory->createPlayer(item);
         // player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
         player->schedule(item);
         

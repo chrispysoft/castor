@@ -139,19 +139,19 @@ class StreamPlayer : public Player {
     StreamBuffer<sam_t> mStreamBuffer;
 
 public:
-    StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
+    StreamPlayer(double tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tName, tPreloadTime),
         mSampleRate(tSampleRate),
-        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 16))
+        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
     {
-        preloadTime = 10;
         mBuffer = &mStreamBuffer;
     }
     
-    ~StreamPlayer() {
-        // log.debug() << "StreamPlayer " << name << " dealloc...";
-        // if (state != IDLE) stop();
-        // log.debug() << "StreamPlayer " << name << " dealloced";
-    }
+    // ~StreamPlayer() {
+    //     log.debug() << "StreamPlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "StreamPlayer " << name << " dealloced";
+    // }
 
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;

@@ -97,12 +97,16 @@ public:
 
 
 class Player : public Input, public BufferedSource, public Fader {
+    time_t preloadTime;
+    time_t loadRetryInterval = 3;
+    time_t lastLoadAttempt = 0;
 public:
 
-    Player(const std::string& name = "") :
+    Player(const std::string& name = "", time_t tPreloadTime = 0) :
         Input(name),
         BufferedSource(),
-        Fader(2, 2, 44100)
+        Fader(2, 2, 44100),
+        preloadTime(tPreloadTime)
     {
         generateFadeCurves();
     }
@@ -184,9 +188,7 @@ public:
     }
 
     
-    time_t preloadTime = 0;
-    time_t loadRetryInterval = 3;
-    time_t lastLoadAttempt = 0;
+    
 
     bool isInLoadTime() {
         auto now = std::time(0);

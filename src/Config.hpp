@@ -110,6 +110,7 @@ public:
     int silenceStopDuration;
     int preloadTimeFile;
     int preloadTimeStream;
+    int preloadTimeLine = 5;
     int preloadTimeFallback;
 
     int sampleRate = 44100;

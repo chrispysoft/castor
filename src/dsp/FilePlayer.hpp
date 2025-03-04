@@ -94,18 +94,18 @@ class FilePlayer : public Player {
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
-    FilePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
+    FilePlayer(double tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tName, tPreloadTime),
         mSampleRate(tSampleRate)
     {
-        preloadTime = 3600;
         mBuffer = &mFileBuffer;
     }
     
-    ~FilePlayer() {
-        // log.debug() << "FilePlayer " << name << " dealloc...";
-        // if (state != IDLE) stop();
-        // log.debug() << "FilePlayer " << name << " dealloced";
-    }
+    // ~FilePlayer() {
+    //     log.debug() << "FilePlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "FilePlayer " << name << " dealloced";
+    // }
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "FilePlayer load " << tURL << " position " << seek;
