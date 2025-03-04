@@ -57,8 +57,10 @@ public:
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
 
         auto sampleCount = mReader->sampleCount();
-        auto alignsz = util::nextMultiple(sampleCount, 2048);
-        mBuffer.resize(alignsz, false);
+
+        auto pagesize = sysconf(_SC_PAGE_SIZE);
+        auto bufsize = util::nextMultiple(sampleCount, pagesize / sizeof(sam_t));
+        mBuffer.resize(bufsize, false);
 
         mReader->read(mBuffer);
         mReader = nullptr;
