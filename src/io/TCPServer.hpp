@@ -19,9 +19,11 @@
 
 #pragma once
 
+#include <queue>
 #include <cstring>
 #include <atomic>
 #include <thread>
+#include <mutex>
 #include <future>
 #include <vector>
 #include <sys/socket.h>
@@ -41,6 +43,8 @@ class TCPServer {
     int mPort;
     std::atomic<bool> mRunning = false;
     std::thread mListenerThread;
+    std::queue<std::string> mStatusQueue;
+    std::mutex mStatusMutex;
     std::mutex mSocketMutex;
     std::vector<std::future<void>> mFutures;
 
@@ -129,11 +133,8 @@ public:
         log.debug() << "TCPServer stopped";
     }
 
-    std::queue<std::string> mStatusQueue;
-    std::mutex mStatusMutex;
-
-    void pushStatus(const std::string& tStatus) {
-        // std::lock_guard<std::mutex> lock(mStatusMutex);
+    void pushStatus(std::string tStatus) {
+        std::lock_guard<std::mutex> lock(mStatusMutex);
         mStatusQueue.push(tStatus);
     }
 
@@ -196,7 +197,7 @@ private:
                 if (!mStatusQueue.empty()) {
                     std::string status;
                     {
-                        // std::lock_guard<std::mutex> lock(mStatusMutex);
+                        std::lock_guard<std::mutex> lock(mStatusMutex);
                         status = mStatusQueue.front();
                         mStatusQueue.pop();
                     }
