@@ -254,29 +254,31 @@ public:
 
     
     static void getStatusHeader(std::ostringstream& strstr) {
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Start";
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Stop";
-        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Type";
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "State";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
-        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
+        using namespace std;
+        strstr << left << setw(12) << "Start";
+        strstr << left << setw(12) << "Stop";
+        strstr << left << setw(16) << "ID";
+        strstr << left << setw(12) << "Type";
+        strstr << left << setw(12) << "State";
+        strstr << right << setw(12) << "Loaded";
+        strstr << right << setw(12) << "Played";
+        // strstr << right << setw(12) << "Gain";
+        strstr << right << setw(12) << "Size (MiB)";
         strstr << '\n';
     }
 
     void getStatus(std::ostringstream& strstr) {
-        strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(playItem.start, "%H:%M:%S");
-        strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(playItem.end, "%H:%M:%S");
-        strstr << std::left << std::setfill(' ') << std::setw(16) << name.substr(0, 16);
-        strstr << std::left << std::setfill(' ') << std::setw(12) << category;
-        strstr << std::right << std::setfill(' ') << std::setw(12) << stateStr();
-        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << writeProgress();
-        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << readProgress();
-        // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << volume;
-        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << bufferSizeMiB();
-        // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << rms << ' ';
+        using namespace std;
+        strstr << left << setw(12) << util::timefmt(playItem.start, "%H:%M:%S");
+        strstr << left << setw(12) << util::timefmt(playItem.end, "%H:%M:%S");
+        strstr << left << setw(16) << name.substr(0, 16);
+        strstr << left << setw(12) << category;
+        strstr << left << setw(12) << stateStr();
+        strstr << right << setw(12) << fixed << setprecision(2) << writeProgress();
+        strstr << right << setw(12) << fixed << setprecision(2) << readProgress();
+        // strstr << right << setfill(' ') << setw(12) << fixed << setprecision(2) << volume;
+        strstr << right << setw(12) << fixed << setprecision(2) << bufferSizeMiB();
+        // statusSS << left << setfill(' ') << setw(16) << fixed << setprecision(2) << rms << ' ';
         strstr << '\n';
     }
 
