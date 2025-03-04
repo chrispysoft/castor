@@ -172,13 +172,13 @@ public:
 
             log.debug(Log::Magenta) << "PLAY " << name;
             play();
-            log.debug(Log::Magenta) << "FADE IN " << name;
+            log.info(Log::Magenta) << "FADE IN " << name;
             fadeInCurveIndex = 0;
 
             scheduleCV.wait_until(lock, unlockTime2, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
-            log.debug(Log::Magenta) << "FADE OUT " << name;
+            log.info(Log::Magenta) << "FADE OUT " << name;
             fadeOutCurveIndex = 0;
         }
     }

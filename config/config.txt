@@ -1,3 +1,6 @@
+# Logging (1=debug, 2=info, 3=warning, 4=error)
+log_level=2
+
 # Paths
 log_path=./logs/castor.log
 socket_path=./socket/castor.socket

@@ -41,6 +41,7 @@ class Castor {
         mEngine(mConfig)
     {
         log.setFilePath(mConfig.logPath);
+        log.setLevel(mConfig.logLevel);
 
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
