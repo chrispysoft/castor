@@ -138,8 +138,9 @@ public:
     }
 
     virtual void stop() {
-        std::unique_lock<std::mutex> lock(scheduleMutex);
+        std::lock_guard<std::mutex> lock(scheduleMutex);
         state = IDLE;
+        isScheduling = false;
         scheduleCV.notify_all();
     }
 
@@ -149,13 +150,14 @@ public:
     std::thread schedulingThread;
     std::atomic<bool> isLoaded = false;
     std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
-
     std::mutex scheduleMutex;
     std::condition_variable scheduleCV;
+    bool isScheduling = false;
 
     virtual void schedule(const PlayItem& item) {
         playItem = item;
         state = WAIT;
+        isScheduling = true;
         schedulingThread = std::thread(&Player::waitForEvents, this);
     }
 
@@ -165,14 +167,17 @@ public:
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
-            scheduleCV.wait_until(lock, unlockTime1, [this] { return state == IDLE; });
+            scheduleCV.wait_until(lock, unlockTime1, [this] { return !isScheduling; });
+            if (!isScheduling) return;
+
+            log.debug(Log::Magenta) << "PLAY " << name;
+            play();
             log.debug(Log::Magenta) << "FADE IN " << name;
             fadeInCurveIndex = 0;
-        }
 
-        {
-            std::unique_lock<std::mutex> lock(scheduleMutex);
-            scheduleCV.wait_until(lock, unlockTime2, [this] { return state == IDLE; });
+            scheduleCV.wait_until(lock, unlockTime2, [this] { return !isScheduling; });
+            if (!isScheduling) return;
+
             log.debug(Log::Magenta) << "FADE OUT " << name;
             fadeOutCurveIndex = 0;
         }
