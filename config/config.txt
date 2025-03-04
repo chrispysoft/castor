@@ -33,7 +33,8 @@ stream_out_href=http://localhost:8000/
 # playlist_url=http://localhost/tank/api/v1/playlists/
 # playlog_url=http://localhost:8010/api/v1/playlog
 # health_url=http://localhost:8010/api/v1/source/health/1
-clock_url=http://localhost:8010/api/v1/clock
+# clock_url=http://localhost:8010/api/v1/clock
+# playlist_token=id:token
 calendar_refresh_interval=60
 health_report_interval=10
 
