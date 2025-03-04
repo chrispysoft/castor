@@ -374,6 +374,7 @@ public:
     std::ostringstream strstr;
 
     void updateStatus() {
+        strstr.flush();
         // strstr << "\x1b[5A";
         strstr << "________________________________________________________________________________________\n";
         strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << " dB\n";
@@ -386,7 +387,7 @@ public:
         strstr << std::right << std::setfill(' ') << std::setw(12) << "State";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
+        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
         strstr << '\n';
 
@@ -397,14 +398,16 @@ public:
             strstr << std::right << std::setfill(' ') << std::setw(12) << player->stateStr();
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
+            // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer.memorySizeMB();
             // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
             strstr << '\n';
         }
 
-        mTCPServer.setStatus(strstr);
-        strstr.flush();
+        strstr << std::endl;
+
+        mTCPServer.pushStatus(strstr.str());
+        
         // log.debug() << statusSS.str();
     }
 };
