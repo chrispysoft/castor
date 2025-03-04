@@ -159,7 +159,7 @@ public:
                 if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize);
 
                 uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
-                int convSamples = swr_convert(mSwrCtx, outData, maxSamples, mFrame->data, mFrame->nb_samples);
+                int convSamples = swr_convert(mSwrCtx, outData, maxSamples, const_cast<const uint8_t**>(mFrame->data), mFrame->nb_samples);
                 // log.debug() << "max samples: " << maxSamples << " converted samples: " << convSamples;
 
                 if (convSamples < 0) {
