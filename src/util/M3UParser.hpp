@@ -54,7 +54,7 @@ public:
 
         auto getDuration = [](const string& path) {
             auto reader = audio::CodecReader(44100, path);
-            int duration = round(reader.duration());
+            int duration = ceil(reader.duration());
             if (duration <= 0) {
                 throw std::runtime_error("M3UParser could not get duration");
             }
