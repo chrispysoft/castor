@@ -34,6 +34,7 @@ class Input {
 public:
 
     const std::string name;
+    std::string category;
     
     Input(const std::string name = "") :
         name(name)
@@ -125,14 +126,30 @@ public:
         return state;
     }
 
+    #define STR_IDLE "IDLE"
+    #define STR_WAIT "WAIT"
+    #define STR_LOAD "LOAD"
+    #define STR_CUED "CUE "
+    #define STR_PLAY "PLAY"
+    #define STR_FAIL "FAIL"
+
+    #define COL_RED "\033[0;31m"
+    #define COL_GRN "\033[0;32m"
+    #define COL_YEL "\033[0;33m"
+    #define COL_BLU "\033[0;34m"
+    #define COL_MAG "\033[0;35m"
+    #define COL_CYN "\033[0;36m"
+    #define FMT_RST "\033[0m"
+
+
     const char* stateStr() {
         switch (state) {
-            case IDLE: return "IDLE";
-            case WAIT: return "WAIT";
-            case LOAD: return "LOAD";
-            case CUED: return "CUE ";
-            case PLAY: return "PLAY";
-            case FAIL: return "FAIL";
+            case IDLE: return STR_IDLE;
+            case WAIT: return COL_CYN STR_WAIT FMT_RST;
+            case LOAD: return COL_MAG STR_LOAD FMT_RST;
+            case CUED: return COL_YEL STR_CUED FMT_RST;
+            case PLAY: return COL_GRN STR_PLAY FMT_RST;
+            case FAIL: return COL_RED STR_FAIL FMT_RST;
             default: throw std::runtime_error("Unknown default");
         }
     }
@@ -217,15 +234,50 @@ public:
 
 
     float readProgress() {
+        if (!mBuffer) return 0;
         auto capacity = static_cast<float>(mBuffer->capacity());
         if (capacity == 0) return 0;
         return static_cast<float>(mBuffer->readPosition()) / capacity;
     }
 
     float writeProgress() {
+        if (!mBuffer) return 0;
         auto capacity = static_cast<float>(mBuffer->capacity());
         if (capacity == 0) return 0;
         return static_cast<float>(mBuffer->writePosition()) / capacity;
+    }
+
+    float bufferSizeMiB() {
+        if (!mBuffer) return 0;
+        return mBuffer->memorySizeMiB();
+    }
+
+    
+    static void getStatusHeader(std::ostringstream& strstr) {
+        strstr << std::left << std::setfill(' ') << std::setw(12) << "Start";
+        strstr << std::left << std::setfill(' ') << std::setw(12) << "Stop";
+        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
+        strstr << std::left << std::setfill(' ') << std::setw(12) << "Type";
+        strstr << std::left << std::setfill(' ') << std::setw(12) << "State";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
+        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
+        strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
+        strstr << '\n';
+    }
+
+    void getStatus(std::ostringstream& strstr) {
+        strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(playItem.start, "%H:%M:%S");
+        strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(playItem.end, "%H:%M:%S");
+        strstr << std::left << std::setfill(' ') << std::setw(16) << name.substr(0, 16);
+        strstr << std::left << std::setfill(' ') << std::setw(12) << category;
+        strstr << std::right << std::setfill(' ') << std::setw(12) << stateStr();
+        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << writeProgress();
+        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << readProgress();
+        // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << volume;
+        strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << bufferSizeMiB();
+        // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << rms << ' ';
+        strstr << '\n';
     }
 
 

@@ -34,7 +34,9 @@ public:
     LinePlayer(double tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
         Player(tName, tPreloadTime),
         mSampleRate(tSampleRate)
-    {}
+    {
+        category = "LINE";
+    }
 
     // ~LinePlayer() {
     //     log.debug() << "LinePlayer " << name << " dealloc...";

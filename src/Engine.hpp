@@ -382,38 +382,18 @@ public:
     void updateStatus() {
         strstr.flush();
         // strstr << "\x1b[5A";
-        strstr << "________________________________________________________________________________________\n";
+        strstr << "____________________________________________________________________________________________________\n";
         strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << " dB\n";
         strstr << "Fallback: " << (mFallback.isActive() ? "PLAY" : "CUE") << '\n';
         strstr << "Player queue (" << mPlayers.size() << " items):\n";
 
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Start";
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Stop";
-        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "State";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
-        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
-        strstr << '\n';
-
+        audio::Player::getStatusHeader(strstr);
         for (auto player : mPlayers) {
-            strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(player->playItem.start, "%H:%M:%S");
-            strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(player->playItem.end, "%H:%M:%S");
-            strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16);
-            strstr << std::right << std::setfill(' ') << std::setw(12) << player->stateStr();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
-            // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer->memorySizeMB();
-            // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
-            strstr << '\n';
+            if (player) player->getStatus(strstr);
         }
-
         strstr << std::endl;
 
         mTCPServer.pushStatus(strstr.str());
-        
         // log.debug() << statusSS.str();
     }
 };

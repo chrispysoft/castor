@@ -46,7 +46,7 @@ public:
     size_t writePosition() override { return mWritePos; }
     size_t capacity() override { return mCapacity; }
 
-    float memorySizeMB() override {
+    float memorySizeMiB() override {
         static constexpr float kibi = 1024.0f;
         static constexpr float mibi = kibi * kibi;
         float bytesz = mCapacity * sizeof(T);
@@ -144,6 +144,7 @@ public:
         mSampleRate(tSampleRate),
         mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
     {
+        category = "STRM";
         mBuffer = &mStreamBuffer;
     }
     
