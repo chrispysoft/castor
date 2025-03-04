@@ -82,6 +82,7 @@ class Engine : public audio::Client::Renderer {
     std::thread mRenderThread;
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
+    util::Timer mTCPUpdateTimer;
     api::Program mCurrProgram = {};
     PlayerFactory mFactory;
     // std::queue<PlayItem> mScheduleItems = {};
@@ -107,6 +108,7 @@ public:
         mStreamOutput(mConfig.sampleRate),
         mMixBuffer(mConfig.audioBufferSize * 2),
         mReportTimer(mConfig.healthReportInterval),
+        mTCPUpdateTimer(1),
         mInputBuffer(mConfig.audioBufferSize * 2),
         mOutputBuffer(mConfig.audioBufferSize * 2),
         mScheduleQueue("schedule queue", 1),
@@ -163,7 +165,7 @@ public:
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
         if (mLoadThread.joinable()) mLoadThread.join();
-        if (mRenderThread.joinable()) mRenderThread.join();
+        // if (mRenderThread.joinable()) mRenderThread.join();
         for (auto player : mPlayers) player->stop();
         mPlayers.clear();
         // if (mActivePlayer) mActivePlayer->stop();
@@ -197,13 +199,13 @@ public:
         }
 
         
-        // if (mReportTimer.query()) {
-        //     mAPIReportQueue.dispatch([this] {
-        //         postHealth();
-        //     });
-        // }
+        if (mReportTimer.query()) {
+            mAPIReportQueue.dispatch([this] {
+                postHealth();
+            });
+        }
 
-        if (mTCPServer.connected()) {
+        if (mTCPServer.connected() && mTCPUpdateTimer.query()) {
             updateStatus();
         }
     }

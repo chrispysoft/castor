@@ -129,7 +129,14 @@ public:
         log.debug() << "TCPServer stopped";
     }
 
-    std::string statusString;
+    std::queue<std::string> mStatusQueue;
+    std::mutex mStatusMutex;
+
+    void pushStatus(const std::string& tStatus) {
+        // std::lock_guard<std::mutex> lock(mStatusMutex);
+        mStatusQueue.push(tStatus);
+    }
+
     bool connected() {
         mFutures.erase(std::remove_if(mFutures.begin(), mFutures.end(), [](const std::future<void>& f) {
             return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
@@ -186,11 +193,18 @@ private:
                     auto response = std::string(rxBuf, bytesRead);
                     log.info() << "TCPServer received from client [" << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "]: " << response;
                 }
-
-                if (send(clientSocket, statusString.c_str(), statusString.size(), 0) < 0) {
-                    throw std::runtime_error("send failed");
+                if (!mStatusQueue.empty()) {
+                    std::string status;
+                    {
+                        // std::lock_guard<std::mutex> lock(mStatusMutex);
+                        status = mStatusQueue.front();
+                        mStatusQueue.pop();
+                    }
+                    
+                    if (send(clientSocket, status.c_str(), status.size(), 0) < 0) {
+                        throw std::runtime_error("send failed");
+                    }
                 }
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
         }
