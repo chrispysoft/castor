@@ -28,7 +28,7 @@ namespace audio {
 template <typename T>
 inline float rms(const T* tBlock, size_t tNumSamples, size_t tSampleMax = 1) {
     if (tNumSamples == 0) return 0.0f;
-    const float divisor = std::is_floating_point<T>::value ? 1.0f : static_cast<float>(std::numeric_limits<T>::max());
+    const float divisor = std::is_floating_point<T>::value ? 1.0f : static_cast<float>(std::numeric_limits<T>::max()+1);
     float rms = 0.0f;
     for (auto i = 0; i < tNumSamples; ++i) {
         const float sam = static_cast<float>(tBlock[i]) / divisor;
