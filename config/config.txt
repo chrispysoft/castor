@@ -29,8 +29,8 @@ stream_out_genre=Electronic
 stream_out_href=http://localhost:8000/
 
 # API (comment-out to disable)
-program_url=http://localhost/steering/api/v1/program/playout/
-playlist_url=http://localhost/tank/api/v1/playlists/
+# program_url=http://localhost/steering/api/v1/program/playout/
+# playlist_url=http://localhost/tank/api/v1/playlists/
 # playlog_url=http://localhost:8010/api/v1/playlog
 # health_url=http://localhost:8010/api/v1/source/health/1
 clock_url=http://localhost:8010/api/v1/clock
