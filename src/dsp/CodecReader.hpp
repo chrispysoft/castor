@@ -53,7 +53,7 @@ public:
         av_dict_set(&options, "reconnect_delay_max", "2", 0); // max delay 2s
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
-        log.debug() << "CodecReader init " << mURL;
+        // log.debug() << "CodecReader init " << mURL;
         auto res = avformat_open_input(&mFormatCtx, mURL.c_str(), nullptr, &options);
         av_dict_free(&options);
         if (res < 0) {
@@ -130,7 +130,7 @@ public:
             mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
         }
 
-        log.debug() << "CodecReader inited with estimated num samples: " << mSampleCount;
+        log.debug() << "CodecReader inited " << mURL << " (" << mSampleCount << " samples)";
     }
 
     ~CodecReader() {
