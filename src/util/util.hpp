@@ -109,6 +109,11 @@ size_t nextMultiple(size_t value, size_t multiplier) {
 }
 
 
+static float dbLinear(float db) {
+    return pow(10.0f, db / 10.0f);
+}
+
+
 template <typename T>
 class RingBuffer {
     size_t mCapacity;

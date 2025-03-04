@@ -33,7 +33,7 @@ class SilenceDetector {
     static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRMSCycleCount = 4;
     
-    const float mThreshold;
+    const float mThresholdLin;
     const time_t mStartDuration;
     const time_t mStopDuration;
     RMS mRMS;
@@ -43,7 +43,7 @@ class SilenceDetector {
     
 public:
     SilenceDetector(float tThreshold, time_t tStartDuration, time_t tStopDuration) :
-        mThreshold(tThreshold),
+        mThresholdLin(util::dbLinear(tThreshold)),
         mStartDuration(tStartDuration),
         mStopDuration(tStopDuration),
         mRMS(kRMSCycleCount, kChannelCount)
@@ -53,7 +53,7 @@ public:
     void process(const sam_t* in, size_t nframes) {
         mCurrRMS = mRMS.process(in, nframes);
         // std::cout << mCurrRMS << std::endl;
-        bool silence = mCurrRMS <= mThreshold;
+        bool silence = mCurrRMS <= mThresholdLin;
         if (silence) {
             if (mSilenceStart == 0) {
                 mSilenceStart = std::time(0);

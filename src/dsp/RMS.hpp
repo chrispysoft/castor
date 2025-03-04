@@ -66,8 +66,9 @@ public:
                 avg += val;
             }
             avg /= mSize;
-            if (avg == 0) mRMS = -INFINITY;
-            else mRMS = 20 * log10(avg);
+            // if (avg == 0) mRMS = -INFINITY;
+            // else mRMS = 10 * log10(avg);
+            mRMS = avg;
             mIdx = 0;
         }
         return mRMS;
