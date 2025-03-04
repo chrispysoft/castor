@@ -80,7 +80,7 @@ public:
 
             for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
                 auto player = *it;
-                if (player->mBuffer.readPosition() >= player->mBuffer.capacity()) {
+                if (player->mBuffer->readPosition() >= player->mBuffer->capacity()) {
                     player->stop();
                     it = mPlayers.erase(it); // erase() returns next valid iterator
                 } else {
@@ -106,7 +106,7 @@ public:
             try {
                 auto player = std::make_shared<FilePlayer>(mSampleRate, url);
                 player->load(url);
-                sumSamples += player->mBuffer.capacity();
+                sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
                     log.warn() << "Fallback buffer size reached";
                     player->stop();
@@ -172,7 +172,7 @@ public:
         
         auto player = mCurrPlayer;
         if (player) {
-            nread = player->mBuffer.read(out, nsamples);
+            nread = player->mBuffer->read(out, nsamples);
         }
 
         if (nread == 0) {

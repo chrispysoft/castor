@@ -146,7 +146,7 @@ public:
 
     double duration() { return mDuration; }
 
-    void read(PlayBuffer<sam_t>& tBuffer) {
+    void read(SourceBuffer<sam_t>& tBuffer) {
         log.debug() << "CodecReader read " << mURL;
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {

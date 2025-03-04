@@ -29,6 +29,103 @@
 
 namespace castor {
 namespace audio {
+
+template <typename T>
+class StreamBuffer : public SourceBuffer<T> {
+    std::atomic<size_t> mWritePos = 0;
+    std::atomic<size_t> mReadPos = 0;
+    std::atomic<size_t> mSize = 0;
+    size_t mCapacity = 0;
+    bool mOverwrite = false;
+    std::vector<T> mBuffer;
+    std::mutex mMutex;
+    std::condition_variable mCV;
+
+public:
+    size_t readPosition() override { return mReadPos; }
+    size_t writePosition() override { return mWritePos; }
+    size_t capacity() override { return mCapacity; }
+
+    float memorySizeMB() override {
+        static constexpr float kibi = 1024.0f;
+        static constexpr float mibi = kibi * kibi;
+        float bytesz = mCapacity * sizeof(T);
+        return bytesz / mibi;
+    }
+
+    void align() override {
+        mReadPos = (mWritePos + mCapacity/2) % mCapacity;
+    }
+
+    void resize(size_t tCapacity, bool tOverwrite) override {
+        mOverwrite = tOverwrite;
+        mReadPos = 0;
+        mWritePos = 0; // mOverwrite ? tCapacity / 2 : 0;
+        mSize = 0;
+        mBuffer.resize(tCapacity);
+        std::lock_guard<std::mutex> lock(mMutex);
+        mCapacity = tCapacity;
+        mCV.notify_all();
+    }
+
+    size_t write(const T* tData, size_t tLen) override {
+        if (!tData || tLen == 0) return 0;
+        if (tLen > mCapacity) return 0;
+
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
+        }
+
+        size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
+        if (tLen > freeSpace) {
+            if (!mOverwrite) return 0;
+            mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
+            mSize -= tLen;
+        }
+
+        auto writable = std::min(tLen, mCapacity - mWritePos);
+        memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
+
+        auto overlap = tLen - writable;
+        if (overlap > 0) {
+            // log.debug() << "Expected overlap in write of " << overlap;
+            memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
+        }
+
+        mWritePos.store((mWritePos + tLen) % mCapacity, std::memory_order_relaxed);
+        mSize += tLen;
+        return tLen;
+    }
+
+    size_t read(T* tData, size_t tLen) override {
+        if (!tData || tLen == 0) return 0;
+
+        // std::unique_lock<std::mutex> lock(mMutex); // NB if realtime thread
+
+        auto available = mSize.load(std::memory_order_relaxed);
+        if (tLen > available) return 0;
+
+        auto readable = std::min(tLen, mCapacity - mReadPos);
+        memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
+
+        auto overlap = tLen - readable;
+        if (overlap > 0) {
+            memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
+            // log.debug() << "Unexpected overlap in read";
+        }
+
+        std::unique_lock<std::mutex> lock(mMutex);
+
+        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
+        mSize -= tLen;
+
+        mCV.notify_all();
+
+        return tLen;
+    }
+};
+
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
@@ -39,12 +136,15 @@ class StreamPlayer : public Player {
     std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
 
+    StreamBuffer<sam_t> mStreamBuffer;
+
 public:
     StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
         mSampleRate(tSampleRate),
         mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 16))
     {
         preloadTime = 10;
+        mBuffer = &mStreamBuffer;
     }
     
     ~StreamPlayer() {
@@ -56,17 +156,17 @@ public:
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;
         // eject();
-        mBuffer.resize(mBufferSize, true);
+        mStreamBuffer.resize(mBufferSize, true);
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL);
         mLoadWorker = std::thread([this] {
-            mReader->read(mBuffer);
+            mReader->read(mStreamBuffer);
         });
     }
 
     void play() override {
-        mBuffer.align();
+        mStreamBuffer.align();
         Player::play();
     }
 
@@ -74,7 +174,7 @@ public:
         log.debug() << "StreamPlayer stop...";
         Player::stop();
         if (mReader) mReader->cancel();
-        mBuffer.resize(0, false);
+        mStreamBuffer.resize(0, false);
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
         

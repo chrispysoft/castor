@@ -45,105 +45,22 @@ public:
 
 
 template <typename T>
-class PlayBuffer {
-    std::atomic<size_t> mWritePos = 0;
-    std::atomic<size_t> mReadPos = 0;
-    std::atomic<size_t> mSize = 0;
-    size_t mCapacity = 0;
-    bool mOverwrite = false;
-    std::vector<T> mBuffer;
-    std::mutex mMutex;
-    std::condition_variable mCV;
-
+class SourceBuffer {
 public:
-    size_t readPosition() { return mReadPos; }
-    size_t writePosition() { return mWritePos; }
-    size_t capacity() { return mCapacity; }
-
-    float memorySizeMB() {
-        static constexpr float kibi = 1024.0f;
-        static constexpr float mibi = kibi * kibi;
-        float bytesz = mCapacity * sizeof(T);
-        return bytesz / mibi;
-    }
-
-    void align() {
-        // mReadPos = (mWritePos + mCapacity/2) % mCapacity;
-    }
-
-    void resize(size_t tCapacity, bool tOverwrite) {
-        mOverwrite = tOverwrite;
-        mReadPos = 0;
-        mWritePos = 0; // mOverwrite ? tCapacity / 2 : 0;
-        mSize = 0;
-        mBuffer = std::vector<T>(tCapacity);
-        std::lock_guard<std::mutex> lock(mMutex);
-        mCapacity = tCapacity;
-        mCV.notify_all();
-    }
-
-    size_t write(const T* tData, size_t tLen) {
-        if (!tData || tLen == 0) return 0;
-        if (tLen > mCapacity) return 0;
-
-        //if (mOverwrite) {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
-        //}
-
-        size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
-        if (tLen > freeSpace) {
-            if (!mOverwrite) return 0;
-            mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
-            mSize -= tLen;
-        }
-
-        auto writable = std::min(tLen, mCapacity - mWritePos);
-        memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
-
-        auto overlap = tLen - writable;
-        if (overlap > 0) {
-            // log.debug() << "Expected overlap in write of " << overlap;
-            memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
-        }
-
-        mWritePos.store((mWritePos + tLen) % mCapacity, std::memory_order_relaxed);
-        mSize += tLen;
-        return tLen;
-    }
-
-    size_t read(T* tData, size_t tLen) {
-        if (!tData || tLen == 0) return 0;
-
-        // std::unique_lock<std::mutex> lock(mMutex); // NB if realtime thread
-
-        auto available = mSize.load(std::memory_order_relaxed);
-        if (tLen > available) return 0;
-
-        auto readable = std::min(tLen, mCapacity - mReadPos);
-        memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
-
-        auto overlap = tLen - readable;
-        if (overlap > 0) {
-            memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
-            // log.debug() << "Unexpected overlap in read";
-        }
-
-        std::lock_guard<std::mutex> lock(mMutex);
-
-        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
-        mSize -= tLen;
-
-        mCV.notify_all();
-
-        return tLen;
-    }
+    virtual size_t readPosition() { return 0; }
+    virtual size_t writePosition() { return 0; }
+    virtual size_t capacity() { return 0; }
+    virtual float memorySizeMB() { return 0; }
+    virtual void align() {}
+    virtual void resize(size_t tCapacity, bool tOverwrite) {}
+    virtual size_t write(const T* tData, size_t tLen) { return 0; }
+    virtual size_t read(T* tData, size_t tLen) { return 0; }
 };
 
 
 class BufferedSource {
 public:
-    PlayBuffer<sam_t> mBuffer;
+    SourceBuffer<sam_t>* mBuffer;
 };
 
 
@@ -293,15 +210,15 @@ public:
 
 
     float readProgress() {
-        auto capacity = static_cast<float>(mBuffer.capacity());
+        auto capacity = static_cast<float>(mBuffer->capacity());
         if (capacity == 0) return 0;
-        return static_cast<float>(mBuffer.readPosition()) / capacity;
+        return static_cast<float>(mBuffer->readPosition()) / capacity;
     }
 
     float writeProgress() {
-        auto capacity = static_cast<float>(mBuffer.capacity());
+        auto capacity = static_cast<float>(mBuffer->capacity());
         if (capacity == 0) return 0;
-        return static_cast<float>(mBuffer.writePosition()) / capacity;
+        return static_cast<float>(mBuffer->writePosition()) / capacity;
     }
 
 
@@ -319,38 +236,16 @@ public:
             log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
         }
     }
-
-    void update() {
-        // auto now = std::time(0);
-        
-        // if (now >= playItem.start && now <= playItem.end && fadeInCurveIndex == -1) { // && state == CUED) {
-        //     //log.info(Log::Magenta) << name << " PLAY";
-        //     //play();
-        //     log.info(Log::Magenta) << name << " FADE IN";
-        //     fadeInCurveIndex = 0;
-        //     // if (playItemDidStartCallback) playItemDidStartCallback(playItem);
-        // }
-        // else if (now >= playItem.end - playItem.fadeOutTime && now < playItem.end && fadeOutCurveIndex == -1) { // && state == PLAY && !isFading) {
-        //     log.info(Log::Magenta) << name << " FADE OUT";
-        //     fadeOutCurveIndex = 0;
-        // }
-        // else if (now >= playItem.end && state != IDLE) {
-        //     log.info(Log::Magenta) << name << " STOP";
-        //     stop();
-        // }
-  
-    }
-
-
     
 
+    // temporary fade workaround
 
     virtual void process(const sam_t* in, sam_t* out, size_t nframes) override {
 
-        if (fadeOutCurveIndex == -2) return; // don't process if fade out done
+        if (fadeInCurveIndex == -1 || fadeOutCurveIndex == -2) return; // don't process if not started fade in yet or fade out done
 
         auto sampleCount = nframes * 2;
-        auto samplesRead = mBuffer.read(out, sampleCount);
+        auto samplesRead = mBuffer->read(out, sampleCount);
         auto samplesLeft = sampleCount - samplesRead;
 
         if (fadeInCurveIndex >= 0) {

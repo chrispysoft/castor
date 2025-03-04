@@ -29,11 +29,68 @@
 namespace castor {
 namespace audio {
 
+template <typename T>
+class FileBuffer : public SourceBuffer<T> {
+    std::atomic<size_t> mReadPos = 0;
+    std::atomic<size_t> mWritePos = 0;
+    size_t mCapacity = 0;
+    std::vector<T> mBuffer;
+
+public:
+    size_t readPosition() override { return mReadPos; }
+    size_t writePosition() override { return mWritePos; }
+    size_t capacity() override { return mCapacity; }
+
+    float memorySizeMB() override {
+        static constexpr float kibi = 1024.0f;
+        static constexpr float mibi = kibi * kibi;
+        float bytesz = mCapacity * sizeof(T);
+        return bytesz / mibi;
+    }
+
+    void align() override {}
+
+    void resize(size_t tCapacity, bool tOverwrite) override {
+        mReadPos = 0;
+        mWritePos = 0;
+        mBuffer.resize(tCapacity);
+        mCapacity = tCapacity;
+    }
+
+    size_t write(const T* tData, size_t tLen) override {
+        if (tLen > mCapacity) return 0;
+
+        size_t freeSpace = mCapacity - mWritePos;
+        if (tLen > freeSpace) {
+            return 0;
+        }
+
+        auto writable = std::min(tLen, mCapacity - mWritePos);
+        memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
+        mWritePos += writable;
+
+        return writable;
+    }
+
+    size_t read(T* tData, size_t tLen) override {
+        if (tLen == 0) return 0;
+
+        if (tLen > mCapacity - mReadPos) return 0;
+
+        auto readable = std::min(tLen, mCapacity - mReadPos);
+        memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
+        mReadPos += readable;
+
+        return readable;
+    }
+};
+
 class FilePlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
     
     const double mSampleRate;
+    FileBuffer<sam_t> mFileBuffer;
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
@@ -41,6 +98,7 @@ public:
         mSampleRate(tSampleRate)
     {
         preloadTime = 3600;
+        mBuffer = &mFileBuffer;
     }
     
     ~FilePlayer() {
@@ -60,9 +118,9 @@ public:
 
         auto pagesize = sysconf(_SC_PAGE_SIZE);
         auto bufsize = util::nextMultiple(sampleCount, pagesize / sizeof(sam_t));
-        mBuffer.resize(bufsize, false);
-
-        mReader->read(mBuffer);
+        
+        mFileBuffer.resize(bufsize, false);
+        mReader->read(mFileBuffer);
         mReader = nullptr;
 
         log.debug() << "FilePlayer load done " << tURL;

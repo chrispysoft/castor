@@ -399,7 +399,7 @@ public:
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
             // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer.memorySizeMB();
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer->memorySizeMB();
             // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
             strstr << '\n';
         }
