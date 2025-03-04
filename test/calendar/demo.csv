@@ -4,5 +4,5 @@
 45,50,audio/test/E.mp3
 50,60,line://0
 60,70,https://does-not-exist.stream/
-70,75,audio/test/G#.mp3
-75,80,audio/test/D#.mp3
+70,75,audio/test/B.mp3
+3630,3635,audio/test/F#.mp3
