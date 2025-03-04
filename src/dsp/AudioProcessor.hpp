@@ -199,14 +199,14 @@ public:
         return !isLoaded && isInLoadTime() && (std::time(0) > lastLoadAttempt+loadRetryInterval);
     }
 
-    bool isInPlayTime() const {
-        auto now = std::time(0);
-        return now >= playItem.start && now < playItem.end; 
-    }
+    // bool isInPlayTime() const {
+    //     auto now = std::time(0);
+    //     return now >= playItem.start && now < playItem.end; 
+    // }
 
 
     bool isPlaying() const {
-        return isLoaded && isInPlayTime(); // state == PLAY;
+        return isLoaded && state == PLAY;
     }
 
     bool isFinished() const {
