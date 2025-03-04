@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -42,10 +42,7 @@ protected:
 
     const double mSampleRate;
     const std::string mURL;
-    bool mActive = false;
     std::atomic<bool> mCancelled = false;
-    std::mutex mMutex;
-    std::condition_variable mCV;
     std::vector<sam_t> mFrameBuffer;
 
     AVChannelLayout mChannelLayout;
@@ -66,13 +63,9 @@ public:
     }
 
     virtual void cancel() final {
-        if (mCancelled || !mActive) return;
-        log.debug() << "CodecBase cancel...";
+        // if (mCancelled || !mActive) return;
+        // log.debug() << "CodecBase cancel...";
         mCancelled = true;
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [this]{ return !mActive; });
-        }
         log.debug() << "CodecBase cancelled";
     }
 

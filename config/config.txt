@@ -21,20 +21,22 @@ in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio
 
 # Stream Output (comment-out stream_out_url to disable)
-# stream_out_url=icecast://source:hackme@localhost:8000/castor.mp3
-stream_out_metadata_url=http://source:hackme@localhost:8000/admin/metadata?mount=/castor.mp3
-stream_out_name=Castor
+# stream_out_url=icecast://source:hackme@localhost:8000/radio.mp3
+stream_out_metadata_url=http://source:hackme@localhost:8000/admin/metadata?mount=/radio.mp3
+stream_out_name=Radio Station
 stream_out_description=Live Stream
 stream_out_genre=Electronic
-stream_out_href=https://crispybits.app/
+stream_out_href=http://localhost:8000/
 
 # API (comment-out to disable)
-program_url=http://localhost/steering/api/v1/program/playout/
-playlist_url=http://localhost/tank/api/v1/playlists/
+# program_url=http://localhost/steering/api/v1/program/playout/
+# playlist_url=http://localhost/tank/api/v1/playlists/
 # playlog_url=http://localhost:8010/api/v1/playlog
 # health_url=http://localhost:8010/api/v1/source/health/1
-clock_url=http://localhost:8010/api/v1/clock
-playlist_token=engine:1234
+# clock_url=http://localhost:8010/api/v1/clock
+# playlist_token=id:token
+calendar_refresh_interval=60
+health_report_interval=10
 
 # TCP Server
 tcp_port=4440

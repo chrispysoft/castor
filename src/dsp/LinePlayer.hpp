@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -34,7 +34,7 @@ public:
     LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
         mSampleRate(tSampleRate)
     {
-        
+        preloadTime = 5;
     }
 
     ~LinePlayer() {

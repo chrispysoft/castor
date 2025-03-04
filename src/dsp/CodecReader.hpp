@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -53,8 +53,8 @@ public:
         av_dict_set(&options, "reconnect_delay_max", "2", 0); // max delay 2s
         av_dict_set(&options, "fflags", "+discardcorrupt+genpts", 0);
 
-        log.info() << "CodecReader open " << tURL;
-        auto res = avformat_open_input(&mFormatCtx, tURL.c_str(), nullptr, &options);
+        // log.debug() << "CodecReader init " << mURL;
+        auto res = avformat_open_input(&mFormatCtx, mURL.c_str(), nullptr, &options);
         av_dict_free(&options);
         if (res < 0) {
             throw std::runtime_error("Could not open input file: " + AVErrorString(res));
@@ -117,7 +117,7 @@ public:
 
         if (mCancelled) throw std::runtime_error("Cancelled");
 
-        if (!tURL.starts_with("http") && tSeek > 0) {
+        if (!mURL.starts_with("http") && tSeek > 0) {
             auto ts = tSeek * AV_TIME_BASE;
             log.debug() << "CodecReader seek frame " << ts;
             av_seek_frame(mFormatCtx, -1, ts, 0);
@@ -129,7 +129,8 @@ public:
             mDuration = mFormatCtx->duration / (double) AV_TIME_BASE - tSeek;
             mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
         }
-        log.debug() << "CodecReader estimated num samples: " << mSampleCount;
+
+        log.debug() << "CodecReader inited " << mURL << " (" << mSampleCount << " samples)";
     }
 
     ~CodecReader() {
@@ -145,14 +146,8 @@ public:
 
     double duration() { return mDuration; }
 
-    void read(PlayBuffer<sam_t>& tBuffer) {
-        log.info() << "CodecReader read...";
-
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mActive = true;
-            mCV.notify_one();
-        }
+    void read(SourceBuffer<sam_t>& tBuffer) {
+        log.debug() << "CodecReader read " << mURL;
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
@@ -186,13 +181,7 @@ public:
             av_frame_unref(mFrame);
         }
 
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mActive = false;
-            mCV.notify_one();
-        }
-
-        log.info() << "CodecReader read finished";
+        log.debug() << "CodecReader read finished " << mURL;
     }
 };
 }

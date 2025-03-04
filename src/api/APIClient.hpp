@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -31,6 +31,8 @@ class Client {
 
     const Config& mConfig;
     const std::vector<std::string> mAuthHeaders;
+    io::HTTPClient mHTTPClientProgram;
+    io::HTTPClient mHTTPClientPlaylog;
 
 public:
     Client(const Config& tConfig) :
@@ -53,60 +55,51 @@ public:
 
         log.debug() << "APIClient getProgram " << url;
         
-        auto res = io::HTTPClient().get(url);
-        if (res.code == 200) {
-            std::stringstream ss(res.response);
-            nlohmann::json j;
-            ss >> j;
-            auto p = j.template get<std::vector<api::Program>>();
-            return p;
-        } else {
-            throw std::runtime_error("APIClient getProgram status code "+std::to_string(res.code));
+        auto res = mHTTPClientProgram.get(url);
+        if (res.code != 200) {
+            throw std::runtime_error("APIClient getProgram failed: "+std::to_string(res.code)+" "+res.response);
         }
+
+        nlohmann::json j = nlohmann::json::parse(res.response);
+        return j.get<std::vector<api::Program>>();
     }
 
     api::Playlist getPlaylist(int showID) {
         auto url = mConfig.playlistURL + std::to_string(showID);
-        auto res = io::HTTPClient().get(url, mAuthHeaders);
         log.debug() << "APIClient getPlaylist " << url;
-        if (res.code == 200) {
-            std::stringstream ss(res.response);
-            nlohmann::json j;
-            ss >> j;
-            auto p = j.template get<api::Playlist>();
-            return p;
-        } else {
-            throw std::runtime_error("APIClient getPlaylist status code "+std::to_string(res.code));
+
+        auto res = mHTTPClientProgram.get(url, mConfig.playlistToken);
+        if (res.code != 200) {
+            throw std::runtime_error("APIClient getPlaylist failed: " + std::to_string(res.code) + " " + res.response);
         }
+
+        nlohmann::json j = nlohmann::json::parse(res.response);
+        return j.get<api::Playlist>();
     }
 
     void postPlaylog(const PlayLog& item) {
         const auto& url = mConfig.playlogURL;
+        log.debug() << "APIClient postPlaylog " << url;
 
         nlohmann::json j = item;
-        std::stringstream ss;
-        ss << j;
-        auto jstr = ss.str();
+        auto jstr = j.dump();
 
-        log.debug() << "APIClient postPlaylog " << url << " " << jstr << " ";
-        auto res = io::HTTPClient().post(url, jstr);
+        auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postPlaylog status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient postPlaylog failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 
     void postHealth(const Health& health) {
         const auto& url = mConfig.healthURL;
+        log.debug() << "APIClient postHealth " << url;
 
         nlohmann::json j = health;
-        std::stringstream ss;
-        ss << j;
-        auto jstr = ss.str();
+        auto jstr = j.dump();
 
-        log.debug() << "APIClient postHealth " << url << " " << jstr << " ";
-        auto res = io::HTTPClient().post(url, jstr);
+        auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postHealth status code "+std::to_string(res.code));
+            throw std::runtime_error("APIClient postHealth failed: "+std::to_string(res.code)+" "+res.response);
         }
     }
 };

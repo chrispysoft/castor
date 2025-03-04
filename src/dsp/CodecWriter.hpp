@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -92,7 +92,7 @@ public:
 
         if (!(mFormatCtx->oformat->flags & AVFMT_NOFILE)) {
             log.debug() << "CodecWriter AVFMT_NOFILE";
-            if (avio_open2(&mFormatCtx->pb, tURL.c_str(), AVIO_FLAG_WRITE, nullptr, &mOptions) < 0) {
+            if (avio_open2(&mFormatCtx->pb, mURL.c_str(), AVIO_FLAG_WRITE, nullptr, &mOptions) < 0) {
                 throw std::runtime_error("Failed to open output file");
             }
         }
@@ -162,8 +162,6 @@ public:
             }
         };
 
-        mActive = true;
-
         auto samplesPerFrame = mCodecCtx->frame_size * kChannelCount;
         auto framesWritten = 0;
 
@@ -204,12 +202,7 @@ public:
         }
 
         av_write_trailer(mFormatCtx);
-        
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mActive = false;
-            mCV.notify_all();
-        }
+
         log.info() << "AudioCodecWriter wrote " << framesWritten << " frames";
     }
 };

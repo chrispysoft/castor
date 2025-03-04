@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -19,9 +19,11 @@
 
 #pragma once
 
+#include <queue>
 #include <cstring>
 #include <atomic>
 #include <thread>
+#include <mutex>
 #include <future>
 #include <vector>
 #include <sys/socket.h>
@@ -41,6 +43,8 @@ class TCPServer {
     int mPort;
     std::atomic<bool> mRunning = false;
     std::thread mListenerThread;
+    std::queue<std::string> mStatusQueue;
+    std::mutex mStatusMutex;
     std::mutex mSocketMutex;
     std::vector<std::future<void>> mFutures;
 
@@ -129,7 +133,11 @@ public:
         log.debug() << "TCPServer stopped";
     }
 
-    std::string statusString;
+    void pushStatus(std::string tStatus) {
+        std::lock_guard<std::mutex> lock(mStatusMutex);
+        mStatusQueue.push(tStatus);
+    }
+
     bool connected() {
         mFutures.erase(std::remove_if(mFutures.begin(), mFutures.end(), [](const std::future<void>& f) {
             return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
@@ -186,11 +194,18 @@ private:
                     auto response = std::string(rxBuf, bytesRead);
                     log.info() << "TCPServer received from client [" << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "]: " << response;
                 }
-
-                if (send(clientSocket, statusString.c_str(), statusString.size(), 0) < 0) {
-                    throw std::runtime_error("send failed");
+                if (!mStatusQueue.empty()) {
+                    std::string status;
+                    {
+                        std::lock_guard<std::mutex> lock(mStatusMutex);
+                        status = mStatusQueue.front();
+                        mStatusQueue.pop();
+                    }
+                    
+                    if (send(clientSocket, status.c_str(), status.size(), 0) < 0) {
+                        throw std::runtime_error("send failed");
+                    }
                 }
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
         }

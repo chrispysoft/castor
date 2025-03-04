@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -115,25 +115,8 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
     api::Program program = {};
-    std::time_t loadTime = 0;
-    std::time_t retryInterval = 2;
-    std::time_t ejectTime = 5;
-    double fadeInTime = 1;
-    double fadeOutTime = 1;
-    
-
-    std::time_t scheduleStart() const { return (loadTime > 0) ? (start - loadTime) : std::time(0); }
-    std::time_t scheduleEnd() const { return end - 5; }
-
-    bool isInScheduleTime() const {
-        auto now = std::time(0);
-        return now >= scheduleStart() && now <= scheduleEnd();
-    }
-
-    bool isPriorSchedulingTime() const {
-        auto now = std::time(0);
-        return now < scheduleStart();
-    }
+    float fadeInTime = 1;
+    float fadeOutTime = 1;
 
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;

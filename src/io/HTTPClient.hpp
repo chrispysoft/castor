@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -49,7 +49,7 @@ public:
         if (mCURL) curl_easy_cleanup(mCURL);
     }
 
-    Result get(const std::string& tURL, const std::vector<std::string>& tHeaders = {}) {
+    Result get(const std::string& tURL, const std::string& tBearerToken = "") {
         using namespace std;
         using json = nlohmann::json;
 
@@ -59,25 +59,22 @@ public:
         curl_easy_setopt(mCURL, CURLOPT_WRITEDATA, static_cast<void*>(&rxBuf));
         curl_easy_setopt(mCURL, CURLOPT_WRITEFUNCTION, &HTTPClient::writeCallback);
         
-        curl_slist* list = NULL;
-        if (tHeaders.size() >= 1) {
-            for (auto header : tHeaders) {
-                list = curl_slist_append(list, header.c_str());
-            }
-            curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, list);
+        if (!tBearerToken.empty()) {
+            curl_easy_setopt(mCURL, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
+            curl_easy_setopt(mCURL, CURLOPT_XOAUTH2_BEARER, tBearerToken.c_str());
         }
 
         auto res = curl_easy_perform(mCURL);
-
-        curl_slist_free_all(list);
-
         if (res == CURLE_OK) {
             curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &rResult.code);
             rResult.response = string(rxBuf.begin(), rxBuf.end());
             // log.debug() << "HTTPClient get status " << rResult.code << " " << tURL;
         } else {
-            throw std::runtime_error(curl_easy_strerror(res));
+            rResult.code = -1;
+            rResult.response = string(curl_easy_strerror(res));
         }
+
+        curl_easy_reset(mCURL);
 
         return rResult;
     }
@@ -90,20 +87,18 @@ public:
 
         curl_easy_setopt(mCURL, CURLOPT_URL, tURL.c_str());
         curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tJSON.c_str());
-
-        curl_slist* list = NULL;
-        list = curl_slist_append(list, "Content-Type: application/json");
-        curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, list);
+        // curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, mPostHeaderList);
 
         auto res = curl_easy_perform(mCURL);
-        curl_slist_free_all(list);
-
         if (res == CURLE_OK) {
             curl_easy_getinfo(mCURL, CURLINFO_RESPONSE_CODE, &rResult.code);
             // log.debug() << "HTTPClient post status " << rResult.code << " " << tURL;
         } else {
-            throw std::runtime_error(curl_easy_strerror(res));
+            rResult.code = -1;
+            rResult.response = string(curl_easy_strerror(res));
         }
+
+        curl_easy_reset(mCURL);
 
         return rResult;
     }

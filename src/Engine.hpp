@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -31,12 +31,13 @@
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
+#include "dsp/FilePlayer.hpp"
 #include "dsp/StreamPlayer.hpp"
 #include "dsp/Fallback.hpp"
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
-// #include "util/dispatch.hpp"
+#include "util/dispatch.hpp"
 
 namespace castor {
 
@@ -47,11 +48,13 @@ public:
     std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem, double tSampleRate) {
         // std::lock_guard<std::mutex> lock(mMutex);
         auto name = tPlayItem.uri.substr(tPlayItem.uri.rfind('/')+1);
-        log.info(Log::Magenta) << "PlayerFactory createPlayer " << name;
+        // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (tPlayItem.uri.starts_with("line"))
             return std::make_shared<audio::LinePlayer>(tSampleRate, name);
-        else
+        else if (tPlayItem.uri.starts_with("http"))
             return std::make_shared<audio::StreamPlayer>(tSampleRate, name);
+        else
+            return std::make_shared<audio::FilePlayer>(tSampleRate, name);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -79,11 +82,14 @@ class Engine : public audio::Client::Renderer {
     std::thread mRenderThread;
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
+    util::Timer mTCPUpdateTimer;
     api::Program mCurrProgram = {};
     PlayerFactory mFactory;
     // std::queue<PlayItem> mScheduleItems = {};
     std::mutex mScheduleItemsMutex;
     std::mutex mPlayersMutex;
+    dispatch_queue mScheduleQueue;
+    dispatch_queue mAPIReportQueue;
 
     std::vector<audio::sam_t> mInputBuffer;
     std::vector<audio::sam_t> mOutputBuffer;
@@ -101,17 +107,21 @@ public:
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
         mMixBuffer(mConfig.audioBufferSize * 2),
-        mReportTimer(mConfig.reportInterval),
+        mReportTimer(mConfig.healthReportInterval),
+        mTCPUpdateTimer(1),
         mInputBuffer(mConfig.audioBufferSize * 2),
-        mOutputBuffer(mConfig.audioBufferSize * 2)
+        mOutputBuffer(mConfig.audioBufferSize * 2),
+        mScheduleQueue("schedule queue", 1),
+        mAPIReportQueue("report queue", 1)
+        // mLoadQueue("load queue", 2)
     {
         mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
     }
 
-    void parseArgs(const std::unordered_map<std::string,std::string>& tArgs) {
+    void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
         try {
-            auto calFile = tArgs.at("--calendar");
+            auto calFile = tArgs["--calendar"];
             if (!calFile.empty()) mCalendar.load(calFile);
         }
         catch (const std::exception& e) {
@@ -132,7 +142,7 @@ public:
             }
         });
         mLoadThread = std::thread(&Engine::load, this);
-        mRenderThread = std::thread(&Engine::render, this);
+        // mRenderThread = std::thread(&Engine::render, this);
 
         try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
@@ -155,7 +165,7 @@ public:
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
         if (mLoadThread.joinable()) mLoadThread.join();
-        if (mRenderThread.joinable()) mRenderThread.join();
+        // if (mRenderThread.joinable()) mRenderThread.join();
         for (auto player : mPlayers) player->stop();
         mPlayers.clear();
         // if (mActivePlayer) mActivePlayer->stop();
@@ -176,37 +186,41 @@ public:
         }
 
         for (auto player : mPlayers) {
-            player->update();
+            if (player->isPlaying() && player != mActivePlayer) {
+                // std::lock_guard<std::mutex> lock(mPlayersMutex);
+                mActivePlayer = player;
+            }
         }
 
         while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
+            mPlayers.front()->stop();
             std::lock_guard<std::mutex> lock(mPlayersMutex);
             mPlayers.pop_front();
         }
 
         
+        if (mReportTimer.query()) {
+            mAPIReportQueue.dispatch([this] {
+                postHealth();
+            });
+        }
 
-        // if (mReportTimer.query()) {
-        //     postHealth();
-        // }
-
-        if (mTCPServer.connected()) {
+        if (mTCPServer.connected() && mTCPUpdateTimer.query()) {
             updateStatus();
         }
     }
 
     void calendarChanged(const std::deque<PlayItem>& playItems) {
-        std::unique_lock<std::mutex> lock(mScheduleItemsMutex);
-        for (const auto& item : playItems) {
-            // mScheduleQueue.dispatch([item, this] {
+        mScheduleQueue.dispatch([items=playItems, this] {
+            for (const auto& item : items) {
                 schedule(item);
-            // });
-        }
+            }
+        });
     }
 
 
-    void schedule(PlayItem item) {
-        log.debug(Log::Yellow) << "Engine schedule " << item.start;
+    void schedule(const PlayItem& item) {
+        // log.debug(Log::Yellow) << "Engine schedule " << item.start;
         if (std::time(0) > item.end) return;
 
         enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;
@@ -236,27 +250,24 @@ public:
             default: break;
         }
 
-        if (item.uri.starts_with("http")) item.loadTime = mConfig.preloadTimeStream;
-        else if (item.uri.starts_with("line")) {}
-        else item.loadTime = mConfig.preloadTimeFile;
         
         auto player = mFactory.createPlayer(item, mConfig.sampleRate);
         // player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
         player->schedule(item);
         
-        {
-            std::lock_guard<std::mutex> lock(mPlayersMutex);
+        //{
+            // std::lock_guard<std::mutex> lock(mPlayersMutex);
             mPlayers.push_back(player);
-        }
+        //}
     }
 
 
     void load() {
         while (mRunning) {
             
-            std::unique_lock<std::mutex> lock(mPlayersMutex);
+            //std::unique_lock<std::mutex> lock(mPlayersMutex);
             auto players = mPlayers;
-            lock.unlock();
+            //lock.unlock();
 
             for (auto player : players) {
                 if (player && player->needsLoad()) {
@@ -264,7 +275,7 @@ public:
                 }
             }
             
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
 
@@ -303,32 +314,9 @@ public:
             }
         }
         
-        postPlaylog(item);
-    }
-
-    void render() {
-        while (mRunning) {
-            auto bufsz = mConfig.audioBufferSize;
-
-            while (mAudioClient.readyToRender(bufsz)) {
-
-                {
-                    std::lock_guard<std::mutex> lock(mPlayersMutex);
-                    for (auto player : mPlayers) {
-                        if (player && player->isPlaying()) {
-                            // log.error() << player->name;
-                            mActivePlayer = player;
-                            break;
-                        }
-                    }
-                }
-
-                renderCallback(mInputBuffer.data(), mOutputBuffer.data(), bufsz);
-                mAudioClient.render(mInputBuffer.data(), mOutputBuffer.data(), bufsz);
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
+        mAPIReportQueue.dispatch([this, item=item] {
+            postPlaylog(item);
+        });
     }
     
 
@@ -382,8 +370,11 @@ public:
         }
     }
 
+
+    std::ostringstream strstr;
+
     void updateStatus() {
-        std::ostringstream strstr;
+        strstr.flush();
         // strstr << "\x1b[5A";
         strstr << "________________________________________________________________________________________\n";
         strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << " dB\n";
@@ -396,7 +387,7 @@ public:
         strstr << std::right << std::setfill(' ') << std::setw(12) << "State";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
+        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
         strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
         strstr << '\n';
 
@@ -407,13 +398,16 @@ public:
             strstr << std::right << std::setfill(' ') << std::setw(12) << player->stateStr();
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
             strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer.memorySizeMB();
+            // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
+            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer->memorySizeMB();
             // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
             strstr << '\n';
         }
+
         strstr << std::endl;
-        mTCPServer.statusString = strstr.str();
+
+        mTCPServer.pushStatus(strstr.str());
+        
         // log.debug() << statusSS.str();
     }
 };

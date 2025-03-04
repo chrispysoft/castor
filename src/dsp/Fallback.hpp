@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024-2025 Christoph Pastl (crispybits.app)
+ *  Copyright (C) 2024-2025 Christoph Pastl
  *
  *  This file is part of Castor.
  *
@@ -23,7 +23,7 @@
 #include <thread>
 #include <future>
 #include "SineOscillator.hpp"
-#include "QueuePlayer.hpp"
+#include "FilePlayer.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -41,8 +41,8 @@ class Fallback : public Input {
     std::thread mWorker;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mActive = false;
-    std::deque<std::shared_ptr<StreamPlayer>> mPlayers = {};
-    std::shared_ptr<StreamPlayer> mCurrPlayer = nullptr;
+    std::deque<std::shared_ptr<FilePlayer>> mPlayers = {};
+    std::shared_ptr<FilePlayer> mCurrPlayer = nullptr;
 
 public:
     Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime) : Input(),
@@ -80,7 +80,7 @@ public:
 
             for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
                 auto player = *it;
-                if (player->mBuffer.readPosition() >= player->mBuffer.capacity()) {
+                if (player->mBuffer->readPosition() >= player->mBuffer->capacity()) {
                     player->stop();
                     it = mPlayers.erase(it); // erase() returns next valid iterator
                 } else {
@@ -104,9 +104,9 @@ public:
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<StreamPlayer>(mSampleRate, url);
+                auto player = std::make_shared<FilePlayer>(mSampleRate, url);
                 player->load(url);
-                sumSamples += player->mBuffer.capacity();
+                sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
                     log.warn() << "Fallback buffer size reached";
                     player->stop();
@@ -146,7 +146,7 @@ public:
                 if (!loadNext) break;
             }
         }
-        log.debug(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
+        log.info(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
     }
 
 
@@ -172,7 +172,7 @@ public:
         
         auto player = mCurrPlayer;
         if (player) {
-            nread = player->mBuffer.read(out, nsamples);
+            nread = player->mBuffer->read(out, nsamples);
         }
 
         if (nread == 0) {
