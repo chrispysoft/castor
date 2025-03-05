@@ -96,7 +96,7 @@ public:
 
         // log.debug() << "CodecReader alloc resampler...";
         mSwrCtx = swr_alloc();
-        swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_S16, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr);
+        swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr);
         if (!mSwrCtx) {
             throw std::runtime_error("swr_alloc failed");
         }

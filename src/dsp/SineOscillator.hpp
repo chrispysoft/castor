@@ -56,8 +56,9 @@ public:
     }
 
     sam_t process() {
-        double sam = round(processDbl() * std::numeric_limits<sam_t>::max());
-        return static_cast<sam_t>(sam);
+        // double sam = round(processDbl() * std::numeric_limits<sam_t>::max());
+        // return static_cast<sam_t>(sam);
+        return processDbl();
     }
 };
 }

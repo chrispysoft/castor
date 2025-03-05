@@ -97,8 +97,8 @@ public:
             throw std::runtime_error("AudioClient failed to get output device info");
         }
 
-        PaStreamParameters iParams(iDevID, 2, paInt16, iDevInfo->defaultLowInputLatency, NULL);
-        PaStreamParameters oParams(oDevID, 2, paInt16, oDevInfo->defaultLowOutputLatency, NULL);
+        PaStreamParameters iParams(iDevID, 2, paFloat32, iDevInfo->defaultLowInputLatency, NULL);
+        PaStreamParameters oParams(oDevID, 2, paFloat32, oDevInfo->defaultLowOutputLatency, NULL);
 
         PaStreamCallback* streamCallback = tRealtime ? &Client::paCallback : NULL;
 
