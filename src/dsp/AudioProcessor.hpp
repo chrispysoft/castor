@@ -171,6 +171,8 @@ public:
     std::thread schedulingThread;
     std::atomic<bool> isLoaded = false;
     std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
+    std::mutex loadedMutex;
+    std::condition_variable loadedCV;
     std::mutex scheduleMutex;
     std::condition_variable scheduleCV;
     bool isScheduling = false;
@@ -188,6 +190,12 @@ public:
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
+
+            // wait until loaded or stopped
+            scheduleCV.wait(lock, [this] { return isLoaded || !isScheduling; });
+            if (!isScheduling) return;
+
+            // wait until fade-in or stopped
             scheduleCV.wait_until(lock, unlockTime1, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
@@ -196,6 +204,7 @@ public:
             log.info(Log::Magenta) << "FADE IN " << name;
             fadeInCurveIndex = 0;
 
+            // wait until fade-out or stopped
             scheduleCV.wait_until(lock, unlockTime2, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
@@ -288,8 +297,10 @@ public:
         time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
         try {
             load(playItem.uri, pos);
+            std::lock_guard<std::mutex> lock(scheduleMutex);
             state = CUED;
             isLoaded = true;
+            scheduleCV.notify_one();
         }
         catch (const std::exception& e) {
             state = FAIL;

@@ -44,10 +44,10 @@ public:
     //     log.debug() << "LinePlayer " << name << " dealloced";
     // }
 
-    void schedule(const PlayItem& item) override {
-        playItem = std::move(item);
-        state = CUED;
-    }
+    // void schedule(const PlayItem& item) override {
+    //     playItem = std::move(item);
+    //     state = CUED;
+    // }
 
     void load(const std::string& tURL, double seek = 0) override {}
 
