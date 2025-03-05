@@ -109,6 +109,11 @@ size_t nextMultiple(size_t value, size_t multiplier) {
 }
 
 
+static float linearDB(float lin) {
+    if (lin < 0) return -INFINITY;
+    return 10.0f * log10(lin);
+}
+
 static float dbLinear(float db) {
     return pow(10.0f, db / 10.0f);
 }
