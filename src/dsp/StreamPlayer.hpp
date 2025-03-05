@@ -74,7 +74,7 @@ public:
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
+            mCV.wait(lock, [&]{ return mSize + tLen < mCapacity || mCapacity == 0; });
         }
 
         size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
@@ -115,7 +115,7 @@ public:
             // log.debug() << "Unexpected overlap in read";
         }
 
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock(mMutex);
 
         mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
         mSize -= tLen;

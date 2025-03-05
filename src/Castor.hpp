@@ -77,7 +77,7 @@ public:
         log.info() << "Castor terminating...";
         mEngine.stop();
         {
-            std::unique_lock<std::mutex> lock(mMutex);
+            std::lock_guard<std::mutex> lock(mMutex);
             mRunning = false;
             mCV.notify_all();
         }

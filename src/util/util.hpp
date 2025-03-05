@@ -143,11 +143,9 @@ public:
         return mCapacity;
     }
 
-    void write(const T* tData, size_t tLen, bool tWait = false) {
-        if (tWait) {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
-        }
+    void write(const T* tData, size_t tLen) {
+        std::lock_guard<std::mutex> lock(mMutex);
+
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
             mTail = (mTail + 1) % mCapacity;
@@ -157,6 +155,8 @@ public:
                 mHead = (mHead + 1) % mCapacity; // overwrite (prevented if tWait)
             }
         }
+
+        mCV.notify_all();
     }
 
     size_t read(T* tData, size_t tLen) {
@@ -164,19 +164,23 @@ public:
             return 0;
         }
 
-        std::unique_lock<std::mutex> lock(mMutex);
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
+        }
+
         size_t read = 0;
         while (read < tLen && mSize > 0) {
             tData[read++] = mBuffer[mHead];
             mHead = (mHead + 1) % mCapacity;
             --mSize;
         }
-        mCV.notify_all();
+        
         return read;
     }
 
     void flush() {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock(mMutex);
         mSize = 0;
         mHead = 0;
         mTail = 0;
