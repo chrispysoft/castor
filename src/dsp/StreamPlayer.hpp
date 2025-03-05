@@ -167,7 +167,7 @@ public:
     }
 
     void play() override {
-        mStreamBuffer.align();
+        // mStreamBuffer.align();
         Player::play();
     }
 
