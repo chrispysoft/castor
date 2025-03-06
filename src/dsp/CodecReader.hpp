@@ -28,6 +28,7 @@ namespace audio {
 class CodecReader : public CodecBase {
 
     static constexpr size_t kFrameBufferSize = 4096; // 128 - 2048
+    static constexpr size_t kAudioBufferSize = 1024;
 
     size_t mSampleCount;
     double mDuration;
@@ -37,6 +38,7 @@ class CodecReader : public CodecBase {
     SwrContext* mSwrCtx = nullptr;
     AVPacket* mPacket = nullptr;
     AVFrame* mFrame = nullptr;
+    AVAudioFifo* mFIFO = nullptr;
     int mStreamIndex = -1;
     
 public:
@@ -44,6 +46,8 @@ public:
         CodecBase(tSampleRate, kFrameBufferSize, tURL),
         mSampleCount(0)
     {
+        av_log_set_level(AV_LOG_WARNING);
+
         AVDictionary *options = NULL;
         av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
         av_dict_set(&options, "buffer_size", "65536", 0); // 64KB buffer
@@ -95,8 +99,10 @@ public:
         }
 
         // log.debug() << "CodecReader alloc resampler...";
-        mSwrCtx = swr_alloc();
-        swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr);
+        if (swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr) < 0) {
+            throw std::runtime_error("swr_alloc_set_opts failed");
+        }
+
         if (!mSwrCtx) {
             throw std::runtime_error("swr_alloc failed");
         }
@@ -131,9 +137,12 @@ public:
         }
 
         log.debug() << "CodecReader inited " << mURL << " (" << mSampleCount << " samples)";
+
+        mFIFO = av_audio_fifo_alloc(AV_SAMPLE_FMT_FLT, 1, kFrameBufferSize);
     }
 
     ~CodecReader() {
+        av_audio_fifo_free(mFIFO);
         av_packet_free(&mPacket);
         av_frame_free(&mFrame);
         swr_free(&mSwrCtx);
@@ -149,6 +158,9 @@ public:
     void read(SourceBuffer<sam_t>& tBuffer) {
         log.debug() << "CodecReader read " << mURL;
 
+        // satisfy source buffer with constant block size
+        auto outFrameSize = kAudioBufferSize * kChannelCount;
+
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
             if (avcodec_send_packet(mCodecCtx, mPacket) < 0) break;
@@ -156,10 +168,11 @@ public:
             while (!mCancelled && avcodec_receive_frame(mCodecCtx, mFrame) >= 0) {
                 auto maxSamples = swr_get_out_samples(mSwrCtx, mFrame->nb_samples);
                 auto maxBufSize = maxSamples * kChannelCount;
-                if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize);
+                // if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize); // should not happen with sufficient buffer size
 
-                uint8_t* outData[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
-                int convSamples = swr_convert(mSwrCtx, outData, maxSamples, const_cast<const uint8_t**>(mFrame->data), mFrame->nb_samples);
+                // reading maxSamples avoids internal buffering but doesn't guarantee full block size
+                uint8_t* outData[1] = { (uint8_t*) mFrameBuffer.data() };
+                int convSamples = swr_convert(mSwrCtx, outData, maxSamples, (const uint8_t**) mFrame->data, mFrame->nb_samples);
                 // log.debug() << "max samples: " << maxSamples << " converted samples: " << convSamples;
 
                 if (convSamples < 0) {
@@ -169,11 +182,29 @@ public:
                     break;
                 }
 
-                auto toWrite = convSamples * kChannelCount;
-                auto written = tBuffer.write(mFrameBuffer.data(), toWrite);
-                if ( written != toWrite) {
-                    log.warn() << "CocecReader could not write all samples";
-                    break;
+                // use fifo to create desired chunks (and reuse frame buffer to save resources)
+                auto fifoWritten = av_audio_fifo_write(mFIFO, (void**) outData, convSamples * kChannelCount);
+                auto fifosz = av_audio_fifo_size(mFIFO);
+                // log.debug() << fifoWritten << " written to fifo, size " << fifisz;
+
+                while (fifosz >= outFrameSize) {
+                    void* dat[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
+
+                    auto fifoRead = av_audio_fifo_read(mFIFO, dat, outFrameSize);
+                    // log.debug() << read << " read from fifo";
+
+                    if (fifoRead != outFrameSize) {
+                        log.warn() << "CodecReader failed to read complete block from fifo";
+                        break;
+                    }
+
+                    auto written = tBuffer.write(mFrameBuffer.data(), outFrameSize);
+                    if (written != outFrameSize) {
+                        log.warn() << "CodecReader could not write all samples to output buffer";
+                        break;
+                    }
+
+                    fifosz = av_audio_fifo_size(mFIFO);
                 }
             }
 
