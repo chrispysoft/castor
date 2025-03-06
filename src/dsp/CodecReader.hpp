@@ -46,7 +46,7 @@ public:
         CodecBase(tSampleRate, kFrameBufferSize, tURL),
         mSampleCount(0)
     {
-        av_log_set_level(AV_LOG_WARNING);
+        av_log_set_level(AV_LOG_FATAL);
 
         AVDictionary *options = NULL;
         av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds
