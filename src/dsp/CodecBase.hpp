@@ -28,6 +28,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
+#include <libavutil/audio_fifo.h>
 #include <libswresample/swresample.h>
 }
 #include "audio.hpp"
