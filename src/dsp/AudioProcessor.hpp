@@ -52,7 +52,6 @@ public:
     virtual size_t writePosition() = 0;
     virtual size_t capacity() = 0;
     virtual float memorySizeMiB() = 0;
-    virtual void align() = 0;
     virtual void resize(size_t tCapacity, bool tOverwrite) = 0;
     virtual size_t write(const T* tData, size_t tLen) = 0;
     virtual size_t read(T* tData, size_t tLen) = 0;

@@ -48,8 +48,6 @@ public:
         return bytesz / mibi;
     }
 
-    void align() override {}
-
     void resize(size_t tCapacity, bool tOverwrite) override {
         mReadPos = 0;
         mWritePos = 0;
