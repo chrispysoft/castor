@@ -184,18 +184,34 @@ public:
     }
 
     void waitForEvents() {
-        auto unlockTime1 = std::chrono::system_clock::from_time_t(playItem.start);
-        auto unlockTime2 = std::chrono::system_clock::from_time_t(playItem.end - 2);
+        auto loadTime = std::chrono::system_clock::from_time_t(playItem.start - preloadTime);
+        auto fadeInTime = std::chrono::system_clock::from_time_t(playItem.start);
+        auto fadeOutTime = std::chrono::system_clock::from_time_t(playItem.end - 2);
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
+
+            // wait until load time or stopped
+            // scheduleCV.wait_until(lock, loadTime, [this] { return !isScheduling; });
+            // if (!isScheduling) return;
+            // if (playItem.end + 5 < std::time(0)) return;
+
+            // log.debug(Log::Magenta) << "LOAD " << name;
+            // // loadSemaphore.acquire();
+            // while (!isLoaded && isScheduling) {
+            //     tryLoad();
+            //     if (!isLoaded) {
+            //         std::this_thread::sleep_for(std::chrono::seconds(3));
+            //     }
+            // }
+            // loadSemaphore.release();
 
             // wait until loaded or stopped
             scheduleCV.wait(lock, [this] { return isLoaded || !isScheduling; });
             if (!isScheduling) return;
 
             // wait until fade-in or stopped
-            scheduleCV.wait_until(lock, unlockTime1, [this] { return !isScheduling; });
+            scheduleCV.wait_until(lock, fadeInTime, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             log.debug(Log::Magenta) << "PLAY " << name;
@@ -204,7 +220,7 @@ public:
             fadeInCurveIndex = 0;
 
             // wait until fade-out or stopped
-            scheduleCV.wait_until(lock, unlockTime2, [this] { return !isScheduling; });
+            scheduleCV.wait_until(lock, fadeOutTime, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             log.info(Log::Magenta) << "FADE OUT " << name;
