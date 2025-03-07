@@ -196,13 +196,6 @@ public:
             }
         }
 
-        while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
-            std::lock_guard<std::mutex> lock(mPlayersMutex);
-            mPlayers.pop_front();
-        }
-
-        
         if (mReportTimer.query()) {
             mAPIReportQueue.dispatch([this] {
                 postHealth();
@@ -212,60 +205,43 @@ public:
         if (mTCPServer.connected() && mTCPUpdateTimer.query()) {
             updateStatus();
         }
+
+        mScheduleQueue.dispatch([this] {
+            cleanup();
+        });
     }
 
     void calendarChanged(const std::deque<PlayItem>& playItems) {
-        mScheduleQueue.dispatch([items=playItems, this] {
-            for (const auto& item : items) {
+        for (const auto& item : playItems) {
+            if (item.end < std::time(0)) continue;
+            mScheduleQueue.dispatch([item=item, this] {
                 schedule(item);
-            }
-        });
+            });
+        }
     }
 
 
     void schedule(const PlayItem& item) {
         // log.debug(Log::Yellow) << "Engine schedule " << item.start;
-        if (std::time(0) > item.end) return;
 
-        enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;
-        
-        {
-            // std::lock_guard<std::mutex> lock(mPlayersMutex);
-            for (auto pi = 0 ; pi < mPlayers.size(); ++pi) {
-                auto player = mPlayers[pi];
-                if (!player) continue;
-                auto plItm = player->playItem;
-                if (item.start >= plItm.start && item.end <= plItm.end) {
-                    if (plItm == item) action = EXISTS;
-                    else action = REPLACE;
-                    break;
-                }
-            }
-        }
-
-        switch (action) {
-            case EXISTS: {
-                return;
-            }
-            case REPLACE: {
-                // mPlayers.erase(0);
-                break;
-            }
-            default: break;
-        }
-
+        if (mPlayerMap.contains(item)) return;
         
         auto player = mPlayerFactory->createPlayer(item);
         // player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
         player->schedule(item);
         
-        {
-            mPlayerMap[item] = player;
-            std::lock_guard<std::mutex> lock(mPlayersMutex);
-            mPlayers.push_back(player);
-        }
+        // std::lock_guard<std::mutex> lock(mPlayersMutex);
+        mPlayerMap[item] = player;
+        mPlayers.push_back(player);
+    }
 
-        // log.debug(Log::Yellow) << "Engine schedule " << item.start;
+    void cleanup() {
+        while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
+            mPlayers.front()->stop();
+            // std::lock_guard<std::mutex> lock(mPlayersMutex);
+            mPlayerMap.erase(mPlayers.front()->playItem);
+            mPlayers.pop_front();
+        }
     }
 
 
@@ -276,11 +252,11 @@ public:
             auto players = mPlayers;
             //lock.unlock();
 
-            for (auto player : players) {
-                if (player && player->needsLoad()) {
-                    player->tryLoad();
-                }
-            }
+            // for (auto player : players) {
+            //     if (player && player->needsLoad()) {
+            //         player->tryLoad();
+            //     }
+            // }
             
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
