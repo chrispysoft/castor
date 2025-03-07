@@ -382,7 +382,7 @@ public:
     void updateStatus() {
         strstr.flush();
         // strstr << "\x1b[5A";
-        strstr << "____________________________________________________________________________________________________\n";
+        strstr << "____________________________________________________________________________________________________________\n";
         strstr << "RMS: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
         strstr << "Fallback: " << (mFallback.isActive() ? "ACTIVE" : "INACTIVE") << '\n';
         strstr << "Player queue (" << mPlayers.size() << " items):\n";

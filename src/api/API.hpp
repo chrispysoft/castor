@@ -121,6 +121,10 @@ struct PlayItem {
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
     }
+
+    bool operator<(const PlayItem& item) const {
+        return this->start < item.start;
+    }
 };
 
 void to_json(nlohmann::json& j, const PlayItem& p) {
