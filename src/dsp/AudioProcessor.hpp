@@ -265,7 +265,7 @@ public:
         using namespace std;
         strstr << left << setw(12) << "Start";
         strstr << left << setw(12) << "Stop";
-        strstr << left << setw(16) << "ID";
+        strstr << left << setw(24) << "ID";
         strstr << left << setw(12) << "Type";
         strstr << left << setw(12) << "State";
         strstr << right << setw(12) << "Loaded";
@@ -279,7 +279,7 @@ public:
         using namespace std;
         strstr << left << setw(12) << util::timefmt(playItem.start, "%H:%M:%S");
         strstr << left << setw(12) << util::timefmt(playItem.end, "%H:%M:%S");
-        strstr << left << setw(16) << name.substr(0, 16);
+        strstr << left << setw(24) << name.substr(0, 20);
         strstr << left << setw(12) << category;
         strstr << left << setw(12) << stateStr();
         strstr << right << setw(12) << fixed << setprecision(2) << writeProgress();
