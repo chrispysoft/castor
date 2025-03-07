@@ -290,6 +290,14 @@ public:
         strstr << '\n';
     }
 
+    // std::ordered_map<std::string, std::string> getStats() {
+    //     std::ordered_map<std::string, std::string> stats;
+    //     stats["silence"] = std::to_string(mSilenceDet.currentRMS());
+    //     stats["fallback"] = mFallback.isActive() ? "active" : "inactive";
+    //     stats["players"] = std::to_string(mPlayers.size());
+    //     return stats;
+    // }
+
 
     void tryLoad() {
         state = LOAD;
