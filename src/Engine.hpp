@@ -89,15 +89,16 @@ class Engine : public audio::Client::Renderer {
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
     std::unique_ptr<PlayerFactory> mPlayerFactory = nullptr;
     std::shared_ptr<audio::Player> mActivePlayer = nullptr;
+    std::map<PlayItem, std::shared_ptr<audio::Player>> mPlayerMap;
     std::thread mWorker;
     std::thread mLoadThread;
-    std::thread mRenderThread;
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
     util::Timer mTCPUpdateTimer;
     api::Program mCurrProgram = {};
     // std::queue<PlayItem> mScheduleItems = {};
-    std::mutex mScheduleItemsMutex;
+    // std::mutex mScheduleItemsMutex;
+    // std::condition_variable mScheduleItemsCV;
     std::mutex mPlayersMutex;
     dispatch_queue mScheduleQueue;
     dispatch_queue mAPIReportQueue;
@@ -118,7 +119,6 @@ public:
         mTCPUpdateTimer(1),
         mScheduleQueue("schedule queue", 1),
         mAPIReportQueue("report queue", 1)
-        // mLoadQueue("load queue", 2)
     {
         mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
@@ -171,10 +171,8 @@ public:
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
         if (mLoadThread.joinable()) mLoadThread.join();
-        // if (mRenderThread.joinable()) mRenderThread.join();
         for (auto player : mPlayers) player->stop();
         mPlayers.clear();
-        // if (mActivePlayer) mActivePlayer->stop();
         mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
@@ -261,10 +259,13 @@ public:
         // player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
         player->schedule(item);
         
-        //{
-            // std::lock_guard<std::mutex> lock(mPlayersMutex);
+        {
+            mPlayerMap[item] = player;
+            std::lock_guard<std::mutex> lock(mPlayersMutex);
             mPlayers.push_back(player);
-        //}
+        }
+
+        // log.debug(Log::Yellow) << "Engine schedule " << item.start;
     }
 
 
