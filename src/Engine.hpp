@@ -252,11 +252,11 @@ public:
             auto players = mPlayers;
             //lock.unlock();
 
-            // for (auto player : players) {
-            //     if (player && player->needsLoad()) {
-            //         player->tryLoad();
-            //     }
-            // }
+            for (auto player : players) {
+                if (player && player->needsLoad()) {
+                    player->tryLoad();
+                }
+            }
             
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
