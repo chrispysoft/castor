@@ -30,6 +30,7 @@ namespace castor {
 namespace io {
 class HTTPClient {
     CURL* mCURL;
+    struct curl_slist* mPostHeaders;
 
 public:
 
@@ -43,9 +44,11 @@ public:
         if (!mCURL) {
             throw std::runtime_error("HTTPClient failed to init curl");
         }
+        mPostHeaders = curl_slist_append(mPostHeaders, "Content-Type: application/json");
     }
 
     ~HTTPClient() {
+        curl_slist_free_all(mPostHeaders);
         if (mCURL) curl_easy_cleanup(mCURL);
     }
 
@@ -87,7 +90,7 @@ public:
 
         curl_easy_setopt(mCURL, CURLOPT_URL, tURL.c_str());
         curl_easy_setopt(mCURL, CURLOPT_POSTFIELDS, tJSON.c_str());
-        // curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, mPostHeaderList);
+        curl_easy_setopt(mCURL, CURLOPT_HTTPHEADER, mPostHeaders);
 
         auto res = curl_easy_perform(mCURL);
         if (res == CURLE_OK) {
