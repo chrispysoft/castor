@@ -20,6 +20,7 @@
 #pragma once
 
 #include "../third_party/json.hpp"
+#include "../dsp/CodecBase.hpp"
 
 namespace castor {
 namespace api {
@@ -115,6 +116,7 @@ struct PlayItem {
     std::time_t end;
     std::string uri;
     std::shared_ptr<api::Program> program = nullptr;
+    std::unique_ptr<audio::Metadata> metadata = nullptr;
 
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
@@ -137,16 +139,29 @@ struct PlayItem {
 
 struct PlayLog {
     std::string trackStart;
-    std::time_t trackDuration;
-    int playlistId = -1;
-    int showId = -1;
+    std::string trackArtist;
+    std::string trackAlbum;
+    std::string trackTitle;
     std::string showName;
     std::string timeslotId;
+    float trackDuration;
+    int trackType = 0;
+    int trackNum = 1;
+    int playlistId = -1;
+    int showId = -1;
+    int logSource = 1;
+    
 
     PlayLog(const PlayItem& p) :
         trackStart(util::utcFmt(p.start)),
         trackDuration(p.end - p.start)
     {
+        const auto& meta = p.metadata;
+        if (meta) {
+            trackTitle = meta->get("title");
+            trackArtist = meta->get("artist");
+            trackAlbum = meta->get("album");
+        }
         auto program = p.program;
         if (program) {
             showId = program->showId;
@@ -160,11 +175,17 @@ struct PlayLog {
 void to_json(nlohmann::json& j, const PlayLog& p) {
     j = nlohmann::json {
         {"trackStart", p.trackStart},
+        {"trackArtist", p.trackArtist},
+        {"trackAlbum", p.trackAlbum},
+        {"trackTitle", p.trackTitle},
         {"trackDuration", p.trackDuration},
+        {"trackType", p.trackType},
+        {"trackNum", p.trackNum},
         {"playlistId", p.playlistId},
+        {"timeslotId", p.timeslotId},
         {"showId", p.showId},
         {"showName", p.showName},
-        {"timeslotId", p.timeslotId}
+        {"logSource", p.logSource}
     };
 }
 

@@ -157,6 +157,9 @@ public:
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL);
+        
+        playItem->metadata = mReader->metadata();
+
         mLoadWorker = std::thread([this] {
             mReader->read(mStreamBuffer);
         });

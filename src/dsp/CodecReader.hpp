@@ -155,6 +155,11 @@ public:
 
     double duration() { return mDuration; }
 
+    std::unique_ptr<Metadata> metadata() {
+        return std::make_unique<Metadata>(mFormatCtx->metadata);
+    }
+
+
     void read(SourceBuffer<sam_t>& tBuffer) {
         log.debug() << "CodecReader read " << mURL;
 
