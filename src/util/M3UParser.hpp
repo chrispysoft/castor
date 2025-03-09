@@ -93,7 +93,7 @@ public:
                             items.emplace_back(std::make_shared<PlayItem>(itmStart, itmEnd, path));
                             itmStart = itmEnd;
                         } else {
-                            log.info() << "M3U item exceeds end time - cropping";
+                            log.debug() << "M3U item exceeds end time - adapting";
                             items.emplace_back(std::make_shared<PlayItem>(itmStart, endTime, path));
                             break;
                         }
@@ -112,7 +112,7 @@ public:
                         items.emplace_back(std::make_shared<PlayItem>(itmStart, itmEnd, path));
                         itmStart = itmEnd;
                     } else {
-                        log.warn() << "M3U item exceeds end time - cropping";
+                        log.debug() << "M3U item exceeds end time - adapting";
                         items.emplace_back(std::make_shared<PlayItem>(itmStart, endTime, path));
                         break;
                     }
