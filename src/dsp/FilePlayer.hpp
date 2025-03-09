@@ -113,6 +113,8 @@ public:
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
 
+        playItem->metadata = mReader->metadata();
+
         auto sampleCount = mReader->sampleCount();
 
         auto pagesize = sysconf(_SC_PAGE_SIZE);

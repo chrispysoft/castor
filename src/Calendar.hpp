@@ -96,6 +96,7 @@ public:
     }
 
     void load(std::string tURL) {
+        auto program = std::make_shared<api::Program>(1, 2, 3, "id", "", "", "Test Show", "Test Episode");
         auto parser = util::CSVParser(tURL);
         auto rows = parser.rows();
         auto now = std::time(0);
@@ -104,7 +105,7 @@ public:
             auto start = now + std::stoi(row[0]);
             auto end   = now + std::stoi(row[1]);
             auto url   = row[2];
-            mItems.emplace_back(std::make_shared<PlayItem>(start, end, url));
+            mItems.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
             // log.info(Log::Red) << start << " " << end << " " << url;
         }
 
