@@ -135,8 +135,8 @@ class StreamPlayer : public Player {
     StreamBuffer<sam_t> mStreamBuffer;
 
 public:
-    StreamPlayer(double tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
-        Player(tName, tPreloadTime),
+    StreamPlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate),
         mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
     {

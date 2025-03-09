@@ -103,10 +103,10 @@ class Player : public Input, public BufferedSource, public Fader {
     time_t lastLoadAttempt = 0;
 public:
 
-    Player(const std::string& name = "", time_t tPreloadTime = 0) :
+    Player(float tSampleRate, const std::string& name = "", time_t tPreloadTime = 0) :
         Input(name),
         BufferedSource(),
-        Fader(2, 2, 44100),
+        Fader(2, 2, tSampleRate),
         preloadTime(tPreloadTime)
     {
         generateFadeCurves();

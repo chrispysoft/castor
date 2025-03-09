@@ -92,8 +92,8 @@ class FilePlayer : public Player {
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
-    FilePlayer(double tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
-        Player(tName, tPreloadTime),
+    FilePlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate)
     {
         category = "FILE";

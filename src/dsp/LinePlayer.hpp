@@ -31,8 +31,8 @@ class LinePlayer : public Player {
     
 
 public:
-    LinePlayer(double tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
-        Player(tName, tPreloadTime),
+    LinePlayer(float tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate)
     {
         category = "LINE";
