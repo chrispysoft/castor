@@ -113,7 +113,7 @@ public:
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
 
-        playItem->metadata = mReader->metadata();
+        if (playItem) playItem->metadata = mReader->metadata();
 
         auto sampleCount = mReader->sampleCount();
 
