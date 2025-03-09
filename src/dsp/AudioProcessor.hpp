@@ -19,10 +19,11 @@
 
 #pragma once
 
-#include <string>
-#include <iomanip>
 #include <chrono>
 #include <ctime>
+#include <iomanip>
+#include <memory>
+#include <string>
 #include "audio.hpp"
 #include "RMS.hpp"
 #include "../util/Log.hpp"
@@ -155,6 +156,7 @@ public:
 
     virtual void play() {
         state = PLAY;
+        if (startCallback) startCallback(playItem);
     }
 
     virtual void stop() {
@@ -166,17 +168,17 @@ public:
 
     virtual void load(const std::string& url, double position = 0) = 0;
 
-    PlayItem playItem = {};
+    std::shared_ptr<PlayItem> playItem = nullptr;
     std::thread schedulingThread;
     std::atomic<bool> isLoaded = false;
-    std::function<void(const PlayItem& playItem)> playItemDidStartCallback;
+    std::function<void(std::shared_ptr<PlayItem> item)> startCallback = nullptr;
     std::mutex loadedMutex;
     std::condition_variable loadedCV;
     std::mutex scheduleMutex;
     std::condition_variable scheduleCV;
     bool isScheduling = false;
 
-    virtual void schedule(const PlayItem& item) {
+    virtual void schedule(std::shared_ptr<PlayItem> item) {
         playItem = item;
         state = WAIT;
         isScheduling = true;
@@ -184,9 +186,9 @@ public:
     }
 
     void waitForEvents() {
-        auto loadTime = std::chrono::system_clock::from_time_t(playItem.start - preloadTime);
-        auto fadeInTime = std::chrono::system_clock::from_time_t(playItem.start);
-        auto fadeOutTime = std::chrono::system_clock::from_time_t(playItem.end - 2);
+        auto loadTime = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
+        auto fadeInTime = std::chrono::system_clock::from_time_t(playItem->start);
+        auto fadeOutTime = std::chrono::system_clock::from_time_t(playItem->end - 2);
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
@@ -194,7 +196,7 @@ public:
             // wait until load time or stopped
             // scheduleCV.wait_until(lock, loadTime, [this] { return !isScheduling; });
             // if (!isScheduling) return;
-            // if (playItem.end + 5 < std::time(0)) return;
+            // if (playItem->end + 5 < std::time(0)) return;
 
             // log.debug(Log::Magenta) << "LOAD " << name;
             // // loadSemaphore.acquire();
@@ -233,8 +235,8 @@ public:
 
     bool isInLoadTime() {
         auto now = std::time(0);
-        auto min = playItem.start - preloadTime;
-        auto max = playItem.end - 5;
+        auto min = playItem->start - preloadTime;
+        auto max = playItem->end - 5;
         return now >= min && now <= max;
     }
 
@@ -244,7 +246,7 @@ public:
 
     // bool isInPlayTime() const {
     //     auto now = std::time(0);
-    //     return now >= playItem.start && now < playItem.end; 
+    //     return now >= playItem->start && now < playItem->end; 
     // }
 
 
@@ -253,7 +255,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem.end + 1);
+        return std::time(0) > (playItem->end + 1);
     }
 
 
@@ -293,8 +295,8 @@ public:
 
     void getStatus(std::ostringstream& strstr) {
         using namespace std;
-        strstr << left << setw(12) << util::timefmt(playItem.start, "%H:%M:%S");
-        strstr << left << setw(12) << util::timefmt(playItem.end, "%H:%M:%S");
+        strstr << left << setw(12) << util::timefmt(playItem->start, "%H:%M:%S");
+        strstr << left << setw(12) << util::timefmt(playItem->end, "%H:%M:%S");
         strstr << left << setw(24) << name.substr(0, 20);
         strstr << left << setw(12) << category;
         strstr << left << setw(12) << stateStr();
@@ -317,9 +319,9 @@ public:
 
     void tryLoad() {
         state = LOAD;
-        time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem.start));
+        time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem->start));
         try {
-            load(playItem.uri, pos);
+            load(playItem->uri, pos);
             std::lock_guard<std::mutex> lock(scheduleMutex);
             state = CUED;
             isLoaded = true;
@@ -328,7 +330,7 @@ public:
         catch (const std::exception& e) {
             state = FAIL;
             lastLoadAttempt = std::time(0);
-            log.error() << "AudioProcessor failed to load '" << playItem.uri << "': " << e.what();
+            log.error() << "AudioProcessor failed to load '" << playItem->uri << "': " << e.what();
         }
     }
     

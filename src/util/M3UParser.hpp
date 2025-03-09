@@ -19,10 +19,15 @@
 
 #pragma once
 
-#include <deque>
+#include <cmath>
+#include <fstream>
+#include <memory>
 #include <unordered_map>
+#include <vector>
+#include <string>
 #include "../api/API.hpp"
 #include "../dsp/CodecReader.hpp"
+#include "../util/util.hpp"
 
 namespace castor {
 namespace util {
@@ -30,13 +35,13 @@ namespace util {
 class M3UParser {
 public:
 
-    std::unordered_map<size_t, std::deque<PlayItem>> mMap = {};
+    std::unordered_map<size_t, std::vector<std::shared_ptr<PlayItem>>> mMap = {};
 
     void reset() {
         mMap.clear();
     }
 
-    std::deque<PlayItem> parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
+    std::vector<std::shared_ptr<PlayItem>> parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
         auto hash = std::hash<std::string>{}(std::string(url + std::to_string(startTime) + std::to_string(endTime)));
         auto it = mMap.find(hash);
         if (it != mMap.end()) {
@@ -48,8 +53,7 @@ public:
         }
     }
 
-    std::deque<PlayItem> _parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
-        // std::cout << "_parse " << uri << std::endl;
+    std::vector<std::shared_ptr<PlayItem>> _parse(const std::string& url, const time_t& startTime = 0, const time_t& endTime = 0) {
         using namespace std;
 
         auto getDuration = [](const string& path) {
@@ -61,7 +65,7 @@ public:
             return duration;
         };
 
-        std::deque<PlayItem> items;
+        std::vector<std::shared_ptr<PlayItem>> items;
         ifstream file(url);
         if (!file.is_open()) {
             throw runtime_error("Failed to open file " + url);
@@ -86,11 +90,11 @@ public:
                         }
                         auto itmEnd = itmStart + duration;
                         if (endTime == 0 || itmEnd <= endTime) {
-                            items.push_back({itmStart, itmEnd, path});
+                            items.emplace_back(std::make_shared<PlayItem>(itmStart, itmEnd, path));
                             itmStart = itmEnd;
                         } else {
                             log.info() << "M3U item exceeds end time - cropping";
-                            items.push_back({itmStart, endTime, path});
+                            items.emplace_back(std::make_shared<PlayItem>(itmStart, endTime, path));
                             break;
                         }
                     }
@@ -105,11 +109,11 @@ public:
                     int duration = getDuration(path);
                     auto itmEnd = itmStart + duration;
                     if (endTime == 0 || itmEnd <= endTime) {
-                        items.push_back({itmStart, itmEnd, path});
+                        items.emplace_back(std::make_shared<PlayItem>(itmStart, itmEnd, path));
                         itmStart = itmEnd;
                     } else {
                         log.warn() << "M3U item exceeds end time - cropping";
-                        items.push_back({itmStart, endTime, path});
+                        items.emplace_back(std::make_shared<PlayItem>(itmStart, endTime, path));
                         break;
                     }
                 }

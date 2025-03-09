@@ -114,9 +114,7 @@ struct PlayItem {
     std::time_t start;
     std::time_t end;
     std::string uri;
-    api::Program program = {};
-    float fadeInTime = 1;
-    float fadeOutTime = 1;
+    std::shared_ptr<api::Program> program = nullptr;
 
     bool operator==(const PlayItem& item) const {
         return item.start == this->start && item.end == this->end && item.uri == this->uri;
@@ -127,32 +125,36 @@ struct PlayItem {
     }
 };
 
-void to_json(nlohmann::json& j, const PlayItem& p) {
-    j = nlohmann::json {
-        {"start", p.start},
-        {"end", p.end},
-        //{"uri", p.uri},
-        {"program", p.program}
-    };
-}
+// void to_json(nlohmann::json& j, const PlayItem& p) {
+//     j = nlohmann::json {
+//         {"start", p.start},
+//         {"end", p.end},
+//         //{"uri", p.uri},
+//         {"program", p.program}
+//     };
+// }
 
 
 struct PlayLog {
     std::string trackStart;
     std::time_t trackDuration;
-    int playlistId;
-    int showId;
+    int playlistId = -1;
+    int showId = -1;
     std::string showName;
     std::string timeslotId;
 
     PlayLog(const PlayItem& p) :
         trackStart(util::utcFmt(p.start)),
-        trackDuration(p.end - p.start),
-        playlistId(p.program.playlistId),
-        showId(p.program.showId),
-        showName(p.program.showName),
-        timeslotId(std::to_string(p.program.timeslotId))
-    {}
+        trackDuration(p.end - p.start)
+    {
+        auto program = p.program;
+        if (program) {
+            showId = program->showId;
+            showName = program->showName;
+            playlistId = program->playlistId;
+            timeslotId = std::to_string(program->timeslotId);
+        }
+    }
 };
 
 void to_json(nlohmann::json& j, const PlayLog& p) {
