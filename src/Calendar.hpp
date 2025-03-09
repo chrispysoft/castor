@@ -121,7 +121,8 @@ private:
 
         auto items = fetchItems();
 
-        if (items != mItems) {
+        if (!std::ranges::equal(items, mItems, [](const auto& a, const auto& b) { return *a == *b; })) {
+        //if (items != mItems) {
             std::lock_guard<std::mutex> lock(mItemsMutex);
             mItems = std::move(items);
             log.debug(Log::Yellow) << "Calendar changed";
