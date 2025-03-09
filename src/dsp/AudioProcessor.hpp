@@ -139,17 +139,17 @@ public:
     #define COL_BLU "\033[0;34m"
     #define COL_MAG "\033[0;35m"
     #define COL_CYN "\033[0;36m"
-    #define FMT_RST "\033[0m"
+    #define COL_DEF "\033[0;39m"
 
 
     const char* stateStr() {
         switch (state) {
-            case IDLE: return STR_IDLE;
-            case WAIT: return COL_CYN STR_WAIT FMT_RST;
-            case LOAD: return COL_MAG STR_LOAD FMT_RST;
-            case CUED: return COL_YEL STR_CUED FMT_RST;
-            case PLAY: return COL_GRN STR_PLAY FMT_RST;
-            case FAIL: return COL_RED STR_FAIL FMT_RST;
+            case IDLE: return COL_DEF STR_IDLE COL_DEF;
+            case WAIT: return COL_CYN STR_WAIT COL_DEF;
+            case LOAD: return COL_MAG STR_LOAD COL_DEF;
+            case CUED: return COL_YEL STR_CUED COL_DEF;
+            case PLAY: return COL_GRN STR_PLAY COL_DEF;
+            case FAIL: return COL_RED STR_FAIL COL_DEF;
             default: throw std::runtime_error("Unknown default");
         }
     }
@@ -285,11 +285,10 @@ public:
         strstr << left << setw(12) << "Stop";
         strstr << left << setw(24) << "ID";
         strstr << left << setw(12) << "Type";
-        strstr << left << setw(12) << "State";
+        strstr << left << setw(12) <<  "Status" COL_DEF;
         strstr << right << setw(12) << "Loaded";
         strstr << right << setw(12) << "Played";
-        // strstr << right << setw(12) << "Gain";
-        strstr << right << setw(12) << "Size (MiB)";
+        strstr << right << setw(12) << "Size";
         strstr << '\n';
     }
 
@@ -300,11 +299,10 @@ public:
         strstr << left << setw(24) << name.substr(0, 20);
         strstr << left << setw(12) << category;
         strstr << left << setw(12) << stateStr();
-        strstr << right << setw(12) << fixed << setprecision(2) << writeProgress();
-        strstr << right << setw(12) << fixed << setprecision(2) << readProgress();
-        // strstr << right << setfill(' ') << setw(12) << fixed << setprecision(2) << volume;
-        strstr << right << setw(12) << fixed << setprecision(2) << bufferSizeMiB();
-        // statusSS << left << setfill(' ') << setw(16) << fixed << setprecision(2) << rms << ' ';
+        strstr << fixed << setprecision(2);
+        strstr << right << setw(12) << writeProgress();
+        strstr << right << setw(12) << readProgress();
+        strstr << right << setw(12) << bufferSizeMiB();
         strstr << '\n';
     }
 
