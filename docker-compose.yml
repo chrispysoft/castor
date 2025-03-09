@@ -1,13 +1,14 @@
 services:
   castor:
     container_name: castor
-    image: crispybitsapp/castor:alpha5
+    image: crispybitsapp/castor:latest
     restart: always
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       TZ: ${TIMEZONE}
+      LOG_LEVEL: 2
       LOG_PATH: "/srv/logs/castor.log"
       AUDIO_SOURCE_PATH: ${AUDIO_SOURCE_PATH}
       AUDIO_PLAYLIST_PATH: ${AUDIO_PLAYLIST_PATH}
@@ -30,7 +31,10 @@ services:
       PROGRAM_URL: ${PROGRAM_URL}
       PLAYLIST_URL: ${PLAYLIST_URL}
       PLAYLOG_URL: ${PLAYLOG_URL}
+      HEALTH_URL: ${HEALTH_URL}
       PLAYLIST_TOKEN: ${PLAYLIST_TOKEN}
+      CALENDAR_REFRESH_INTERVAL: ${CALENDAR_REFRESH_INTERVAL}
+      HEALTH_REPORT_INTERVAL: ${HEALTH_REPORT_INTERVAL}
       TCP_PORT: ${TCP_PORT}
     volumes:
       - ./audio:/srv/audio
