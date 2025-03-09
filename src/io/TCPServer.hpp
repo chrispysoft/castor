@@ -42,7 +42,9 @@ class TCPServer {
     int mSocket;
     int mPort;
     std::atomic<bool> mRunning = false;
+    std::atomic<bool> mConnected = false;
     std::thread mListenerThread;
+    std::string mStatusString;
     std::queue<std::string> mStatusQueue;
     std::mutex mStatusMutex;
     std::mutex mSocketMutex;
@@ -135,14 +137,12 @@ public:
 
     void pushStatus(std::string tStatus) {
         std::lock_guard<std::mutex> lock(mStatusMutex);
-        mStatusQueue.push(tStatus);
+        // mStatusQueue.push(tStatus);
+        mStatusString = std::move(tStatus);
     }
 
     bool connected() {
-        mFutures.erase(std::remove_if(mFutures.begin(), mFutures.end(), [](const std::future<void>& f) {
-            return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-        }), mFutures.end());
-        return mFutures.size() > 0;
+        return mConnected;
     }
 
 private:
@@ -178,6 +178,14 @@ private:
                 mFutures.emplace_back(std::async(std::launch::async, &TCPServer::handleClient, this, clientSocket, clientAddr));
                 log.info() << "TCPServer accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port);
             }
+
+            if (mFutures.size()) {
+                mFutures.erase(std::remove_if(mFutures.begin(), mFutures.end(), [](const std::future<void>& f) {
+                    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+                }), mFutures.end());
+            }
+
+            mConnected = mFutures.size() > 0;
         }
     }
 
@@ -194,18 +202,18 @@ private:
                     auto response = std::string(rxBuf, bytesRead);
                     log.info() << "TCPServer received from client [" << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << "]: " << response;
                 }
-                if (!mStatusQueue.empty()) {
+                //if (!mStatusQueue.empty()) {
                     std::string status;
                     {
                         std::lock_guard<std::mutex> lock(mStatusMutex);
-                        status = mStatusQueue.front();
-                        mStatusQueue.pop();
+                        status = mStatusString; // mStatusQueue.front();
+                        // mStatusQueue.pop();
                     }
-                    
+
                     if (send(clientSocket, status.c_str(), status.size(), 0) < 0) {
                         throw std::runtime_error("send failed");
                     }
-                }
+                //}
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
         }

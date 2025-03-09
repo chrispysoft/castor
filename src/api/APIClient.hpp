@@ -19,7 +19,9 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
+#include <vector>
 #include "API.hpp"
 #include "../io/HTTPClient.hpp"
 #include "../util/Log.hpp"
@@ -43,28 +45,33 @@ public:
         }
     {}
 
-
-    std::vector<api::Program> getProgram(time_t duration = 0) {
+    std::vector<std::shared_ptr<api::Program>> getProgram(time_t duration = 0) {
         auto url = mConfig.programURL + "?includeVirtual=true";
         if (duration > 0) {
             auto now = std::time(nullptr);
             auto end = now + duration;
             auto endfmt = util::utcFmt(end);
-            url += "&end="+endfmt;
+            url += "&end=" + endfmt;
         }
 
         log.debug() << "APIClient getProgram " << url;
         
         auto res = mHTTPClientProgram.get(url);
         if (res.code != 200) {
-            throw std::runtime_error("APIClient getProgram failed: "+std::to_string(res.code)+" "+res.response);
+            throw std::runtime_error("APIClient getProgram failed: " + std::to_string(res.code) + " " + res.response);
         }
 
         nlohmann::json j = nlohmann::json::parse(res.response);
-        return j.get<std::vector<api::Program>>();
+        auto programs = j.get<std::vector<api::Program>>();
+        std::vector<std::shared_ptr<api::Program>> programPtrs;
+        programPtrs.reserve(programs.size());
+        for (const auto& program : programs) {
+            programPtrs.emplace_back(std::make_shared<api::Program>(program));
+        }
+        return programPtrs;
     }
 
-    api::Playlist getPlaylist(int showID) {
+    std::shared_ptr<api::Playlist> getPlaylist(int showID) {
         auto url = mConfig.playlistURL + std::to_string(showID);
         log.debug() << "APIClient getPlaylist " << url;
 
@@ -74,19 +81,22 @@ public:
         }
 
         nlohmann::json j = nlohmann::json::parse(res.response);
-        return j.get<api::Playlist>();
+        return std::make_shared<api::Playlist>(j.get<api::Playlist>());
     }
 
     void postPlaylog(const PlayLog& item) {
         const auto& url = mConfig.playlogURL;
-        log.debug() << "APIClient postPlaylog " << url;
+        auto debug = log.debug();
+        debug << "APIClient postPlaylog " << url;
 
         nlohmann::json j = item;
         auto jstr = j.dump();
 
+        debug << jstr;
+
         auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postPlaylog failed: "+std::to_string(res.code)+" "+res.response);
+            throw std::runtime_error("APIClient postPlaylog failed: " + std::to_string(res.code) + " " + res.response);
         }
     }
 
@@ -99,7 +109,7 @@ public:
 
         auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postHealth failed: "+std::to_string(res.code)+" "+res.response);
+            throw std::runtime_error("APIClient postHealth failed: " + std::to_string(res.code) + " " + res.response);
         }
     }
 };

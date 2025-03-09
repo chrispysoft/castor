@@ -43,18 +43,30 @@ namespace castor {
 
 class PlayerFactory {
     // std::mutex mMutex;
+    float mSampleRate;
+    time_t mPreloadTimeFile;
+    time_t mPreloadTimeStream;
+    time_t mPreloadTimeLine;
     
 public:
-    std::shared_ptr<audio::Player> createPlayer(const PlayItem& tPlayItem, double tSampleRate) {
+    PlayerFactory(const Config& tConfig) :
+        mSampleRate(tConfig.sampleRate),
+        mPreloadTimeFile(tConfig.preloadTimeFile),
+        mPreloadTimeStream(tConfig.preloadTimeStream),
+        mPreloadTimeLine(tConfig.preloadTimeLine)
+    {}
+
+    std::shared_ptr<audio::Player> createPlayer(std::shared_ptr<PlayItem> tPlayItem) {
+        auto uri = tPlayItem->uri;
+        auto name = uri.substr(uri.rfind('/')+1);
         // std::lock_guard<std::mutex> lock(mMutex);
-        auto name = tPlayItem.uri.substr(tPlayItem.uri.rfind('/')+1);
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
-        if (tPlayItem.uri.starts_with("line"))
-            return std::make_shared<audio::LinePlayer>(tSampleRate, name);
-        else if (tPlayItem.uri.starts_with("http"))
-            return std::make_shared<audio::StreamPlayer>(tSampleRate, name);
+        if (uri.starts_with("line"))
+            return std::make_shared<audio::LinePlayer>(mSampleRate, name, mPreloadTimeLine);
+        else if (uri.starts_with("http"))
+            return std::make_shared<audio::StreamPlayer>(mSampleRate, name, mPreloadTimeStream);
         else
-            return std::make_shared<audio::FilePlayer>(tSampleRate, name);
+            return std::make_shared<audio::FilePlayer>(mSampleRate, name, mPreloadTimeFile);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -74,25 +86,23 @@ class Engine : public audio::Client::Renderer {
     audio::Fallback mFallback;
     audio::Recorder mRecorder;
     audio::StreamOutput mStreamOutput;
-    std::vector<audio::sam_t> mMixBuffer;
     std::deque<std::shared_ptr<audio::Player>> mPlayers = {};
+    std::unique_ptr<PlayerFactory> mPlayerFactory = nullptr;
     std::shared_ptr<audio::Player> mActivePlayer = nullptr;
+    std::map<std::shared_ptr<PlayItem>, std::shared_ptr<audio::Player>> mPlayerMap;
     std::thread mWorker;
     std::thread mLoadThread;
-    std::thread mRenderThread;
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
     util::Timer mTCPUpdateTimer;
-    api::Program mCurrProgram = {};
-    PlayerFactory mFactory;
+    std::shared_ptr<api::Program> mCurrProgram = nullptr;
     // std::queue<PlayItem> mScheduleItems = {};
-    std::mutex mScheduleItemsMutex;
+    // std::mutex mScheduleItemsMutex;
+    // std::condition_variable mScheduleItemsCV;
     std::mutex mPlayersMutex;
     dispatch_queue mScheduleQueue;
     dispatch_queue mAPIReportQueue;
-
-    std::vector<audio::sam_t> mInputBuffer;
-    std::vector<audio::sam_t> mOutputBuffer;
+    dispatch_queue mItemChangedQueue;
     
     
 public:
@@ -106,17 +116,15 @@ public:
         mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
-        mMixBuffer(mConfig.audioBufferSize * 2),
         mReportTimer(mConfig.healthReportInterval),
         mTCPUpdateTimer(1),
-        mInputBuffer(mConfig.audioBufferSize * 2),
-        mOutputBuffer(mConfig.audioBufferSize * 2),
         mScheduleQueue("schedule queue", 1),
-        mAPIReportQueue("report queue", 1)
-        // mLoadQueue("load queue", 2)
+        mAPIReportQueue("report queue", 1),
+        mItemChangedQueue("change queue", 1)
     {
         mCalendar.calendarChangedCallback = [this](const auto& items) { this->calendarChanged(items); };
         mAudioClient.setRenderer(this);
+        mPlayerFactory = std::make_unique<PlayerFactory>(mConfig);
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -165,10 +173,8 @@ public:
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
         if (mLoadThread.joinable()) mLoadThread.join();
-        // if (mRenderThread.joinable()) mRenderThread.join();
         for (auto player : mPlayers) player->stop();
         mPlayers.clear();
-        // if (mActivePlayer) mActivePlayer->stop();
         mTCPServer.stop();
         mCalendar.stop();
         mRecorder.stop();
@@ -192,13 +198,6 @@ public:
             }
         }
 
-        while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
-            std::lock_guard<std::mutex> lock(mPlayersMutex);
-            mPlayers.pop_front();
-        }
-
-        
         if (mReportTimer.query()) {
             mAPIReportQueue.dispatch([this] {
                 postHealth();
@@ -208,57 +207,55 @@ public:
         if (mTCPServer.connected() && mTCPUpdateTimer.query()) {
             updateStatus();
         }
-    }
 
-    void calendarChanged(const std::deque<PlayItem>& playItems) {
-        mScheduleQueue.dispatch([items=playItems, this] {
-            for (const auto& item : items) {
-                schedule(item);
-            }
+        mScheduleQueue.dispatch([this] {
+            cleanup();
         });
     }
 
+    void calendarChanged(const std::vector<std::shared_ptr<PlayItem>>& playItems) {
+        for (const auto& item : playItems) {
+            if (item->end < std::time(0)) continue;
+            mScheduleQueue.dispatch([item=item, this] {
+                schedule(item);
+            });
+        }
+    }
 
-    void schedule(const PlayItem& item) {
-        // log.debug(Log::Yellow) << "Engine schedule " << item.start;
-        if (std::time(0) > item.end) return;
 
-        enum Action { NIL, EXISTS, ADD, REPLACE } action = NIL;
-        
-        {
-            // std::lock_guard<std::mutex> lock(mPlayersMutex);
-            for (auto pi = 0 ; pi < mPlayers.size(); ++pi) {
-                auto player = mPlayers[pi];
-                if (!player) continue;
-                auto plItm = player->playItem;
-                if (item.start >= plItm.start && item.end <= plItm.end) {
-                    if (plItm == item) action = EXISTS;
-                    else action = REPLACE;
-                    break;
+    void schedule(std::shared_ptr<PlayItem> tItem) {
+        // log.debug(Log::Yellow) << "Engine schedule " << item->start;
+
+        // if (mPlayerMap.contains(item)) return;
+
+        for (auto [itm, plr] : mPlayerMap) {
+            if (itm->start >= tItem->start && itm->end <= tItem->end) {
+                if (*itm == *tItem) {
+                    log.info() << "Item already scheduled " << itm->start;
+                    return;
+                } else {
+                    log.error() << "Engine schedule overlap " << tItem->start << " " << itm->start;
+                    return;
                 }
             }
         }
 
-        switch (action) {
-            case EXISTS: {
-                return;
-            }
-            case REPLACE: {
-                // mPlayers.erase(0);
-                break;
-            }
-            default: break;
-        }
+        auto player = mPlayerFactory->createPlayer(tItem);
+        player->startCallback = [this](auto item) { this->playerStartCallback(item); };
+        player->schedule(tItem);
+        
+        // std::lock_guard<std::mutex> lock(mPlayersMutex);
+        mPlayerMap[tItem] = player;
+        mPlayers.push_back(player);
+    }
 
-        
-        auto player = mFactory.createPlayer(item, mConfig.sampleRate);
-        // player->playItemDidStartCallback = [this](auto item) { this->playItemDidStart(item); };
-        player->schedule(item);
-        
-        //{
+    void cleanup() {
+        while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
+            mPlayers.front()->stop();
             // std::lock_guard<std::mutex> lock(mPlayersMutex);
-            mPlayers.push_back(player);
-        //}
+            mPlayerMap.erase(mPlayers.front()->playItem);
+            mPlayers.pop_front();
+        }
     }
 
 
@@ -279,14 +276,33 @@ public:
         }
     }
 
-    void playItemDidStart(PlayItem item) {
+    void playerStartCallback(std::shared_ptr<PlayItem> tItem) {
+        log.debug() << "Engine playerStartCallback";
+        if (!tItem) {
+            log.error() << "Engine playerStartCallback item is null";
+            return;
+        }
+        mItemChangedQueue.dispatch([item=tItem, this] {
+            this->playItemDidStart(item);
+        });
+    }
+
+    void playItemDidStart(std::shared_ptr<PlayItem> tItem) {
         log.info() << "Engine playItemDidStart";
+        if (!tItem) {
+            log.error() << "Engine playItemDidStart item is null";
+            return;
+        }
 
         if (mStreamOutput.isRunning() && !mConfig.streamOutMetadataURL.empty()) {
             // log.debug() << "Engine updating stream metadata";
             try {
-                auto songName = item.program.showName;
-                std::replace(songName.begin(), songName.end(), ' ', '+');
+                std::string songName;
+                auto program = tItem->program;
+                if (program) {
+                    songName = program->showName;
+                    std::replace(songName.begin(), songName.end(), ' ', '+');
+                }
                 mStreamOutput.updateMetadata(mConfig.streamOutMetadataURL, songName);
             }
             catch (const std::exception& e) {
@@ -294,17 +310,17 @@ public:
             }
         }
     
-        if (mCurrProgram != item.program) {
-            mCurrProgram = item.program;
-            log.info() << "Engine program changed to " << mCurrProgram.showName;
+        if (mCurrProgram != tItem->program) {
+            mCurrProgram = tItem->program;
+            log.info() << "Engine program changed to " << mCurrProgram->showName;
 
-            if (mConfig.audioRecordPath.size() > 0) {
+            if (mCurrProgram && mConfig.audioRecordPath.size() > 0) {
                 mRecorder.stop();
 
-                if (mCurrProgram.showId > 1) {
-                    auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram.showName + ".mp3";
+                if (mCurrProgram->showId > 1) {
+                    auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram->showName + ".mp3";
                     try {
-                        std::unordered_map<std::string, std::string> metadata = {{"artist", item.program.showName }, {"title", item.program.episodeTitle}};
+                        std::unordered_map<std::string, std::string> metadata = {}; // {{"artist", item->program->showName }, {"title", item->program->episodeTitle}};
                         mRecorder.start(recURL, metadata);
                     }
                     catch (const std::runtime_error& e) {
@@ -314,8 +330,8 @@ public:
             }
         }
         
-        mAPIReportQueue.dispatch([this, item=item] {
-            postPlaylog(item);
+        mAPIReportQueue.dispatch([this, tItem] {
+            postPlaylog(tItem);
         });
     }
     
@@ -347,10 +363,10 @@ public:
         }
     }
 
-    void postPlaylog(const PlayItem& tPlayItem) {
-        if (mConfig.playlogURL.empty()) return;
+    void postPlaylog(std::shared_ptr<PlayItem> tPlayItem) {
+        if (tPlayItem == nullptr || mConfig.playlogURL.empty()) return;
         try {
-            mAPIClient.postPlaylog({tPlayItem});
+            mAPIClient.postPlaylog({*tPlayItem});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
@@ -376,38 +392,18 @@ public:
     void updateStatus() {
         strstr.flush();
         // strstr << "\x1b[5A";
-        strstr << "________________________________________________________________________________________\n";
-        strstr << "RMS: " << std::fixed << std::setprecision(2) << mSilenceDet.currentRMS() << " dB\n";
-        strstr << "Fallback: " << (mFallback.isActive() ? "PLAY" : "CUE") << '\n';
+        strstr << "____________________________________________________________________________________________________________\n";
+        strstr << "RMS: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
+        strstr << "Fallback: " << (mFallback.isActive() ? "ACTIVE" : "INACTIVE") << '\n';
         strstr << "Player queue (" << mPlayers.size() << " items):\n";
 
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Start";
-        strstr << std::left << std::setfill(' ') << std::setw(12) << "Stop";
-        strstr << std::left << std::setfill(' ') << std::setw(16) << "ID";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "State";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Loaded";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Played";
-        // strstr << std::right << std::setfill(' ') << std::setw(12) << "Gain";
-        strstr << std::right << std::setfill(' ') << std::setw(12) << "Size (MiB)";
-        strstr << '\n';
-
+        audio::Player::getStatusHeader(strstr);
         for (auto player : mPlayers) {
-            strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(player->playItem.start, "%H:%M:%S");
-            strstr << std::left << std::setfill(' ') << std::setw(12) << util::timefmt(player->playItem.end, "%H:%M:%S");
-            strstr << std::left << std::setfill(' ') << std::setw(16) << player->name.substr(0, 16);
-            strstr << std::right << std::setfill(' ') << std::setw(12) << player->stateStr();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->writeProgress();
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->readProgress();
-            // strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->volume;
-            strstr << std::right << std::setfill(' ') << std::setw(12) << std::fixed << std::setprecision(2) << player->mBuffer->memorySizeMB();
-            // statusSS << std::left << std::setfill(' ') << std::setw(16) << std::fixed << std::setprecision(2) << player->rms << ' ';
-            strstr << '\n';
+            if (player) player->getStatus(strstr);
         }
-
         strstr << std::endl;
 
         mTCPServer.pushStatus(strstr.str());
-        
         // log.debug() << statusSS.str();
     }
 };

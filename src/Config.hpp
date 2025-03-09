@@ -50,6 +50,7 @@ class Config {
     static constexpr const char* kHealthURL = "";
     static constexpr const char* kClockURL = "";
     static constexpr const char* kPlaylistToken = "";
+    static constexpr const char* kLogLevel = "1";
     static constexpr const char* kCalendarRefreshInterval = "60";
     static constexpr const char* kHealthReportInterval = "60";
     static constexpr const char* kTCPPort = "0";
@@ -100,6 +101,7 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string playlistToken;
+    int logLevel;
     int calendarRefreshInterval;
     int healthReportInterval;
     int tcpPort;
@@ -108,6 +110,7 @@ public:
     int silenceStopDuration;
     int preloadTimeFile;
     int preloadTimeStream;
+    int preloadTimeLine = 5;
     int preloadTimeFallback;
 
     int sampleRate = 44100;
@@ -154,6 +157,7 @@ public:
         healthURL = get(map, "health_url", kHealthURL);
         clockURL = get(map, "clock_url", kClockURL);
         playlistToken = get(map, "playlist_token", kPlaylistToken);
+        logLevel = std::stoi(get(map, "log_level", kLogLevel));
         calendarRefreshInterval = std::stoi(get(map, "calendar_refresh_interval", kCalendarRefreshInterval));
         healthReportInterval = std::stoi(get(map, "health_report_interval", kHealthReportInterval));
         tcpPort = std::stoi(get(map, "tcp_port", kTCPPort));
@@ -165,15 +169,16 @@ public:
         preloadTimeFallback = std::stoi(get(map, "preload_time_fallback", kPreloadTimeFallback));
         
         log.info() << "Config:"
-        << "\n\t logPath=" << logPath 
-        << "\n\t socketPath=" << socketPath 
+        << "\n\t logPath=" << logPath
+        << "\n\t logLevel=" << logLevel
+        << "\n\t socketPath=" << socketPath
         << "\n\t audioSourcePath=" << audioSourcePath
         << "\n\t audioPlaylistPath=" << audioPlaylistPath
         << "\n\t audioFallbackPath=" << audioFallbackPath
         << "\n\t audioRecordPath=" << audioRecordPath
-        << "\n\t iDevName=" << iDevName 
-        << "\n\t oDevName=" << oDevName 
-        << "\n\t streamOutURL=" << streamOutURL 
+        << "\n\t iDevName=" << iDevName
+        << "\n\t oDevName=" << oDevName
+        << "\n\t streamOutURL=" << streamOutURL
         << "\n\t streamOutMetadataURL=" << streamOutMetadataURL
         << "\n\t streamOutName=" << streamOutName
         << "\n\t streamOutDescription=" << streamOutDescription

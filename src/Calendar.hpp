@@ -21,10 +21,10 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <thread>
 #include <filesystem>
+#include <vector>
 #include "Config.hpp"
 #include "api/API.hpp"
 #include "api/APIClient.hpp"
@@ -46,14 +46,13 @@ class Calendar {
     std::mutex mItemsMutex;
     std::mutex mWorkMutex;
     std::condition_variable mWorkCV;
-    std::deque<PlayItem> mItems;
+    std::vector<std::shared_ptr<PlayItem>> mItems;
     api::Client mAPIClient;
     util::M3UParser m3uParser;
-    time_t mLastRefreshTime = 0;
 
 public:
 
-    std::function<void(const std::deque<PlayItem>& items)> calendarChangedCallback;
+    std::function<void(const std::vector<std::shared_ptr<PlayItem>>& items)> calendarChangedCallback;
 
     Calendar(const Config& tConfig) :
         mConfig(tConfig),
@@ -97,6 +96,7 @@ public:
     }
 
     void load(std::string tURL) {
+        auto program = std::make_shared<api::Program>(1, 2, 3, "id", "", "", "Test Show", "Test Episode");
         auto parser = util::CSVParser(tURL);
         auto rows = parser.rows();
         auto now = std::time(0);
@@ -105,7 +105,7 @@ public:
             auto start = now + std::stoi(row[0]);
             auto end   = now + std::stoi(row[1]);
             auto url   = row[2];
-            mItems.push_back({start, end, url});
+            mItems.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
             // log.info(Log::Red) << start << " " << end << " " << url;
         }
 
@@ -121,7 +121,8 @@ private:
 
         auto items = fetchItems();
 
-        if (items != mItems) {
+        if (!std::ranges::equal(items, mItems, [](const auto& a, const auto& b) { return *a == *b; })) {
+        //if (items != mItems) {
             std::lock_guard<std::mutex> lock(mItemsMutex);
             mItems = std::move(items);
             log.debug(Log::Yellow) << "Calendar changed";
@@ -133,23 +134,23 @@ private:
         }
     }
     
-    std::deque<PlayItem> fetchItems() {
-        std::deque<PlayItem> items;
+    std::vector<std::shared_ptr<PlayItem>> fetchItems() {
+        std::vector<std::shared_ptr<PlayItem>> items;
         // m3uParser.reset();
         const auto now = std::time(0);
         const auto program = mAPIClient.getProgram(mConfig.preloadTimeFile);
         for (const auto& pr : program) {
             // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
-            if (pr.playlistId <= 0) {
-                log.error() << "Calendar item '" << pr.showName << "' has no playlist id";
+            if (pr->playlistId <= 0) {
+                log.error() << "Calendar item '" << pr->showName << "' has no playlist id";
                 continue;
             }
-            const auto playlist = mAPIClient.getPlaylist(pr.playlistId);
-            const auto prStart = util::parseDatetime(pr.start);
-            const auto prEnd = util::parseDatetime(pr.end);
+            const auto playlist = mAPIClient.getPlaylist(pr->playlistId);
+            const auto prStart = util::parseDatetime(pr->start);
+            const auto prEnd = util::parseDatetime(pr->end);
             auto itemStart = prStart;
 
-            for (const auto& entry : playlist.entries) {
+            for (const auto& entry : playlist->entries) {
                 // log.debug() << entry.uri;
                 auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - itemStart;
                 auto itemEnd = itemStart + entryDuration;
@@ -172,13 +173,14 @@ private:
                             // items.insert(items.end(), m3u.begin(), m3u.end());
                             auto maxEnd = std::time(0) + mConfig.preloadTimeFile;
                             for (const auto& itm : m3u) {
-                                if (itm.end <= maxEnd) {
-                                    items.push_back(itm);
+                                if (itm->end <= maxEnd) {
+                                    itm->program = pr;
+                                    items.emplace_back(itm);
                                 }
                             }
                         } else {
                             log.warn() << "Calendar found no M3U metadata - adding file as item";
-                            items.push_back({itemStart, itemEnd, uri, pr});
+                            items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
                         }
                     } catch (const std::exception& e) {
                         log.error() << "Calendar error reading M3U: " << e.what();
@@ -192,7 +194,7 @@ private:
                             uri += defaultFileSuffix;
                         }
                     }
-                    items.push_back({itemStart, itemEnd, uri, pr});
+                    items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
                 }
                 itemStart += entryDuration;
             }

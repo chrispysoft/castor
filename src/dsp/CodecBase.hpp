@@ -28,6 +28,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
+#include <libavutil/audio_fifo.h>
 #include <libswresample/swresample.h>
 }
 #include "audio.hpp"
@@ -77,5 +78,44 @@ public:
     }
     
 };
+
+class Metadata {
+    const std::vector<std::string> mKeys = {
+        "title",
+        "artist",
+        "album",
+        "track",
+        "date",
+        "genre",
+        "comment",
+        "composer",
+        "performer",
+        "publisher"
+    };
+
+    std::unordered_map<std::string, std::string> mMeta;
+
+public:
+    Metadata(AVDictionary* tDict) {
+        AVDictionaryEntry* tag = nullptr;
+        for (auto key : mKeys) {
+            if ((tag = av_dict_get(tDict, key.c_str(), tag, AV_DICT_IGNORE_SUFFIX))) {
+                mMeta[tag->key] = tag->value;
+            }
+        }
+    }
+
+    std::string get(const std::string& tKey) {
+        try {
+            return mMeta.at(tKey);
+        }
+        catch (...) {
+            return "";
+        }
+    }
+
+
+};
+
 }
 }

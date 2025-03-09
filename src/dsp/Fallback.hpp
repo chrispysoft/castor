@@ -73,9 +73,10 @@ public:
 
 
     void runSync() {
+        loadQueue();
         while (mRunning) {
             if (mPlayers.empty()) {
-                loadQueue();
+                // loadQueue();
             }
 
             for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {

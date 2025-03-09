@@ -109,6 +109,16 @@ size_t nextMultiple(size_t value, size_t multiplier) {
 }
 
 
+static float linearDB(float lin) {
+    if (lin < 0) return -INFINITY;
+    return 10.0f * log10(lin);
+}
+
+static float dbLinear(float db) {
+    return pow(10.0f, db / 10.0f);
+}
+
+
 template <typename T>
 class RingBuffer {
     size_t mCapacity;
@@ -133,11 +143,9 @@ public:
         return mCapacity;
     }
 
-    void write(const T* tData, size_t tLen, bool tWait = false) {
-        if (tWait) {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
-        }
+    void write(const T* tData, size_t tLen) {
+        std::lock_guard<std::mutex> lock(mMutex);
+
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
             mTail = (mTail + 1) % mCapacity;
@@ -147,6 +155,8 @@ public:
                 mHead = (mHead + 1) % mCapacity; // overwrite (prevented if tWait)
             }
         }
+
+        mCV.notify_all();
     }
 
     size_t read(T* tData, size_t tLen) {
@@ -154,19 +164,23 @@ public:
             return 0;
         }
 
-        std::unique_lock<std::mutex> lock(mMutex);
+        {
+            std::unique_lock<std::mutex> lock(mMutex);
+            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
+        }
+
         size_t read = 0;
         while (read < tLen && mSize > 0) {
             tData[read++] = mBuffer[mHead];
             mHead = (mHead + 1) % mCapacity;
             --mSize;
         }
-        mCV.notify_all();
+        
         return read;
     }
 
     void flush() {
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock(mMutex);
         mSize = 0;
         mHead = 0;
         mTail = 0;

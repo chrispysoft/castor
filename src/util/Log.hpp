@@ -30,23 +30,27 @@
 
 namespace castor {
 
+enum class LogLevel : int { NOTSET, DEBUG, INFO, WARN, ERROR };
+
 class LogStream {
     std::ostream& mOut;
     std::ostream& mFile;
     std::ostringstream mBuf;
-    std::string mLabel;
-    std::string mPrefix;
-    std::string mSuffix;
+    const std::string mLabel;
+    const std::string mPrefix;
+    const std::string mSuffix;
     std::mutex& mMutex;
+    const bool mCondition;
 
 public:
-    LogStream(std::ostream& tOut, std::ostream& tFile, const std::string& tLabel, const std::string& tPrefix, const std::string& tSuffix, std::mutex& tMutex) :
+    LogStream(std::ostream& tOut, std::ostream& tFile, const std::string& tLabel, const std::string& tPrefix, const std::string& tSuffix, std::mutex& tMutex, bool tCondition) :
         mOut(tOut),
         mFile(tFile),
         mLabel(tLabel),
         mPrefix(tPrefix),
         mSuffix(tSuffix),
-        mMutex(tMutex)
+        mMutex(tMutex),
+        mCondition(tCondition)
     {}
 
     template <typename T>
@@ -56,10 +60,11 @@ public:
     }
 
     ~LogStream() {
-        std::lock_guard<std::mutex> guard(mMutex);
+        if (!mCondition) return;
         const auto& str = mBuf.str();
         if (!str.empty()) {
             auto timefmt = util::currTimeFmtMs();
+            std::lock_guard<std::mutex> lock(mMutex);
             mOut << mPrefix << timefmt << " " << mLabel << str << mSuffix << std::endl;
             mFile << timefmt << " " << mLabel << str << std::endl;
         }
@@ -70,6 +75,7 @@ class Log {
     
     std::ofstream mFile;
     std::mutex mMutex;
+    LogLevel mLevel = LogLevel::DEBUG;
 
 public:
 
@@ -81,7 +87,7 @@ public:
     static constexpr const char* Cyan = "\033[0;36m";
     static constexpr const char* Reset = "\033[0m";
 
-    void setFilePath(const std::string tFilePath) {
+    void setFilePath(const std::string& tFilePath) {
         mFile.open(tFilePath, std::ios::app);
         if (mFile.is_open()) {
             info() << "Log logging to " << tFilePath;
@@ -91,13 +97,18 @@ public:
     }
 
     ~Log() {
-        mFile.close();
+        if (mFile.is_open()) mFile.close();
     }
 
-    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex); }
-    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "[INFO ] ", color, Reset, mMutex); }
-    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "[WARN ] ", color, Reset, mMutex); }
-    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex); }
+    void setLevel(int tLevelRaw) {
+        mLevel = LogLevel(tLevelRaw);
+        info() << "Log set level " << tLevelRaw;
+    }
+
+    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex, mLevel <= LogLevel::DEBUG); }
+    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "[INFO ] ", color, Reset, mMutex, mLevel <= LogLevel::INFO); }
+    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "[WARN ] ", color, Reset, mMutex, mLevel <= LogLevel::WARN); }
+    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex, mLevel <= LogLevel::ERROR); }
 };
 
 Log log;

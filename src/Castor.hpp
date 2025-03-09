@@ -41,6 +41,7 @@ class Castor {
         mEngine(mConfig)
     {
         log.setFilePath(mConfig.logPath);
+        log.setLevel(mConfig.logLevel);
 
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
@@ -64,8 +65,8 @@ public:
 
     void run(int argc, char* argv[]) {
         mRunning = true;
-        mEngine.parseArgs(util::ArgumentParser(argc, argv).args());
         mEngine.start();
+        mEngine.parseArgs(util::ArgumentParser(argc, argv).args());
         {
             std::unique_lock<std::mutex> lock(mMutex);
             mCV.wait(lock, [&]{ return !mRunning; });
@@ -76,7 +77,7 @@ public:
         log.info() << "Castor terminating...";
         mEngine.stop();
         {
-            std::unique_lock<std::mutex> lock(mMutex);
+            std::lock_guard<std::mutex> lock(mMutex);
             mRunning = false;
             mCV.notify_all();
         }

@@ -46,15 +46,11 @@ public:
     size_t writePosition() override { return mWritePos; }
     size_t capacity() override { return mCapacity; }
 
-    float memorySizeMB() override {
+    float memorySizeMiB() override {
         static constexpr float kibi = 1024.0f;
         static constexpr float mibi = kibi * kibi;
         float bytesz = mCapacity * sizeof(T);
         return bytesz / mibi;
-    }
-
-    void align() override {
-        mReadPos = (mWritePos + mCapacity/2) % mCapacity;
     }
 
     void resize(size_t tCapacity, bool tOverwrite) override {
@@ -74,7 +70,7 @@ public:
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity || mCapacity == 0; });
+            mCV.wait(lock, [&]{ return mSize + tLen < mCapacity || mCapacity == 0; });
         }
 
         size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
@@ -115,7 +111,7 @@ public:
             // log.debug() << "Unexpected overlap in read";
         }
 
-        std::unique_lock<std::mutex> lock(mMutex);
+        std::lock_guard<std::mutex> lock(mMutex);
 
         mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
         mSize -= tLen;
@@ -139,19 +135,20 @@ class StreamPlayer : public Player {
     StreamBuffer<sam_t> mStreamBuffer;
 
 public:
-    StreamPlayer(double tSampleRate, const std::string tName = "") : Player(tName),
+    StreamPlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate),
-        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 16))
+        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
     {
-        preloadTime = 10;
+        category = "STRM";
         mBuffer = &mStreamBuffer;
     }
     
-    ~StreamPlayer() {
-        // log.debug() << "StreamPlayer " << name << " dealloc...";
-        // if (state != IDLE) stop();
-        // log.debug() << "StreamPlayer " << name << " dealloced";
-    }
+    // ~StreamPlayer() {
+    //     log.debug() << "StreamPlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "StreamPlayer " << name << " dealloced";
+    // }
 
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;
@@ -160,13 +157,16 @@ public:
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL);
+        
+        if (playItem) playItem->metadata = mReader->metadata();
+
         mLoadWorker = std::thread([this] {
             mReader->read(mStreamBuffer);
         });
     }
 
     void play() override {
-        mStreamBuffer.align();
+        // mStreamBuffer.align();
         Player::play();
     }
 

@@ -31,20 +31,23 @@ class LinePlayer : public Player {
     
 
 public:
-    LinePlayer(double tSampleRate, const std::string& tName = "") : Player(tName),
+    LinePlayer(float tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate)
     {
-        preloadTime = 5;
+        category = "LINE";
     }
 
-    ~LinePlayer() {
+    // ~LinePlayer() {
+    //     log.debug() << "LinePlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "LinePlayer " << name << " dealloced";
+    // }
 
-    }
-
-    void schedule(const PlayItem& item) override {
-        playItem = std::move(item);
-        state = CUED;
-    }
+    // void schedule(const PlayItem& item) override {
+    //     playItem = std::move(item);
+    //     state = CUED;
+    // }
 
     void load(const std::string& tURL, double seek = 0) override {}
 

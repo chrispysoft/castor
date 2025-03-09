@@ -41,14 +41,12 @@ public:
     size_t writePosition() override { return mWritePos; }
     size_t capacity() override { return mCapacity; }
 
-    float memorySizeMB() override {
+    float memorySizeMiB() override {
         static constexpr float kibi = 1024.0f;
         static constexpr float mibi = kibi * kibi;
         float bytesz = mCapacity * sizeof(T);
         return bytesz / mibi;
     }
-
-    void align() override {}
 
     void resize(size_t tCapacity, bool tOverwrite) override {
         mReadPos = 0;
@@ -94,18 +92,19 @@ class FilePlayer : public Player {
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
-    FilePlayer(double tSampleRate, const std::string tName = "") : Player(tName),
+    FilePlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
+        Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate)
     {
-        preloadTime = 3600;
+        category = "FILE";
         mBuffer = &mFileBuffer;
     }
     
-    ~FilePlayer() {
-        // log.debug() << "FilePlayer " << name << " dealloc...";
-        // if (state != IDLE) stop();
-        // log.debug() << "FilePlayer " << name << " dealloced";
-    }
+    // ~FilePlayer() {
+    //     log.debug() << "FilePlayer " << name << " dealloc...";
+    //     if (state != IDLE) stop();
+    //     log.debug() << "FilePlayer " << name << " dealloced";
+    // }
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "FilePlayer load " << tURL << " position " << seek;
@@ -113,6 +112,8 @@ public:
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
+
+        if (playItem) playItem->metadata = mReader->metadata();
 
         auto sampleCount = mReader->sampleCount();
 

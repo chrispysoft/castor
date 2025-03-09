@@ -27,7 +27,7 @@
 namespace castor {
 namespace audio {
 
-using sam_t = int16_t;
+using sam_t = float;
 
 }
 }
