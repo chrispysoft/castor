@@ -172,6 +172,7 @@ private:
                             auto maxEnd = std::time(0) + mConfig.preloadTimeFile;
                             for (const auto& itm : m3u) {
                                 if (itm->end <= maxEnd) {
+                                    itm->program = pr;
                                     items.emplace_back(itm);
                                 }
                             }
