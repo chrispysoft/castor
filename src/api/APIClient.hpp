@@ -40,7 +40,6 @@ public:
     Client(const Config& tConfig) :
         mConfig(tConfig),
         mAuthHeaders {
-            "Authorization: Bearer " + mConfig.playlistToken,
             "content-type: application/json"
         }
     {}
@@ -71,17 +70,17 @@ public:
         return programPtrs;
     }
 
-    std::shared_ptr<api::Playlist> getPlaylist(int showID) {
-        auto url = mConfig.playlistURL + std::to_string(showID);
-        log.debug() << "APIClient getPlaylist " << url;
+    std::shared_ptr<api::Media> getMedia(int showID) {
+        auto url = mConfig.mediaURL + std::to_string(showID) + "/";
+        log.debug() << "APIClient getMedia " << url;
 
-        auto res = mHTTPClientProgram.get(url, mConfig.playlistToken);
+        auto res = mHTTPClientProgram.get(url);
         if (res.code != 200) {
-            throw std::runtime_error("APIClient getPlaylist failed: " + std::to_string(res.code) + " " + res.response);
+            throw std::runtime_error("APIClient getMedia failed: " + std::to_string(res.code) + " " + res.response);
         }
 
         nlohmann::json j = nlohmann::json::parse(res.response);
-        return std::make_shared<api::Playlist>(j.get<api::Playlist>());
+        return std::make_shared<api::Media>(j.get<api::Media>());
     }
 
     void postPlaylog(const PlayLog& item) {

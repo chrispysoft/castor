@@ -141,16 +141,16 @@ private:
         const auto program = mAPIClient.getProgram(mConfig.preloadTimeFile);
         for (const auto& pr : program) {
             // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
-            if (pr->playlistId <= 0) {
-                log.error() << "Calendar item '" << pr->showName << "' has no playlist id";
+            if (pr->mediaId <= 0) {
+                log.error() << "Calendar item '" << pr->showName << "' has no media id";
                 continue;
             }
-            const auto playlist = mAPIClient.getPlaylist(pr->playlistId);
+            const auto media = mAPIClient.getMedia(pr->mediaId);
             const auto prStart = util::parseDatetime(pr->start);
             const auto prEnd = util::parseDatetime(pr->end);
             auto itemStart = prStart;
 
-            for (const auto& entry : playlist->entries) {
+            for (const auto& entry : media->entries) {
                 // log.debug() << entry.uri;
                 auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - itemStart;
                 auto itemEnd = itemStart + entryDuration;

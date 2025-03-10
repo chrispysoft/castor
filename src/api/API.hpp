@@ -28,7 +28,7 @@ namespace api {
 struct Program {
     int timeslotId = -1;
     int showId = -1;
-    int playlistId = -1;
+    int mediaId = -1;
     std::string id;
     std::string start;
     std::string end;
@@ -36,7 +36,7 @@ struct Program {
     std::string episodeTitle;
 
     bool operator==(const Program& other) const {
-        return other.timeslotId == this->timeslotId && other.showId == this->showId && other.playlistId == this->playlistId && other.id == this->id;
+        return other.timeslotId == this->timeslotId && other.showId == this->showId && other.mediaId == this->mediaId && other.id == this->id;
     }
 };
 
@@ -56,15 +56,15 @@ void from_json(const nlohmann::json& j, Program& t) {
     }
     
     try {
-        j.at("playlistId").get_to(t.playlistId);
+        j.at("mediaId").get_to(t.mediaId);
     }
     catch (...) {
         try {
-            j.at("schedule").at("defaultPlaylistId").get_to(t.playlistId);
+            j.at("schedule").at("defaultMediaId").get_to(t.mediaId);
         }
         catch (...) {
             try {
-                j.at("show").at("defaultPlaylistId").get_to(t.playlistId);
+                j.at("show").at("defaultMediaId").get_to(t.mediaId);
             }
             catch (...) {}
         }
@@ -77,7 +77,7 @@ void to_json(nlohmann::json& j, const Program& p) {
         {"episodeTitle", p.episodeTitle},
         {"timeslotId", p.timeslotId},
         {"showId", p.showId},
-        {"playlistId", p.playlistId},
+        {"mediaId", p.mediaId},
         {"id", p.id},
         {"start", p.start},
         {"end", p.end}
@@ -85,7 +85,7 @@ void to_json(nlohmann::json& j, const Program& p) {
 }
 
 
-struct Playlist {
+struct Media {
     struct Entry {
         std::string uri;
         int duration;
@@ -94,7 +94,7 @@ struct Playlist {
     std::vector<Entry> entries;
 };
 
-void from_json(const nlohmann::json& j, Playlist::Entry& e) {
+void from_json(const nlohmann::json& j, Media::Entry& e) {
     j.at("uri").get_to(e.uri);
     try {
         j.at("duration").get_to(e.duration);
@@ -104,9 +104,9 @@ void from_json(const nlohmann::json& j, Playlist::Entry& e) {
     }
 }
 
-void from_json(const nlohmann::json& j, Playlist& p) {
-    j.at("id").get_to(p.id);
-    j.at("entries").get_to(p.entries);
+void from_json(const nlohmann::json& j, Media& m) {
+    j.at("id").get_to(m.id);
+    j.at("entries").get_to(m.entries);
 }
 
 }
@@ -147,7 +147,7 @@ struct PlayLog {
     float trackDuration;
     int trackType = 0;
     int trackNum = 1;
-    int playlistId = -1;
+    int mediaId = -1;
     int showId = -1;
     int logSource = 1;
     
@@ -166,7 +166,7 @@ struct PlayLog {
         if (program) {
             showId = program->showId;
             showName = program->showName;
-            playlistId = program->playlistId;
+            mediaId = program->mediaId;
             timeslotId = std::to_string(program->timeslotId);
         }
     }
@@ -181,7 +181,7 @@ void to_json(nlohmann::json& j, const PlayLog& p) {
         {"trackDuration", p.trackDuration},
         {"trackType", p.trackType},
         {"trackNum", p.trackNum},
-        {"playlistId", p.playlistId},
+        {"mediaId", p.mediaId},
         {"timeslotId", p.timeslotId},
         {"showId", p.showId},
         {"showName", p.showName},
