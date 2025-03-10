@@ -231,7 +231,7 @@ public:
         for (auto [itm, plr] : mPlayerMap) {
             if (itm->start >= tItem->start && itm->end <= tItem->end) {
                 if (*itm == *tItem) {
-                    log.info() << "Item already scheduled " << itm->start;
+                    // log.debug() << "Item already scheduled " << itm->start;
                     return;
                 } else {
                     log.error() << "Engine schedule overlap " << tItem->start << " " << itm->start;
