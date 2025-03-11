@@ -292,7 +292,7 @@ public:
     }
 
     void playItemDidStart(std::shared_ptr<PlayItem> tItem) {
-        log.info() << "Engine playItemDidStart";
+        log.debug() << "Engine playItemDidStart";
         if (!tItem) {
             log.error() << "Engine playItemDidStart item is null";
             return;
@@ -316,7 +316,7 @@ public:
     
         if (mCurrProgram != tItem->program) {
             mCurrProgram = tItem->program;
-            log.info() << "Engine program changed to " << mCurrProgram->showName;
+            log.info() << "Program changed to '" << mCurrProgram->showName << "'";
 
             if (mCurrProgram && mConfig.audioRecordPath.size() > 0) {
                 mRecorder.stop();
