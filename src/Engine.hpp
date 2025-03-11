@@ -95,6 +95,7 @@ class Engine : public audio::Client::Renderer {
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
     util::Timer mTCPUpdateTimer;
+    util::Timer mEjectTimer;
     std::shared_ptr<api::Program> mCurrProgram = nullptr;
     // std::queue<PlayItem> mScheduleItems = {};
     // std::mutex mScheduleItemsMutex;
@@ -118,6 +119,7 @@ public:
         mStreamOutput(mConfig.sampleRate),
         mReportTimer(mConfig.healthReportInterval),
         mTCPUpdateTimer(1),
+        mEjectTimer(1),
         mScheduleQueue("schedule queue", 1),
         mAPIReportQueue("report queue", 1),
         mItemChangedQueue("change queue", 1)
@@ -163,7 +165,7 @@ public:
             mTCPServer.start();
         }
         catch (const std::exception& e) {
-            log.error() << "Engine failed to start socket server: " << e.what();
+            log.error() << "Engine failed to start TCP server: " << e.what();
         }
         log.info() << "Engine started";
     }
@@ -208,9 +210,11 @@ public:
             updateStatus();
         }
 
-        mScheduleQueue.dispatch([this] {
-            cleanup();
-        });
+        if (mEjectTimer.query()) {
+            mScheduleQueue.dispatch([this] {
+                cleanup();
+            });
+        }
     }
 
     void calendarChanged(const std::vector<std::shared_ptr<PlayItem>>& playItems) {
@@ -231,7 +235,7 @@ public:
         for (auto [itm, plr] : mPlayerMap) {
             if (itm->start >= tItem->start && itm->end <= tItem->end) {
                 if (*itm == *tItem) {
-                    log.info() << "Item already scheduled " << itm->start;
+                    // log.debug() << "Item already scheduled " << itm->start;
                     return;
                 } else {
                     log.error() << "Engine schedule overlap " << tItem->start << " " << itm->start;
@@ -288,7 +292,7 @@ public:
     }
 
     void playItemDidStart(std::shared_ptr<PlayItem> tItem) {
-        log.info() << "Engine playItemDidStart";
+        log.debug() << "Engine playItemDidStart";
         if (!tItem) {
             log.error() << "Engine playItemDidStart item is null";
             return;
@@ -312,7 +316,7 @@ public:
     
         if (mCurrProgram != tItem->program) {
             mCurrProgram = tItem->program;
-            log.info() << "Engine program changed to " << mCurrProgram->showName;
+            log.info() << "Program changed to '" << mCurrProgram->showName << "'";
 
             if (mCurrProgram && mConfig.audioRecordPath.size() > 0) {
                 mRecorder.stop();

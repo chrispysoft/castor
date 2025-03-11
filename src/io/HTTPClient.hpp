@@ -52,7 +52,7 @@ public:
         if (mCURL) curl_easy_cleanup(mCURL);
     }
 
-    Result get(const std::string& tURL, const std::string& tBearerToken = "") {
+    Result get(const std::string& tURL) {
         using namespace std;
         using json = nlohmann::json;
 
@@ -62,10 +62,10 @@ public:
         curl_easy_setopt(mCURL, CURLOPT_WRITEDATA, static_cast<void*>(&rxBuf));
         curl_easy_setopt(mCURL, CURLOPT_WRITEFUNCTION, &HTTPClient::writeCallback);
         
-        if (!tBearerToken.empty()) {
-            curl_easy_setopt(mCURL, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
-            curl_easy_setopt(mCURL, CURLOPT_XOAUTH2_BEARER, tBearerToken.c_str());
-        }
+        // if (!tBearerToken.empty()) {
+        //     curl_easy_setopt(mCURL, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
+        //     curl_easy_setopt(mCURL, CURLOPT_XOAUTH2_BEARER, tBearerToken.c_str());
+        // }
 
         auto res = curl_easy_perform(mCURL);
         if (res == CURLE_OK) {

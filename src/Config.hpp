@@ -45,11 +45,10 @@ class Config {
     static constexpr const char* kStreamOutGenre = "";
     static constexpr const char* kStreamOutHREF = "";
     static constexpr const char* kProgramURL = "";
-    static constexpr const char* kPlaylistURL = "";
+    static constexpr const char* kMediaURL = "";
     static constexpr const char* kPlaylogURL = "";
     static constexpr const char* kHealthURL = "";
     static constexpr const char* kClockURL = "";
-    static constexpr const char* kPlaylistToken = "";
     static constexpr const char* kLogLevel = "1";
     static constexpr const char* kCalendarRefreshInterval = "60";
     static constexpr const char* kHealthReportInterval = "60";
@@ -96,11 +95,10 @@ public:
     std::string streamOutGenre;
     std::string streamOutHREF;
     std::string programURL;
-    std::string playlistURL;
+    std::string mediaURL;
     std::string playlogURL;
     std::string healthURL;
     std::string clockURL;
-    std::string playlistToken;
     int logLevel;
     int calendarRefreshInterval;
     int healthReportInterval;
@@ -152,11 +150,10 @@ public:
         streamOutGenre = get(map, "stream_out_genre", kStreamOutGenre);
         streamOutHREF = get(map, "stream_out_href", kStreamOutHREF);
         programURL = get(map, "program_url", kProgramURL);
-        playlistURL = get(map, "playlist_url", kPlaylistURL);
+        mediaURL = get(map, "media_url", kMediaURL);
         playlogURL = get(map, "playlog_url", kPlaylogURL);
         healthURL = get(map, "health_url", kHealthURL);
         clockURL = get(map, "clock_url", kClockURL);
-        playlistToken = get(map, "playlist_token", kPlaylistToken);
         logLevel = std::stoi(get(map, "log_level", kLogLevel));
         calendarRefreshInterval = std::stoi(get(map, "calendar_refresh_interval", kCalendarRefreshInterval));
         healthReportInterval = std::stoi(get(map, "health_report_interval", kHealthReportInterval));
@@ -185,11 +182,10 @@ public:
         << "\n\t streamOutGenre=" << streamOutGenre
         << "\n\t streamOutHREF=" << streamOutHREF
         << "\n\t programURL=" << programURL
-        << "\n\t playlistURL=" << playlistURL
+        << "\n\t mediaURL=" << mediaURL
         << "\n\t playlogURL=" << playlogURL
         << "\n\t healthURL=" << healthURL
         << "\n\t clockURL=" << clockURL
-        << "\n\t playlistToken=<hidden>"
         << "\n\t calendarRefreshInterval=" << calendarRefreshInterval
         << "\n\t healthReportInterval=" << healthReportInterval
         << "\n\t tcpPort=" << tcpPort
