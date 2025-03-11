@@ -58,6 +58,14 @@ public:
 
     
     void run() {
+        if (mFallbackURL.empty()) {
+            log.error() << "Fallback folder not set";
+            return;
+        }
+        if (!std::filesystem::exists(mFallbackURL)) {
+            log.error() << "Fallback folder does not exist";
+            return;
+        }
         mRunning = true;
         mWorker = std::thread(&Fallback::runSync, this);
         log.debug() << "Fallback running";
