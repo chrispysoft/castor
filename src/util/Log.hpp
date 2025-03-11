@@ -30,7 +30,7 @@
 
 namespace castor {
 
-enum class LogLevel : int { NOTSET, DEBUG, INFO, WARN, ERROR };
+enum class LogLevel : int { Notset, Debug, Info, Warn, Error };
 
 class LogStream {
     std::ostream& mOut;
@@ -75,7 +75,7 @@ class Log {
     
     std::ofstream mFile;
     std::mutex mMutex;
-    LogLevel mLevel = LogLevel::DEBUG;
+    LogLevel mLevel = LogLevel::Debug;
 
 public:
 
@@ -105,10 +105,10 @@ public:
         info() << "Log set level " << tLevelRaw;
     }
 
-    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex, mLevel <= LogLevel::DEBUG); }
-    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "[INFO ] ", color, Reset, mMutex, mLevel <= LogLevel::INFO); }
-    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "[WARN ] ", color, Reset, mMutex, mLevel <= LogLevel::WARN); }
-    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex, mLevel <= LogLevel::ERROR); }
+    LogStream debug(const char* color = Cyan)  { return LogStream(std::cerr, mFile, "[DEBUG] ", color, Reset, mMutex, mLevel <= LogLevel::Debug); }
+    LogStream info(const char* color = Green)  { return LogStream(std::cerr, mFile, "[INFO ] ", color, Reset, mMutex, mLevel <= LogLevel::Info); }
+    LogStream warn(const char* color = Yellow) { return LogStream(std::cerr, mFile, "[WARN ] ", color, Reset, mMutex, mLevel <= LogLevel::Warn); }
+    LogStream error(const char* color = Red)   { return LogStream(std::cerr, mFile, "[ERROR] ", color, Reset, mMutex, mLevel <= LogLevel::Error); }
 };
 
 Log log;
