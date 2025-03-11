@@ -165,7 +165,7 @@ public:
             mTCPServer.start();
         }
         catch (const std::exception& e) {
-            log.error() << "Engine failed to start socket server: " << e.what();
+            log.error() << "Engine failed to start TCP server: " << e.what();
         }
         log.info() << "Engine started";
     }
