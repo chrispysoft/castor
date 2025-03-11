@@ -56,48 +56,45 @@ public:
     void resize(size_t tCapacity, bool tOverwrite) override {
         mOverwrite = tOverwrite;
         mReadPos = 0;
-        mWritePos = 0; // mOverwrite ? tCapacity / 2 : 0;
+        mWritePos = 0;
         mSize = 0;
         mBuffer.resize(tCapacity);
-        std::lock_guard<std::mutex> lock(mMutex);
         mCapacity = tCapacity;
-        mCV.notify_all();
     }
 
     size_t write(const T* tData, size_t tLen) override {
-        if (!tData || tLen == 0) return 0;
         if (tLen > mCapacity) return 0;
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen < mCapacity || mCapacity == 0; });
+            mCV.wait(lock, [&]{ return mSize.load(std::memory_order_acquire) + tLen < mCapacity || mCapacity == 0; });
         }
 
-        size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
-        if (tLen > freeSpace) {
-            if (!mOverwrite) return 0;
-            mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
-            mSize -= tLen;
-        }
+        if (mCapacity == 0) return 0;
+
+        // size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
+        // if (tLen > freeSpace) {
+        //     if (!mOverwrite) return 0;
+        //     mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
+        //     mSize -= tLen;
+        // }
 
         auto writable = std::min(tLen, mCapacity - mWritePos);
         memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
 
         auto overlap = tLen - writable;
         if (overlap > 0) {
-            // log.debug() << "Expected overlap in write of " << overlap;
+            log.warn() << "Unexpected buffer data overlap in write";
             memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
         }
 
         mWritePos.store((mWritePos + tLen) % mCapacity, std::memory_order_relaxed);
-        mSize += tLen;
+        mSize.store(mSize.load(std::memory_order_relaxed) + tLen, std::memory_order_relaxed);
         return tLen;
     }
 
     size_t read(T* tData, size_t tLen) override {
         if (!tData || tLen == 0) return 0;
-
-        // std::unique_lock<std::mutex> lock(mMutex); // NB if realtime thread
 
         auto available = mSize.load(std::memory_order_relaxed);
         if (tLen > available) return 0;
@@ -107,16 +104,14 @@ public:
 
         auto overlap = tLen - readable;
         if (overlap > 0) {
+            log.warn() << "Unexpected buffer data overlap in read";
             memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
-            // log.debug() << "Unexpected overlap in read";
         }
 
-        std::lock_guard<std::mutex> lock(mMutex);
+        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_release);
+        mSize.store(mSize.load(std::memory_order_relaxed) - tLen, std::memory_order_release);
 
-        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
-        mSize -= tLen;
-
-        mCV.notify_all();
+        mCV.notify_one();
 
         return tLen;
     }
@@ -125,8 +120,11 @@ public:
 class StreamPlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
-    static constexpr size_t kBufferTimeHint = 15;
-    
+
+    static size_t calcBufferSize(float tSampleRate, time_t tPreloadTime, size_t tBlockSize) {
+        return util::nextMultiple(tSampleRate * kChannelCount * tPreloadTime * 2, tBlockSize);
+    }
+
     const double mSampleRate;
     const size_t mBufferSize;
     std::thread mLoadWorker;
@@ -138,7 +136,7 @@ public:
     StreamPlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0) :
         Player(tSampleRate, tName, tPreloadTime),
         mSampleRate(tSampleRate),
-        mBufferSize(util::nextMultiple(mSampleRate * kChannelCount * kBufferTimeHint, 2048))
+        mBufferSize(calcBufferSize(mSampleRate, tPreloadTime, 2048))
     {
         category = "STRM";
         mBuffer = &mStreamBuffer;
@@ -167,6 +165,7 @@ public:
 
     void play() override {
         // mStreamBuffer.align();
+        // log.debug() << "StreamPlayer buffer pos write / read / capacity: " << mStreamBuffer.writePosition() << " / " << mStreamBuffer.readPosition() << " / " << mStreamBuffer.capacity();
         Player::play();
     }
 
