@@ -95,6 +95,7 @@ class Engine : public audio::Client::Renderer {
     std::atomic<bool> mRunning = false;
     util::Timer mReportTimer;
     util::Timer mTCPUpdateTimer;
+    util::Timer mEjectTimer;
     std::shared_ptr<api::Program> mCurrProgram = nullptr;
     // std::queue<PlayItem> mScheduleItems = {};
     // std::mutex mScheduleItemsMutex;
@@ -118,6 +119,7 @@ public:
         mStreamOutput(mConfig.sampleRate),
         mReportTimer(mConfig.healthReportInterval),
         mTCPUpdateTimer(1),
+        mEjectTimer(1),
         mScheduleQueue("schedule queue", 1),
         mAPIReportQueue("report queue", 1),
         mItemChangedQueue("change queue", 1)
@@ -208,9 +210,11 @@ public:
             updateStatus();
         }
 
-        mScheduleQueue.dispatch([this] {
-            cleanup();
-        });
+        if (mEjectTimer.query()) {
+            mScheduleQueue.dispatch([this] {
+                cleanup();
+            });
+        }
     }
 
     void calendarChanged(const std::vector<std::shared_ptr<PlayItem>>& playItems) {
