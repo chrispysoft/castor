@@ -194,6 +194,10 @@ private:
                             uri += defaultFileSuffix;
                         }
                     }
+                    else if (uri.empty()) { // assume default location
+                        uri = mConfig.audioSourcePath + "/" + std::to_string(pr->showId) + "/" + std::to_string(pr->mediaId) + defaultFileSuffix;
+                        log.debug() << "Calendar generated file url '" << uri << "'";
+                    }
                     items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
                 }
                 itemStart += entryDuration;
