@@ -32,12 +32,14 @@ namespace audio {
 class Fallback : public Input {
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
+    static constexpr time_t kLoadRetryInterval = 10;
 
     const double mSampleRate;
     const std::string mFallbackURL;
     SineOscillator mOscL;
     SineOscillator mOscR;
     size_t mBufferTime;
+    time_t mLastLoadAttempt = 0;
     std::thread mWorker;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mActive = false;
@@ -81,24 +83,26 @@ public:
 
 
     void runSync() {
-        loadQueue();
         while (mRunning) {
-            if (mPlayers.empty()) {
-                // loadQueue();
+            auto now = std::time(0);
+
+            if (mPlayers.empty() && now >= mLastLoadAttempt + kLoadRetryInterval) {
+                loadQueue();
+                mLastLoadAttempt = now;
             }
 
-            for (auto it = mPlayers.begin(); it != mPlayers.end(); ) {
-                auto player = *it;
-                if (player->mBuffer->readPosition() >= player->mBuffer->capacity()) {
-                    player->stop();
-                    it = mPlayers.erase(it); // erase() returns next valid iterator
-                } else {
-                    // player->work();
-                    ++it;
-                }
+            auto isFinished = [](const std::shared_ptr<Player>& player) {
+                return player->mBuffer->readPosition() >= player->mBuffer->capacity();
+            };
+
+            while (!mPlayers.empty() && isFinished(mPlayers.front())) {
+                mPlayers.front()->stop();
+                mPlayers.pop_front();
             }
 
-            if (!mPlayers.empty()) mCurrPlayer = mPlayers.front();
+            if (!mPlayers.empty()) {
+                if (mCurrPlayer != mPlayers.front()) mCurrPlayer = mPlayers.front();
+            }
             else mCurrPlayer = nullptr;
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
