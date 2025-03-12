@@ -27,7 +27,7 @@ namespace audio {
 
 class CodecReader : public CodecBase {
 
-    static constexpr size_t kFrameBufferSize = 4096; // 128 - 2048
+    static constexpr size_t kFrameBufferSize = 16384; // 128 - 2048
     static constexpr size_t kAudioBufferSize = 1024;
 
     size_t mSampleCount;
