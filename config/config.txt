@@ -4,8 +4,8 @@ log_level=2
 # Paths
 log_path=./logs/castor.log
 socket_path=./socket/castor.socket
-audio_source_path=/opt/MP3/Sendungsarch/aura
-audio_playlist_path=/opt/aura/audio/playlist
+audio_source_path=./audio/source
+audio_playlist_path=./audio/playlist
 # audio_record_path=./audio/recordings
 audio_fallback_path=./audio/fallback
 

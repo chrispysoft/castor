@@ -67,14 +67,18 @@ public:
 
 class Fader {
 public:
+    const float fadeInTime;
+    const float fadeOutTime;
     std::vector<float> fadeInCurve;
     std::vector<float> fadeOutCurve;
     std::atomic<int> fadeInCurveIndex = -1;
     std::atomic<int> fadeOutCurveIndex = -1;
 
-    Fader(float fadeInTime, float fadeOutTime, float sampleRate) :
-        fadeInCurve(fadeInTime * sampleRate),
-        fadeOutCurve(fadeOutTime * sampleRate)
+    Fader(float tFadeInTime, float tFadeOutTime, float tSampleRate) :
+        fadeInTime(tFadeInTime),
+        fadeOutTime(tFadeOutTime),
+        fadeInCurve(fadeInTime * tSampleRate),
+        fadeOutCurve(fadeOutTime * tSampleRate)
     {
         generateFadeCurves();
     }
@@ -106,7 +110,7 @@ public:
     Player(float tSampleRate, const std::string& name = "", time_t tPreloadTime = 0) :
         Input(name),
         BufferedSource(),
-        Fader(2, 2, tSampleRate),
+        Fader(1, 1, tSampleRate),
         preloadTime(tPreloadTime)
     {
         generateFadeCurves();
@@ -160,7 +164,6 @@ public:
     }
 
     virtual void stop() {
-        std::lock_guard<std::mutex> lock(scheduleMutex);
         state = IDLE;
         isScheduling = false;
         scheduleCV.notify_all();
@@ -186,9 +189,9 @@ public:
     }
 
     void waitForEvents() {
-        auto loadTime = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
-        auto fadeInTime = std::chrono::system_clock::from_time_t(playItem->start);
-        auto fadeOutTime = std::chrono::system_clock::from_time_t(playItem->end - 2);
+        // auto loadTm = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
+        auto fadeInTm = std::chrono::system_clock::from_time_t(playItem->start);
+        auto fadeOutTm = std::chrono::system_clock::from_time_t(playItem->end - (time_t) round(fadeOutTime));
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
@@ -213,7 +216,7 @@ public:
             if (!isScheduling) return;
 
             // wait until fade-in or stopped
-            scheduleCV.wait_until(lock, fadeInTime, [this] { return !isScheduling; });
+            scheduleCV.wait_until(lock, fadeInTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             log.debug(Log::Magenta) << "PLAY " << name;
@@ -222,7 +225,7 @@ public:
             fadeInCurveIndex = 0;
 
             // wait until fade-out or stopped
-            scheduleCV.wait_until(lock, fadeOutTime, [this] { return !isScheduling; });
+            scheduleCV.wait_until(lock, fadeOutTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             log.info(Log::Magenta) << "FADE OUT " << name;
@@ -320,7 +323,6 @@ public:
         time_t pos = std::max(0l, std::time(0) - static_cast<time_t>(playItem->start));
         try {
             load(playItem->uri, pos);
-            std::lock_guard<std::mutex> lock(scheduleMutex);
             state = CUED;
             isLoaded = true;
             scheduleCV.notify_one();
