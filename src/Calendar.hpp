@@ -100,14 +100,17 @@ public:
         auto parser = util::CSVParser(tURL);
         auto rows = parser.rows();
         auto now = std::time(0);
+        auto items = std::vector<std::shared_ptr<PlayItem>>();
         for (const auto& row : rows) {
             if (row.size() != 3) continue;
             auto start = now + std::stoi(row[0]);
             auto end   = now + std::stoi(row[1]);
             auto url   = row[2];
-            mItems.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
+            items.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
             // log.info(Log::Red) << start << " " << end << " " << url;
         }
+
+        mItems = items;
 
         if (calendarChangedCallback) {
             calendarChangedCallback(mItems);
