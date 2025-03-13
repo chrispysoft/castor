@@ -61,9 +61,15 @@ public:
         mRecorder.stop();
     }
 
-    void updateMetadata(const std::string& tURL, const std::string& tMetadata) {
-        log.debug() << "StreamOutput updateMetadata " << tMetadata;
-        auto url = tURL + "&mode=updinfo&song=" + tMetadata;
+    void updateMetadata(const std::string& tURL, std::shared_ptr<PlayItem> tItem) {
+        std::string songName;
+        auto program = tItem->program;
+        if (program) {
+            songName = program->showName;
+            std::replace(songName.begin(), songName.end(), ' ', '+');
+        }
+        log.debug() << "StreamOutput updateMetadata " << songName;
+        auto url = tURL + "&mode=updinfo&song=" + songName;
         auto res = mHTTPClient.get(url);
         auto code = res.code;
         if (code != 200) {

@@ -301,13 +301,7 @@ public:
         if (mStreamOutput.isRunning() && !mConfig.streamOutMetadataURL.empty()) {
             // log.debug() << "Engine updating stream metadata";
             try {
-                std::string songName;
-                auto program = tItem->program;
-                if (program) {
-                    songName = program->showName;
-                    std::replace(songName.begin(), songName.end(), ' ', '+');
-                }
-                mStreamOutput.updateMetadata(mConfig.streamOutMetadataURL, songName);
+                mStreamOutput.updateMetadata(mConfig.streamOutMetadataURL, tItem);
             }
             catch (const std::exception& e) {
                 log.error() << "Engine failed to update stream metadata: " << e.what();
