@@ -254,7 +254,7 @@ public:
     void cleanPlayers() {
         std::lock_guard<std::mutex> lock(mPlayersMutex);
         while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
+            // mPlayers.front()->stop();
             mPlayers.pop_front();
         }
     }

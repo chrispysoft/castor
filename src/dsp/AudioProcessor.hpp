@@ -192,6 +192,7 @@ public:
         // auto loadTm = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
         auto fadeInTm = std::chrono::system_clock::from_time_t(playItem->start);
         auto fadeOutTm = std::chrono::system_clock::from_time_t(playItem->end - (time_t) round(fadeOutTime));
+        auto stopTm = std::chrono::system_clock::from_time_t(playItem->end);
         
         {
             std::unique_lock<std::mutex> lock(scheduleMutex);
@@ -224,12 +225,19 @@ public:
             log.info(Log::Magenta) << "FADE IN " << name;
             fadeInCurveIndex = 0;
 
-            // wait until fade-out or stopped
+            // wait until fade-out
             scheduleCV.wait_until(lock, fadeOutTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             log.info(Log::Magenta) << "FADE OUT " << name;
             fadeOutCurveIndex = 0;
+
+            // wait until stop time
+            scheduleCV.wait_until(lock, stopTm, [this] { return !isScheduling; });
+            if (!isScheduling) return;
+
+            log.info(Log::Magenta) << "STOP " << name;
+            stop();
         }
     }
 
@@ -258,7 +266,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem->end + 1);
+        return std::time(0) > (playItem->end) && state == IDLE;
     }
 
 
