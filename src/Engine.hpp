@@ -211,9 +211,10 @@ public:
             }
 
             auto players = getPlayers();
-            for (auto player : players) {
+            for (const auto& player : players) {
                 if (player->isPlaying() && player != mActivePlayer) {
                     mActivePlayer = player;
+                    break;
                 }
             }
 
