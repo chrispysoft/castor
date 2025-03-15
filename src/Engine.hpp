@@ -213,6 +213,7 @@ public:
             auto players = getPlayers();
             for (const auto& player : players) {
                 if (player->isPlaying() && player != mActivePlayer) {
+                    // log.debug() << "set active player to " << player->name;
                     mActivePlayer = player;
                     break;
                 }
