@@ -341,7 +341,7 @@ public:
             }
         }
     
-        if (mCurrProgram != tItem->program) {
+        if (mCurrProgram != tItem->program && (!mCurrProgram || !tItem->program || *mCurrProgram != *tItem->program)) {
             mCurrProgram = tItem->program;
             programChanged();
         }
