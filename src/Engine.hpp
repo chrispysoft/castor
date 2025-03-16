@@ -88,7 +88,6 @@ class Engine : public audio::Client::Renderer {
     audio::StreamOutput mStreamOutput;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mScheduleItemsChanged = false;
-    std::thread mWorkThread;
     std::thread mScheduleThread;
     std::thread mLoadThread;
     std::mutex mScheduleItemsMutex;
@@ -146,7 +145,6 @@ public:
         mCalendar.start();
         mAudioClient.start(mConfig.realtimeRendering);
         mFallback.run();
-        mWorkThread = std::thread(&Engine::runWork, this);;
         mScheduleThread = std::thread(&Engine::runSchedule, this);
         mLoadThread = std::thread(&Engine::runLoad, this);
         // mRenderThread = std::thread(&Engine::render, this);
@@ -170,7 +168,6 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
-        if (mWorkThread.joinable()) mWorkThread.join();
         if (mScheduleThread.joinable()) mScheduleThread.join();
         if (mLoadThread.joinable()) mLoadThread.join();
         for (auto player : mPlayers) player->stop();
