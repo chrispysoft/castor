@@ -49,6 +49,9 @@ class SilenceDetector {
     std::vector<sam_t> mBuffer;
     
 public:
+
+    std::function<void(bool silence)> silenceChangedCallback;
+
     SilenceDetector(float tThreshold, time_t tStartDuration, time_t tStopDuration) :
         mThresholdLin(util::dbLinear(tThreshold)),
         mStartDuration(tStartDuration),
@@ -71,6 +74,14 @@ public:
 
     float currentRMS() const {
         return mCurrRMS;
+    }
+
+
+    void setSilence(bool tSilence) {
+        if (mSilence != tSilence) {
+            mSilence = tSilence;
+            if (silenceChangedCallback) silenceChangedCallback(mSilence);
+        }
     }
 
     
@@ -115,7 +126,7 @@ public:
             } else {
                 if (now - mSilenceStart > mStartDuration) {
                     mSilenceStop = 0;
-                    mSilence = true;
+                    setSilence(true);
                 }
             }
         } else {
@@ -124,7 +135,7 @@ public:
             } else {
                 if (now - mSilenceStop > mStopDuration) {
                     mSilenceStart = 0;
-                    mSilence = false;
+                    setSilence(false);
                 }
             }
         }

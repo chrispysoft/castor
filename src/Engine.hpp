@@ -124,7 +124,8 @@ public:
         mAPIReportQueue("report queue", 1),
         mItemChangedQueue("change queue", 1)
     {
-        mCalendar.calendarChangedCallback = [this](const auto& items) { this->onCalendarChange(items); };
+        mCalendar.calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
+        mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
         mAudioClient.setRenderer(this);
         mPlayerFactory = std::make_unique<PlayerFactory>(mConfig);
     }
@@ -310,14 +311,15 @@ public:
 
     // callbacks
     
-    void onCalendarChange(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
+    void onCalendarChanged(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
+        log.debug() << "Engine onCalendarChanged";
         std::lock_guard<std::mutex> lock(mScheduleItemsMutex);
         mScheduleItems = tItems;
         mScheduleItemsChanged = true;
     }
 
     void onPlayerStart(std::shared_ptr<PlayItem> tItem) {
-        log.debug() << "Engine playerStartCallback";
+        log.debug() << "Engine onPlayerStart";
         if (!tItem) {
             log.error() << "Engine playerStartCallback item is null";
             return;
@@ -325,6 +327,12 @@ public:
         mItemChangedQueue.dispatch([item=tItem, this] {
             playItemChanged(item);
         });
+    }
+
+    void onSilenceChanged(const bool& tSilence) {
+        log.debug() << "Engine onSilenceChanged " << tSilence;
+        if (tSilence) mFallback.start();
+        else mFallback.stop();
     }
 
 
