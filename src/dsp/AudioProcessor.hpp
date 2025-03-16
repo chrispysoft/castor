@@ -220,16 +220,16 @@ public:
             scheduleCV.wait_until(lock, fadeInTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
-            log.debug(Log::Magenta) << "PLAY " << name;
+            log.info(Log::Magenta) << "PLAY " << name;
             play();
-            log.info(Log::Magenta) << "FADE IN " << name;
+            // log.info(Log::Magenta) << "FADE IN " << name;
             fadeInCurveIndex = 0;
 
             // wait until fade-out
             scheduleCV.wait_until(lock, fadeOutTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
-            log.info(Log::Magenta) << "FADE OUT " << name;
+            // log.info(Log::Magenta) << "FADE OUT " << name;
             fadeOutCurveIndex = 0;
 
             // wait until stop time
