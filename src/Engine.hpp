@@ -262,7 +262,7 @@ public:
     }
 
     void refreshPlayers() {
-        log.debug() << "Engine updatePlayers";
+        log.debug() << "Engine refreshPlayers";
 
         auto oldPlayers = getPlayers();
         std::deque<std::shared_ptr<audio::Player>> newPlayers;
@@ -356,7 +356,7 @@ public:
     }
 
     void programChanged() {
-        log.info() << "Program changed to '" << mCurrProgram->showName << "'";
+        log.info(Log::Cyan) << "Program changed to '" << mCurrProgram->showName << "'";
 
         if (mCurrProgram && mConfig.audioRecordPath.size() > 0) {
             mRecorder.stop();
@@ -436,7 +436,6 @@ public:
             // std::cout << player->name << " ";
             player->process(in, out, nframes);
         }
-        // std::cout << std::endl;
 
         mSilenceDet.process(out, nframes);
         if (mFallback.isActive()) {

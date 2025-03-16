@@ -110,7 +110,7 @@ public:
     }
 
     void loadQueue() {
-        log.debug(Log::Yellow) << "Fallback loading queue...";
+        log.info(Log::Yellow) << "Fallback loading queue...";
         
         size_t maxSamples = mSampleRate * mBufferTime * 2;
         size_t sumSamples = 0;
