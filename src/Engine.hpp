@@ -238,6 +238,10 @@ public:
     void refreshPlayers() {
         log.debug() << "Engine refreshPlayers";
 
+        auto itemsEqual = [](const std::shared_ptr<PlayItem>& lhs, const std::shared_ptr<PlayItem>& rhs) {
+            return lhs && rhs && *lhs == *rhs;
+        };
+
         auto oldPlayers = mPlayers;
         std::deque<std::shared_ptr<audio::Player>> newPlayers;
 
@@ -245,7 +249,7 @@ public:
         for (const auto& item : mScheduleItems) {
             if (item->end < std::time(0)) continue;
 
-            auto it = std::find_if(oldPlayers.begin(), oldPlayers.end(), [&](const auto& plr) { return  plr->playItem == item; });
+            auto it = std::find_if(oldPlayers.begin(), oldPlayers.end(), [&](const auto& plr) { return itemsEqual(plr->playItem, item); });
             if (it != oldPlayers.end()) {
                 newPlayers.push_back(*it);
             } else {
@@ -258,7 +262,7 @@ public:
         
         // stop players not matching new play items
         for (const auto& player : oldPlayers) {
-            auto it = std::find_if(mScheduleItems.begin(), mScheduleItems.end(), [&](const auto& itm) { return  itm == player->playItem; });
+            auto it = std::find_if(mScheduleItems.begin(), mScheduleItems.end(), [&](const auto& itm) { return itemsEqual(itm, player->playItem); });
             if (it == mScheduleItems.end()) {
                 player->stop();
             }
