@@ -40,6 +40,7 @@ class Calendar {
     const std::string filePrefix = "file://";
     const std::string defaultFileSuffix = ".flac";
     
+    const time_t mStartupTime;
     const Config& mConfig;
     std::atomic<bool> mRunning = false;
     std::thread mWorker;
@@ -55,6 +56,7 @@ public:
     std::function<void(const std::vector<std::shared_ptr<PlayItem>>& items)> calendarChangedCallback;
 
     Calendar(const Config& tConfig) :
+        mStartupTime(std::time(0)),
         mConfig(tConfig),
         mAPIClient(mConfig),
         m3uParser()
@@ -99,12 +101,11 @@ public:
         auto program = std::make_shared<api::Program>(1, 2, 3, "id", "", "", "Test Show", "Test Episode");
         auto parser = util::CSVParser(tURL);
         auto rows = parser.rows();
-        auto now = std::time(0);
         auto items = std::vector<std::shared_ptr<PlayItem>>();
         for (const auto& row : rows) {
             if (row.size() != 3) continue;
-            auto start = now + std::stoi(row[0]);
-            auto end   = now + std::stoi(row[1]);
+            auto start = mStartupTime + std::stoi(row[0]);
+            auto end   = mStartupTime + std::stoi(row[1]);
             auto url   = row[2];
             items.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
             // log.info(Log::Red) << start << " " << end << " " << url;
