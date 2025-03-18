@@ -205,7 +205,7 @@ public:
 
                     auto written = tBuffer.write(mFrameBuffer.data(), outFrameSize);
                     if (written != outFrameSize) {
-                        log.warn() << "CodecReader could not write all samples to output buffer";
+                        log.debug() << "CodecReader could not write all samples to output buffer";
                         break;
                     }
 
