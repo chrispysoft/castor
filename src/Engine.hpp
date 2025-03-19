@@ -206,6 +206,7 @@ public:
             
             if (mScheduleItemsChanged) {
                 mScheduleItemsChanged = false;
+                std::lock_guard<std::mutex> lock(mScheduleItemsMutex);
                 refreshPlayers();
                 mScheduleItems.clear();
             }
