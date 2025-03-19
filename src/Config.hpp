@@ -51,6 +51,7 @@ class Config {
     static constexpr const char* kClockURL = "";
     static constexpr const char* kLogLevel = "1";
     static constexpr const char* kCalendarRefreshInterval = "60";
+    static constexpr const char* kCalendarCachePath = "./cache/calendar.json";
     static constexpr const char* kHealthReportInterval = "60";
     static constexpr const char* kTCPPort = "0";
     static constexpr const char* kSilenceThreshold = "-90";
@@ -99,6 +100,7 @@ public:
     std::string playlogURL;
     std::string healthURL;
     std::string clockURL;
+    std::string calendarCachePath;
     int logLevel;
     int calendarRefreshInterval;
     int healthReportInterval;
@@ -154,6 +156,7 @@ public:
         playlogURL = get(map, "playlog_url", kPlaylogURL);
         healthURL = get(map, "health_url", kHealthURL);
         clockURL = get(map, "clock_url", kClockURL);
+        calendarCachePath = get(map, "calendar_cache_path", kCalendarCachePath);
         logLevel = std::stoi(get(map, "log_level", kLogLevel));
         calendarRefreshInterval = std::stoi(get(map, "calendar_refresh_interval", kCalendarRefreshInterval));
         healthReportInterval = std::stoi(get(map, "health_report_interval", kHealthReportInterval));
@@ -188,6 +191,7 @@ public:
         << "\n\t clockURL=" << clockURL
         << "\n\t calendarRefreshInterval=" << calendarRefreshInterval
         << "\n\t healthReportInterval=" << healthReportInterval
+        << "\n\t calendarCachePath=" << calendarCachePath
         << "\n\t tcpPort=" << tcpPort
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration

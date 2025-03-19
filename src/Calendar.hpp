@@ -80,19 +80,17 @@ public:
                 }
                 auto refreshTime = std::chrono::seconds(mConfig.calendarRefreshInterval);
                 std::unique_lock<std::mutex> lock(mWorkMutex);
-                mWorkCV.wait_for(lock, refreshTime, [this] { return !mRunning; });
+                mWorkCV.wait_for(lock, refreshTime, [this] { return !mRunning.load(std::memory_order_acquire); });
             }
         });
         log.debug() << "Calendar started";
     }
 
     void stop() {
+        log.debug() << "Calendar stopping...";
         if (!mRunning.exchange(false)) return;
-        {
-            std::lock_guard<std::mutex> lock(mWorkMutex);
-            mRunning = false;
-            mWorkCV.notify_all();
-        }
+        mRunning.store(false, std::memory_order_release);
+        mWorkCV.notify_all();
         if (mWorker.joinable()) mWorker.join();
         log.debug() << "Calendar stopped";
     }
@@ -110,12 +108,7 @@ public:
             items.emplace_back(std::make_shared<PlayItem>(start, end, url, program));
             // log.info(Log::Red) << start << " " << end << " " << url;
         }
-
-        mItems = items;
-
-        if (calendarChangedCallback) {
-            calendarChangedCallback(mItems);
-        }
+        storeItems(items);
     }
 
 private:
@@ -126,15 +119,18 @@ private:
         auto items = fetchItems();
 
         if (!std::ranges::equal(items, mItems, [](const auto& a, const auto& b) { return *a == *b; })) {
-        //if (items != mItems) {
-            std::lock_guard<std::mutex> lock(mItemsMutex);
-            mItems = std::move(items);
-            log.debug(Log::Yellow) << "Calendar changed";
-            if (calendarChangedCallback) {
-                calendarChangedCallback(mItems);
-            }
+            log.info(Log::Yellow) << "Calendar changed";
+            storeItems(items);
         } else {
             log.debug() << "Calendar not changed";
+        }
+    }
+
+    void storeItems(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
+        std::lock_guard<std::mutex> lock(mItemsMutex);
+        mItems = std::move(tItems);
+        if (calendarChangedCallback) {
+            calendarChangedCallback(mItems);
         }
     }
     
@@ -213,6 +209,21 @@ private:
             // }
         }
         return items;
+    }
+
+    void serialize() {
+        nlohmann::json j = mItems;
+        std::ofstream f(mConfig.calendarCachePath);
+        if (!f.is_open()) throw std::runtime_error("Failed to open output file");
+        f << j;
+    }
+
+    void deserialize() {
+        std::ifstream f(mConfig.calendarCachePath);
+        if (!f.is_open()) throw std::runtime_error("Failed to open input file");
+        nlohmann::json j;
+        f >> j;
+        mItems = j;
     }
 };
 }
