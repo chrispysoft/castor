@@ -78,9 +78,9 @@ public:
 class Engine : public audio::Client::Renderer {
 
     const Config& mConfig;
-    Calendar mCalendar;
-    io::TCPServer mTCPServer;
-    api::Client mAPIClient;
+    std::unique_ptr<Calendar> mCalendar;
+    std::unique_ptr<io::TCPServer> mTCPServer;
+    std::unique_ptr<api::Client> mAPIClient;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
     audio::Fallback mFallback;
@@ -111,9 +111,9 @@ class Engine : public audio::Client::Renderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
-        mCalendar(mConfig),
-        mTCPServer(mConfig.tcpPort),
-        mAPIClient(mConfig),
+        mCalendar(std::make_unique<Calendar>(mConfig)),
+        mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
+        mAPIClient(std::make_unique<api::Client>(mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
         mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
@@ -125,7 +125,7 @@ public:
         mAPIReportQueue("report queue", 1),
         mItemChangedQueue("change queue", 1)
     {
-        mCalendar.calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
+        mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
         mAudioClient.setRenderer(this);
         mPlayerFactory = std::make_unique<PlayerFactory>(mConfig);
@@ -134,7 +134,7 @@ public:
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
         try {
             auto calFile = tArgs["--calendar"];
-            if (!calFile.empty()) mCalendar.load(calFile);
+            if (!calFile.empty()) mCalendar->load(calFile);
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to load calendar test file: " << e.what();
@@ -144,7 +144,7 @@ public:
     void start() {
         log.debug() << "Engine starting...";
         mRunning = true;
-        mCalendar.start();
+        mCalendar->start();
         mAudioClient.start(mConfig.realtimeRendering);
         mFallback.run();
         mScheduleThread = std::thread(&Engine::runSchedule, this);
@@ -159,7 +159,7 @@ public:
         }
 
         try {
-            mTCPServer.start();
+            mTCPServer->start();
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to start TCP server: " << e.what();
@@ -174,8 +174,8 @@ public:
         if (mLoadThread.joinable()) mLoadThread.join();
         for (const auto& player : mPlayers) player->stop();
         mPlayers.clear();
-        mTCPServer.stop();
-        mCalendar.stop();
+        mTCPServer->stop();
+        mCalendar->stop();
         mRecorder.stop();
         mFallback.terminate();
         mStreamOutput.stop();
@@ -212,7 +212,7 @@ public:
                 mScheduleItems.clear();
             }
 
-            if (mTCPServer.connected() && mTCPUpdateTimer.query()) {
+            if (mTCPServer->connected() && mTCPUpdateTimer.query()) {
                 updateStatus();
             }
 
@@ -370,7 +370,7 @@ public:
         }
         strstr << std::endl;
 
-        mTCPServer.pushStatus(strstr.str());
+        mTCPServer->pushStatus(strstr.str());
         // log.debug() << statusSS.str();
     }
 
@@ -380,7 +380,7 @@ public:
     void postPlaylog(std::shared_ptr<PlayItem> tPlayItem) {
         if (tPlayItem == nullptr || mConfig.playlogURL.empty()) return;
         try {
-            mAPIClient.postPlaylog({*tPlayItem});
+            mAPIClient->postPlaylog({*tPlayItem});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post playlog: " << e.what();
@@ -393,7 +393,7 @@ public:
             // nlohmann::json j = mCalendar.items();
             // std::stringstream s;
             // s << j;
-            mAPIClient.postHealth({true, util::currTimeFmtMs(), ":)"});
+            mAPIClient->postHealth({true, util::currTimeFmtMs(), ":)"});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();
