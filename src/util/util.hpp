@@ -32,6 +32,7 @@
 #include <ctime>
 #include <cstring>
 #include <cmath>
+#include <queue>
 
 namespace castor {
 namespace util {
