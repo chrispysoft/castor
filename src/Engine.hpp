@@ -26,8 +26,6 @@
 #include "Config.hpp"
 #include "Calendar.hpp"
 #include "io/TCPServer.hpp"
-#include "util/Log.hpp"
-#include "util/util.hpp"
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
@@ -37,7 +35,8 @@
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
-#include "util/dispatch.hpp"
+#include "util/Log.hpp"
+#include "util/util.hpp"
 
 namespace castor {
 
@@ -81,6 +80,7 @@ class Engine : public audio::Client::Renderer {
     std::unique_ptr<Calendar> mCalendar;
     std::unique_ptr<io::TCPServer> mTCPServer;
     std::unique_ptr<api::Client> mAPIClient;
+    std::unique_ptr<PlayerFactory> mPlayerFactory;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
     audio::Fallback mFallback;
@@ -96,14 +96,12 @@ class Engine : public audio::Client::Renderer {
     std::atomic<std::deque<std::shared_ptr<audio::Player>>*> mActivePlayers{};
     std::deque<std::shared_ptr<audio::Player>> mActivePlayersBuf1, mActivePlayersBuf2;
     // std::shared_ptr<audio::Player> mActivePlayer = nullptr;
-    std::unique_ptr<PlayerFactory> mPlayerFactory = nullptr;
+    
     std::shared_ptr<api::Program> mCurrProgram = nullptr;
     std::vector<std::shared_ptr<PlayItem>> mScheduleItems;
-    util::Timer mReportTimer;
-    util::Timer mTCPUpdateTimer;
-    util::Timer mEjectTimer;
-    dispatch_queue mAPIReportQueue;
-    dispatch_queue mItemChangedQueue;
+    util::ManualTimer mTCPUpdateTimer;
+    util::ManualTimer mEjectTimer;
+    util::AsyncTimer mReportTimer;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
     
@@ -114,21 +112,20 @@ public:
         mCalendar(std::make_unique<Calendar>(mConfig)),
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
+        mPlayerFactory(std::make_unique<PlayerFactory>(mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
         mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
-        mReportTimer(mConfig.healthReportInterval),
         mTCPUpdateTimer(1),
         mEjectTimer(1),
-        mAPIReportQueue("report queue", 1),
-        mItemChangedQueue("change queue", 1)
+        mReportTimer(mConfig.healthReportInterval)
     {
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
+        mReportTimer.callback = [this] { postStatus(); };
         mAudioClient.setRenderer(this);
-        mPlayerFactory = std::make_unique<PlayerFactory>(mConfig);
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -143,13 +140,13 @@ public:
 
     void start() {
         log.debug() << "Engine starting...";
-        mRunning = true;
-        mCalendar->start();
+        mRunning = true;        
         mAudioClient.start(mConfig.realtimeRendering);
         mFallback.run();
+        mCalendar->start();
         mScheduleThread = std::thread(&Engine::runSchedule, this);
         mLoadThread = std::thread(&Engine::runLoad, this);
-        // mRenderThread = std::thread(&Engine::render, this);
+        mReportTimer.start();
 
         try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
@@ -170,14 +167,15 @@ public:
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
-        if (mScheduleThread.joinable()) mScheduleThread.join();
-        if (mLoadThread.joinable()) mLoadThread.join();
-        for (const auto& player : mPlayers) player->stop();
-        mPlayers.clear();
         mTCPServer->stop();
         mCalendar->stop();
+        mReportTimer.stop();
+        if (mScheduleThread.joinable()) mScheduleThread.join();
+        if (mLoadThread.joinable()) mLoadThread.join();
         mRecorder.stop();
         mFallback.terminate();
+        for (const auto& player : mPlayers) player->stop();
+        mPlayers.clear();
         mStreamOutput.stop();
         mAudioClient.stop();
         log.info() << "Engine stopped";
@@ -217,12 +215,6 @@ public:
             }
 
             setPlayers(mPlayers);
-
-            if (mReportTimer.query()) {
-                mAPIReportQueue.dispatch([this] {
-                    postHealth();
-                });
-            }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
@@ -302,9 +294,8 @@ public:
             log.error() << "Engine playerStartCallback item is null";
             return;
         }
-        mItemChangedQueue.dispatch([item=tItem, this] {
-            playItemChanged(item);
-        });
+        
+        auto fut = std::async(std::launch::async, &Engine::playItemChanged, this, tItem);
     }
 
     void onSilenceChanged(const bool& tSilence) {
@@ -387,7 +378,7 @@ public:
         }
     }
 
-    void postHealth() {
+    void postStatus() {
         if (mConfig.healthURL.empty()) return;
         try {
             // nlohmann::json j = mCalendar.items();
