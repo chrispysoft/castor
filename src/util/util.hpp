@@ -27,6 +27,7 @@
 #include <map>
 #include <regex>
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 #include <ctime>
 #include <cstring>

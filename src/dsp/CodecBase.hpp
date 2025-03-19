@@ -23,6 +23,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
