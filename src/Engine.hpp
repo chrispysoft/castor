@@ -102,6 +102,7 @@ class Engine : public audio::Client::Renderer {
     util::ManualTimer mTCPUpdateTimer;
     util::ManualTimer mEjectTimer;
     util::AsyncTimer mReportTimer;
+    util::AsyncWorker<std::shared_ptr<PlayItem>> mItemChangeWorker;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
     
@@ -125,6 +126,7 @@ public:
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
         mReportTimer.callback = [this] { postStatus(); };
+        mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mAudioClient.setRenderer(this);
     }
 
@@ -147,6 +149,7 @@ public:
         mScheduleThread = std::thread(&Engine::runSchedule, this);
         mLoadThread = std::thread(&Engine::runLoad, this);
         mReportTimer.start();
+        mItemChangeWorker.start();
 
         try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
@@ -170,6 +173,7 @@ public:
         mTCPServer->stop();
         mCalendar->stop();
         mReportTimer.stop();
+        mItemChangeWorker.stop();
         if (mScheduleThread.joinable()) mScheduleThread.join();
         if (mLoadThread.joinable()) mLoadThread.join();
         mRecorder.stop();
@@ -281,6 +285,12 @@ public:
 
 
     // callbacks
+
+    void onSilenceChanged(const bool& tSilence) {
+        log.debug() << "Engine onSilenceChanged " << tSilence;
+        if (tSilence) mFallback.start();
+        else mFallback.stop();
+    }
     
     void onCalendarChanged(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
         log.debug() << "Engine onCalendarChanged";
@@ -295,14 +305,8 @@ public:
             log.error() << "Engine playerStartCallback item is null";
             return;
         }
-        
-        auto fut = std::async(std::launch::async, &Engine::playItemChanged, this, tItem);
-    }
 
-    void onSilenceChanged(const bool& tSilence) {
-        log.debug() << "Engine onSilenceChanged " << tSilence;
-        if (tSilence) mFallback.start();
-        else mFallback.stop();
+        mItemChangeWorker.async(tItem); // playItemChanged async on same thread
     }
 
 
@@ -323,6 +327,8 @@ public:
             mCurrProgram = tItem->program;
             programChanged();
         }
+
+        postPlaylog(tItem);
     }
 
     void programChanged() {

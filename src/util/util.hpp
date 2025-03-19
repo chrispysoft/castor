@@ -254,5 +254,58 @@ private:
     }
 };
 
+
+template <typename T>
+class AsyncWorker {
+    std::atomic<bool> mRunning = false;
+    std::thread mThread;
+    std::mutex mMutex;
+    std::condition_variable mCV;
+    std::queue<T> mItems;
+
+public:
+
+    std::function<void(T t)> callback;
+
+    AsyncWorker() = default;
+
+    ~AsyncWorker() {
+        if (mRunning.load()) stop();
+    }
+
+    void start() {
+        if (mRunning.exchange(true)) return;
+        mThread = std::thread(&AsyncWorker::run, this);
+    }
+
+    void stop() {
+        if (!mRunning.exchange(false, std::memory_order_release)) return;
+        mCV.notify_one();
+        if (mThread.joinable()) mThread.join();
+    }
+
+
+    void async(T tItem) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mItems.push(std::move(tItem));
+        mCV.notify_one();
+    }
+
+private:
+    void run() {
+        while (mRunning.load()) {
+            T item;
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                mCV.wait(lock, [this]{ return mItems.size() > 0 || !mRunning.load(std::memory_order_acquire); });
+                if (!mRunning) return;
+                item = std::move(mItems.front());
+                mItems.pop();
+            }
+            if (callback) callback(item);
+        }
+    }
+};
+
 }
 }
