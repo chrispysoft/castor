@@ -17,6 +17,7 @@
 
 ## Getting Started
 
+### Running with Docker
 Castor is available as a prebuilt Docker image (amd64). You can either pull a prebuilt image from [Docker Hub](https://hub.docker.com/repository/docker/crispybitsapp/castor/general) or build from source.
 
 ### Building and Running from Source
@@ -54,7 +55,7 @@ make run
 
 For more build options (e.g., clean, help), simply run `make`.
 
-### Running with Docker
+### Building and Running from Source with Docker
 
 To build and run with Docker, execute:
 
