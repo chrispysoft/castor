@@ -19,9 +19,9 @@
 
 #pragma once
 
-#include "../third_party/json.hpp"
-#include "../dsp/CodecBase.hpp"
 #include <ranges>
+#include <json.hpp>
+#include "../dsp/CodecBase.hpp"
 
 namespace castor {
 namespace api {

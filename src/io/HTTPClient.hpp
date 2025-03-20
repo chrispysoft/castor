@@ -23,8 +23,8 @@
 #include <string>
 #include <vector>
 #include <curl/curl.h>
+#include <json.hpp>
 #include "../util/Log.hpp"
-#include "../third_party/json.hpp"
 
 namespace castor {
 namespace io {

@@ -21,6 +21,10 @@ set_target_properties(castor PROPERTIES
     CXX_EXTENSIONS NO
 )
 
+target_include_directories(castor PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+
 target_link_libraries(castor PRIVATE ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${FFMPEG_LIBRARIES})
 
 target_compile_options(castor PRIVATE -Wno-psabi)

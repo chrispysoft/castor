@@ -25,13 +25,13 @@
 #include <thread>
 #include <filesystem>
 #include <vector>
+#include <json.hpp>
 #include "Config.hpp"
 #include "api/API.hpp"
 #include "api/APIClient.hpp"
 #include "util/CSVParser.hpp"
 #include "util/M3UParser.hpp"
 #include "util/util.hpp"
-#include "third_party/json.hpp"
 
 namespace castor {
 class Calendar {
