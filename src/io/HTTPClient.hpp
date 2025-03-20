@@ -30,7 +30,7 @@ namespace castor {
 namespace io {
 class HTTPClient {
     CURL* mCURL;
-    struct curl_slist* mPostHeaders;
+    struct curl_slist* mPostHeaders = NULL;
 
 public:
 
