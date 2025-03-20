@@ -24,6 +24,8 @@
 #include <iomanip>
 #include <memory>
 #include <string>
+#include <thread>
+#include <functional>
 #include "audio.hpp"
 #include "RMS.hpp"
 #include "../util/Log.hpp"

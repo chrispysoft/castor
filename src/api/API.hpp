@@ -21,6 +21,7 @@
 
 #include "../third_party/json.hpp"
 #include "../dsp/CodecBase.hpp"
+#include <ranges>
 
 namespace castor {
 namespace api {
@@ -127,14 +128,36 @@ struct PlayItem {
     }
 };
 
-// void to_json(nlohmann::json& j, const PlayItem& p) {
-//     j = nlohmann::json {
-//         {"start", p.start},
-//         {"end", p.end},
-//         //{"uri", p.uri},
-//         {"program", p.program}
-//     };
-// }
+void to_json(nlohmann::json& j, const PlayItem& p) {
+    j = nlohmann::json {
+        {"start", p.start},
+        {"end", p.end},
+        {"uri", p.uri}
+    };
+}
+
+void to_json(nlohmann::json& j, const std::shared_ptr<PlayItem>& p) {
+    j = *p;
+}
+
+void to_json(nlohmann::json& j, const std::vector<std::shared_ptr<PlayItem>>& v) {
+    j = std::vector<nlohmann::json>(v.begin(), v.end());
+}
+
+void from_json(const nlohmann::json& j, PlayItem& p) {
+    j.at("start").get_to(p.start);
+    j.at("end").get_to(p.end);
+    j.at("uri").get_to(p.uri);
+}
+
+void from_json(const nlohmann::json& j, std::vector<std::shared_ptr<PlayItem>>& v) {
+    v.clear();
+    v.reserve(j.size());
+    for (const auto& item_json : j) {
+        v.emplace_back(std::make_shared<PlayItem>(item_json.get<PlayItem>()));
+    }
+}
+
 
 
 struct PlayLog {

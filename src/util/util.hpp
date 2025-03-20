@@ -21,16 +21,19 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <utility>
 #include <map>
 #include <regex>
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 #include <ctime>
 #include <cstring>
 #include <cmath>
+#include <queue>
 
 namespace castor {
 namespace util {
@@ -191,12 +194,12 @@ public:
 };
 
 
-class Timer {
+class ManualTimer {
     const time_t mTimeout;
     time_t mLastQuery = 0;
 
 public:
-    Timer(time_t tTimeout) :
+    ManualTimer(time_t tTimeout) :
         mTimeout(tTimeout)
     {}
 
@@ -207,6 +210,102 @@ public:
             return true;
         }
         return false;
+    }
+};
+
+
+class AsyncTimer {
+    const std::chrono::seconds mInterval;
+    std::atomic<bool> mRunning = false;
+    std::thread mThread;
+    std::mutex mMutex;
+    std::condition_variable mCV;
+
+public:
+
+    std::function<void()> callback;
+
+    AsyncTimer(time_t tIntervalSec) :
+        mInterval(tIntervalSec)
+    {}
+
+    ~AsyncTimer() {
+        if (mRunning.load()) stop();
+    }
+
+    void start() {
+        if (mRunning.exchange(true)) return;
+        mThread = std::thread(&AsyncTimer::run, this);
+    }
+
+    void stop() {
+        if (!mRunning.exchange(false, std::memory_order_release)) return;
+        mCV.notify_one();
+        if (mThread.joinable()) mThread.join();
+    }
+
+private:
+    void run() {
+        while (mRunning.load()) {
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                if (mCV.wait_for(lock, mInterval, [this]{ return !mRunning.load(std::memory_order_acquire); })) return;
+            }
+            if (callback) callback();
+        }
+    }
+};
+
+
+template <typename T>
+class AsyncWorker {
+    std::atomic<bool> mRunning = false;
+    std::thread mThread;
+    std::mutex mMutex;
+    std::condition_variable mCV;
+    std::queue<T> mItems;
+
+public:
+
+    std::function<void(T t)> callback;
+
+    AsyncWorker() = default;
+
+    ~AsyncWorker() {
+        if (mRunning.load()) stop();
+    }
+
+    void start() {
+        if (mRunning.exchange(true)) return;
+        mThread = std::thread(&AsyncWorker::run, this);
+    }
+
+    void stop() {
+        if (!mRunning.exchange(false, std::memory_order_release)) return;
+        mCV.notify_one();
+        if (mThread.joinable()) mThread.join();
+    }
+
+
+    void async(T tItem) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mItems.push(std::move(tItem));
+        mCV.notify_one();
+    }
+
+private:
+    void run() {
+        while (mRunning.load()) {
+            T item;
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                mCV.wait(lock, [this]{ return mItems.size() > 0 || !mRunning.load(std::memory_order_acquire); });
+                if (!mRunning) return;
+                item = std::move(mItems.front());
+                mItems.pop();
+            }
+            if (callback) callback(item);
+        }
     }
 };
 
