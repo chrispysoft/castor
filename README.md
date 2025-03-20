@@ -54,27 +54,19 @@ make run
 
 For more build options (e.g., clean, help), simply run `make`.
 
+### Running with Docker
+
+To build and run with Docker, execute:
+
+```bash
+docker compose build && docker compose up
+```
+
 ## Configuration
 
 Castor can be configured using a configuration file or environment variables. Environment variables have a higher priority than the config file. For convenience, all config file variables are lowercased, while environment variables are uppercased. For example, if `some_var` is set to "foo" in the config file and `SOME_VAR` is set to "bar" in the environment, the evaluated value will be "bar".
 
 Refer to `config/config.txt` and `.env` for example configurations.
-
-### Running on the Host
-
-To build and run on the host system, execute the following:
-
-```bash
-./run.sh
-```
-
-### Running with Docker
-
-To build and run using Docker, execute:
-
-```bash
-docker compose build && docker compose up
-```
 
 ## Control Logic
 
