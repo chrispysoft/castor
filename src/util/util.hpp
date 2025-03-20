@@ -240,7 +240,7 @@ public:
 
     void stop() {
         if (!mRunning.exchange(false, std::memory_order_release)) return;
-        mCV.notify_one();
+        mCV.notify_all();
         if (mThread.joinable()) mThread.join();
     }
 
@@ -282,7 +282,7 @@ public:
 
     void stop() {
         if (!mRunning.exchange(false, std::memory_order_release)) return;
-        mCV.notify_one();
+        mCV.notify_all();
         if (mThread.joinable()) mThread.join();
     }
 
