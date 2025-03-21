@@ -23,8 +23,8 @@
 #pragma once
 
 #include <filesystem>
+#include <set>
 #include <thread>
-#include <future>
 #include "SineOscillator.hpp"
 #include "FilePlayer.hpp"
 #include "../util/Log.hpp"
@@ -138,10 +138,14 @@ public:
 
         bool loadNext = false;
 
+        std::set<std::filesystem::path> sortedPaths;
         for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
             if (!entry.is_regular_file()) continue;
-            const auto& url = entry.path().string();
+            sortedPaths.insert(entry.path());
+        }
 
+        for (const auto& path : sortedPaths) {
+            const auto& url = path.string();
             if (url.ends_with(".m3u")) {
                 log.debug() << "Fallback opening m3u file " << url;
                 std::ifstream file(url);
