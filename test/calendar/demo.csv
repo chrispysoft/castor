@@ -1,8 +1,8 @@
-05,10,audio/test/A.mp3
-10,25,https://stream.fro.at/fro-128.ogg
-25,45,https://stream.freirad.at/live.ogg
-45,50,audio/test/E.mp3
-50,60,line://0
-60,70,https://does-not-exist.stream/
-70,75,audio/test/B.mp3
+-187,30,audio/test/chrizzpsy - Twigs.mp3
+30,45,audio/test/LPGs2.mp3
+45,60,https://stream.fro.at/fro-128.ogg
+60,75,https://stream.freirad.at/live.ogg
+75,85,line://0
+85,90,https://does-not-exist.stream/
+90,95,audio/test/B.mp3
 3630,3635,audio/test/F#.mp3
