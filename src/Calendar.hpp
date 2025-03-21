@@ -40,7 +40,6 @@ namespace castor {
 class Calendar {
 
     const std::string m3uPrefix = "m3u://";
-    const std::string filePrefix = "file://";
     const std::string defaultFileSuffix = ".flac";
     
     const time_t mStartupTime;
@@ -190,16 +189,8 @@ private:
                     }
                 } else {
                     auto uri = entry.uri;
-                    if (uri.starts_with(filePrefix)) {
-                        uri = mConfig.audioSourcePath + "/" + entry.uri.substr(filePrefix.size());
-                        if (std::filesystem::path(uri).extension().empty()) {
-                            log.warn() << "Calendar item '" << uri << "' has no file extension - adding default " << defaultFileSuffix;
-                            uri += defaultFileSuffix;
-                        }
-                    }
-                    else if (uri.empty()) { // assume default location
-                        uri = mConfig.audioSourcePath + "/" + std::to_string(pr->showId) + "/" + std::to_string(pr->mediaId) + defaultFileSuffix;
-                        log.debug() << "Calendar generated file url '" << uri << "'";
+                    if (std::all_of(uri.begin(), uri.end(), ::isdigit)) {
+                        uri = mConfig.audioSourcePath + "/" + std::to_string(pr->showId) + "/" + uri + defaultFileSuffix;
                     }
                     items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
                 }
