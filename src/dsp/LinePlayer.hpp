@@ -27,11 +27,28 @@
 
 namespace castor {
 namespace audio {
+
+template <typename T>
+class LineBuffer : public SourceBuffer<T> {
+    const T* mBufferPtr;
+
+public:
+    size_t write(const T* tData, size_t tLen) override {
+        mBufferPtr = tData;
+        return tLen;
+    }
+
+    size_t read(T* tData, size_t tLen) override {
+        memcpy(tData, mBufferPtr, tLen * sizeof(T));
+        return tLen;
+    }
+};
+    
 class LinePlayer : public Player {
 
     static constexpr size_t kChannelCount = 2;
     const double mSampleRate;
-    
+    LineBuffer<sam_t> mLineBuffer;
 
 public:
     LinePlayer(float tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0) :
@@ -39,6 +56,7 @@ public:
         mSampleRate(tSampleRate)
     {
         category = "LINE";
+        mBuffer = &mLineBuffer;
     }
 
     // ~LinePlayer() {
@@ -56,9 +74,9 @@ public:
 
     void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * kChannelCount;
-        auto byteSize = sampleCount * sizeof(sam_t);
-        memcpy(tOutBuffer, tInBuffer, byteSize);
-        // calcRMS(tOutBuffer, sampleCount);
+        mLineBuffer.write(tInBuffer, sampleCount);
+
+        Player::process(tInBuffer, tOutBuffer, tFrameCount);
     }
 };
 }
