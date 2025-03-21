@@ -100,6 +100,12 @@ The **SilenceDetector** analyzes the RMS value of the buffer on a background thr
 
 If **Fallback** is active, the output buffer becomes the render target. The buffer is then passed to **StreamOutput** (if enabled) and finally to the **AudioClient**, which interfaces with the audio hardware.
 
+## Recorder
+To enable automatic recording, set `audio_record_path` to a valid directory. Each change of the current show starts a new and stops the previous recording.
+
+## Stream Output
+To enable, set `stream_out_url` to a valid icecast url. Retry interval on errors: 5 sec.
+
 ## Known Issues
 
 - Fallback stops and starts at the same track position without fading in/out
