@@ -105,16 +105,16 @@ public:
 
         PaStreamCallback* streamCallback = tRealtime ? &Client::paCallback : NULL;
 
-        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, streamCallback, this);
+        auto res = Pa_OpenStream(&mStream, &iParams, &oParams, mSampleRate, mBufferSize, paNoFlag, streamCallback, mRenderer);
         if (res != paNoError) {
             throw std::runtime_error("AudioClient Pa_OpenStream failed with error "+std::to_string(res)+" ("+Pa_GetErrorText(res)+")");
         }
 
-        res = Pa_SetStreamFinishedCallback(mStream, &Client::paStreamFinished);
-        if (res != paNoError) {
-            stop();
-            throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
-        }
+        // res = Pa_SetStreamFinishedCallback(mStream, &Client::paStreamFinished);
+        // if (res != paNoError) {
+        //     stop();
+        //     throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
+        // }
 
         res = Pa_StartStream(mStream);
         if (res != paNoError) {
@@ -166,22 +166,23 @@ public:
 
 private:
 
-    int paCallbackMethod(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags) {
-        if (mRenderer) mRenderer->renderCallback(static_cast<const sam_t*>(inputBuffer), static_cast<sam_t*>(outputBuffer), framesPerBuffer);
+    // int paCallbackMethod(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags) {
+    //     if (mRenderer) mRenderer->renderCallback(static_cast<const sam_t*>(inputBuffer), static_cast<sam_t*>(outputBuffer), framesPerBuffer);
+    //     return paContinue;
+    // }
+
+    // void paStreamFinishedMethod() {
+    //     log.info() << "AudioClient stream finished";
+    // }
+
+    static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {
+        static_cast<Renderer*>(userData)->renderCallback(static_cast<const sam_t*>(inputBuffer), static_cast<sam_t*>(outputBuffer), framesPerBuffer);
         return paContinue;
     }
 
-    void paStreamFinishedMethod() {
-        log.info() << "AudioClient stream finished";
-    }
-
-    static int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) {
-        return static_cast<Client*>(userData)->paCallbackMethod(inputBuffer, outputBuffer, framesPerBuffer, timeInfo, statusFlags);
-    }
-
-    static void paStreamFinished(void* userData) {
-        return static_cast<Client*>(userData)->paStreamFinishedMethod();
-    }
+    // static void paStreamFinished(void* userData) {
+    //     return static_cast<Client*>(userData)->paStreamFinishedMethod();
+    // }
 };
 
 }
