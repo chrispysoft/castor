@@ -100,6 +100,14 @@ struct Media {
 
 void from_json(const nlohmann::json& j, Media::Entry& e) {
     j.at("uri").get_to(e.uri);
+    if (e.uri.empty()) { // audio source folder
+        try {
+            e.uri = std::to_string(j.at("fileId").get<int>());
+        }
+        catch (const std::exception& e) {
+            log.error() << "Failed to deserialize fileId as Media uri: " << e.what();
+        }
+    }
     try {
         j.at("duration").get_to(e.duration);
     }
