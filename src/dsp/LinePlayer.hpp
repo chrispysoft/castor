@@ -39,7 +39,7 @@ public:
     }
 
     size_t read(T* tData, size_t tLen) override {
-        memcpy(tData, &mBufferPtr, tLen * sizeof(T));
+        memcpy(tData, mBufferPtr, tLen * sizeof(T));
         return tLen;
     }
 };
