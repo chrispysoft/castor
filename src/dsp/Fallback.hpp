@@ -4,24 +4,27 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Lesser General Public License as published by
+ *  it under the terms of the GNU Affero General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Lesser General Public License for more details.
+ *  GNU Affero General Public License for more details.
  *
- *  You should have received a copy of the GNU Lesser General Public License
+ *  You should have received a copy of the GNU Affero General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  If you use this program over a network, you must also offer access
+ *  to the source code under the terms of the GNU Affero General Public License.
  */
 
 #pragma once
 
 #include <filesystem>
+#include <set>
 #include <thread>
-#include <future>
 #include "SineOscillator.hpp"
 #include "FilePlayer.hpp"
 #include "../util/Log.hpp"
@@ -135,10 +138,14 @@ public:
 
         bool loadNext = false;
 
+        std::set<std::filesystem::path> sortedPaths;
         for (const auto& entry : std::filesystem::directory_iterator(mFallbackURL)) {
             if (!entry.is_regular_file()) continue;
-            const auto& url = entry.path().string();
+            sortedPaths.insert(entry.path());
+        }
 
+        for (const auto& path : sortedPaths) {
+            const auto& url = path.string();
             if (url.ends_with(".m3u")) {
                 log.debug() << "Fallback opening m3u file " << url;
                 std::ifstream file(url);
