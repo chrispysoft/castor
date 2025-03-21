@@ -95,8 +95,9 @@ public:
 
         if (!(mFormatCtx->oformat->flags & AVFMT_NOFILE)) {
             log.debug() << "CodecWriter AVFMT_NOFILE";
-            if (avio_open2(&mFormatCtx->pb, mURL.c_str(), AVIO_FLAG_WRITE, nullptr, &mOptions) < 0) {
-                throw std::runtime_error("Failed to open output file");
+            auto res = avio_open2(&mFormatCtx->pb, mURL.c_str(), AVIO_FLAG_WRITE, nullptr, &mOptions);
+            if (res < 0) {
+                throw std::runtime_error("Failed to open output: " + AVErrorString(res));
             }
         }
 
@@ -130,11 +131,11 @@ public:
             throw std::runtime_error("Failed to allocate frame buffer");
         }
 
-        log.info() << "AudioCodecWriter inited with sample rate " << mSampleRate << " url: " << mURL;
+        log.info() << "CodecWriter inited with sample rate " << mSampleRate << " url: " << mURL;
     }
 
     ~CodecWriter() {
-        log.debug() << "AudioCodecWriter deinit...";
+        log.debug() << "CodecWriter deinit...";
         av_frame_free(&mFrame);
         av_packet_free(&mPacket);
         swr_free(&mSwrCtx);
@@ -145,12 +146,12 @@ public:
         av_dict_free(&mOptions);
         // mMetadata already freed by avformat_free_context
         av_channel_layout_uninit(&mChannelLayout);
-        log.debug() << "AudioCodecWriter deinited";
+        log.debug() << "CodecWriter deinited";
     }
 
 
     void write(util::RingBuffer<sam_t>& tBuffer) {
-        log.debug() << "AudioCodecWriter write...";
+        log.debug() << "CodecWriter write...";
 
         auto writeFrame = [this](AVFrame* lFrame) {
             if (avcodec_send_frame(mCodecCtx, lFrame) < 0) {
@@ -176,14 +177,14 @@ public:
             }
 
             tBuffer.read(mFrameBuffer.data(), samplesPerFrame);
-            // log.debug() << "AudioCodecWriter read " << samplesPerFrame << " samples";
+            // log.debug() << "CodecWriter read " << samplesPerFrame << " samples";
 
             const auto* src = mFrameBuffer.data();
             if (swr_convert(mSwrCtx, mFrame->data, mFrame->nb_samples, (const uint8_t**) &src, mCodecCtx->frame_size) < 0) {
-                log.error() << "AudioCodecWriter swr_convert failed";
+                log.error() << "CodecWriter swr_convert failed";
                 break;
             }
-            // log.debug() << "AudioCodecWriter converted";
+            // log.debug() << "CodecWriter converted";
 
             mFrame->pts = av_rescale_q(framesWritten, {1, mCodecCtx->sample_rate}, mStream->time_base);
             framesWritten += mCodecCtx->frame_size;
@@ -192,7 +193,7 @@ public:
                 writeFrame(mFrame);
             }
             catch (const std::exception& e) {
-                log.error() << "AudioCodecWriter writeFrame data failed: " << e.what();
+                log.error() << "CodecWriter writeFrame data failed: " << e.what();
                 break;
             }
         }
@@ -201,12 +202,12 @@ public:
             writeFrame(nullptr);
         }
         catch (const std::exception& e) {
-            log.error() << "AudioCodecWriter writeFrame null (flush) failed: " << e.what();
+            log.error() << "CodecWriter writeFrame null (flush) failed: " << e.what();
         }
 
         av_write_trailer(mFormatCtx);
 
-        log.info() << "AudioCodecWriter wrote " << framesWritten << " frames";
+        log.info() << "CodecWriter wrote " << framesWritten << " frames";
     }
 };
 }

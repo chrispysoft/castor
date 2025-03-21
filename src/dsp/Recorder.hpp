@@ -44,30 +44,35 @@ class Recorder {
     std::atomic<bool> mRunning = false;
 
 public:
+
+    std::string logName = "Recorder";
+
     Recorder(double tSampleRate) :
         mSampleRate(tSampleRate),
         mRingBuffer(kRingBufferSize)
     {}
 
     void start(const std::string tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) {
-        log.info(Log::Magenta) << "Recorder start";
+        log.debug(Log::Magenta) << logName << " start...";
         if (mRunning) {
-            log.debug() << "Recorder already running";
+            log.debug() << logName << " already running";
             return;
         }
 
         mWriter = std::make_unique<CodecWriter>(mSampleRate, tURL, tMetadata);
+        mRunning = true;
+
+        log.info(Log::Magenta) << logName << " started";
+
         mWorker = std::make_unique<std::thread>([this] {
-            log.debug() << "Recorder worker started";
-            mRunning = true;
             try {
                 mWriter->write(mRingBuffer);
             }
             catch (const std::exception& e) {
-                log.error() << "Recorder error: " << e.what();
+                log.error() << logName << " error: " << e.what();
             }
             mRunning = false;
-            log.debug() << "Recorder worker finished";
+            log.info() << logName << " finished";
         });
     }
 
@@ -75,14 +80,14 @@ public:
         if (!mRunning) {
             return;
         }
-        log.debug() << "Recorder stopping...";
+        log.debug() << logName << " stopping...";
         mRunning = false;
         if (mWriter) mWriter->cancel();
         if (mWorker && mWorker->joinable()) mWorker->join();
         mWriter = nullptr;
         mWorker = nullptr;
         mRingBuffer.flush();
-        log.info(Log::Magenta) << "Recorder stopped";
+        log.info(Log::Magenta) << logName << " stopped";
     }
 
     bool isRunning() {

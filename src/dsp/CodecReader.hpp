@@ -64,7 +64,7 @@ public:
         auto res = avformat_open_input(&mFormatCtx, mURL.c_str(), nullptr, &options);
         av_dict_free(&options);
         if (res < 0) {
-            throw std::runtime_error("Could not open input file: " + AVErrorString(res));
+            throw std::runtime_error("Failed to open input: " + AVErrorString(res));
         }
 
         // log.debug() << "CodecReader find stream info...";

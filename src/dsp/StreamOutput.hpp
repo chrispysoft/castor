@@ -23,6 +23,7 @@
 #pragma once
 
 #include <atomic>
+#include <thread>
 #include "Recorder.hpp"
 #include "../io/HTTPClient.hpp"
 #include "../util/Log.hpp"
@@ -32,36 +33,45 @@ namespace audio {
 class StreamOutput {
 
     std::atomic<bool> mRunning = false;
+    std::thread mStartThread;
     Recorder mRecorder;
-    io::HTTPClient mHTTPClient;
+    std::unique_ptr<io::HTTPClient> mHTTPClient;
 
 public:
     StreamOutput(double tSampleRate) :
-        mRecorder(tSampleRate)
-    {}
+        mRecorder(tSampleRate),
+        mHTTPClient(std::make_unique<io::HTTPClient>())
+    {
+        mRecorder.logName = "StreamWriter";
+    }
 
     bool isRunning() {
         return mRecorder.isRunning();
     }
 
     void start(const std::string& tURL, int tRetryInterval = 5) {
+        if (mRunning) return;
         log.debug() << "StreamOutput start " << tURL;
         mRunning = true;
-        try {
-            mRecorder.start(tURL);
-        }
-        catch (const std::exception& e) {
-            log.error() << "StreamOutput failed to start: " << e.what();
-        }
+        mStartThread = std::thread([this, url=tURL, interval=tRetryInterval] {
+            while (mRunning && !mRecorder.isRunning()) {
+                try {
+                    mRecorder.start(url);
+                }
+                catch (const std::exception& e) {
+                    log.error() << "StreamOutput failed to start: " << e.what() << ". Retrying in " << interval << " sec...";
+                    util::sleepCancellable(interval, mRunning);
+                }
+            }
+        });
     }
 
     void stop() {
-        if (!mRunning) {
-            return;
-        }
+        if (!mRunning) return;
         log.debug() << "StreamOutput stop...";
         mRunning = false;
         mRecorder.stop();
+        if (mStartThread.joinable()) mStartThread.join();
     }
 
     void updateMetadata(const std::string& tURL, std::shared_ptr<PlayItem> tItem) {
@@ -73,7 +83,7 @@ public:
         }
         log.debug() << "StreamOutput updateMetadata " << songName;
         auto url = tURL + "&mode=updinfo&song=" + songName;
-        auto res = mHTTPClient.get(url);
+        auto res = mHTTPClient->get(url);
         auto code = res.code;
         if (code != 200) {
             throw std::runtime_error("metadata http request failed with code: " + std::to_string(code));

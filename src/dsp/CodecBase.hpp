@@ -59,7 +59,7 @@ public:
         mURL(tURL),
         mFrameBuffer(tFrameBufferSize)
     {
-        av_log_set_level(AV_LOG_ERROR);
+        av_log_set_level(AV_LOG_FATAL);
         av_channel_layout_default(&mChannelLayout, kChannelCount);
     }
 
