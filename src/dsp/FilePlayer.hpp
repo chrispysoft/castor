@@ -59,26 +59,16 @@ public:
     }
 
     size_t write(const T* tData, size_t tLen) override {
-        if (tLen > mCapacity) return 0;
-
-        size_t freeSpace = mCapacity - mWritePos;
-        if (tLen > freeSpace) {
-            return 0;
-        }
-
         auto writable = std::min(tLen, mCapacity - mWritePos);
+        if (writable == 0) return 0;
         memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
         mWritePos += writable;
-
         return writable;
     }
 
     size_t read(T* tData, size_t tLen) override {
-        if (tLen == 0) return 0;
-
-        if (tLen > mCapacity - mReadPos) return 0;
-
         auto readable = std::min(tLen, mCapacity - mReadPos);
+        if (readable == 0) return 0;
         memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
         mReadPos += readable;
 
