@@ -19,6 +19,11 @@ silence_threshold=-90
 silence_start_duration=10
 silence_stop_duration=1
 
+# Fading
+program_fade_in_time=1.0
+program_fade_out_time=1.0
+fallback_cross_fade_time=5.0
+
 # Audio Device
 in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio

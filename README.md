@@ -10,9 +10,10 @@
 - 1 stereo line input and 1 stereo line output
 - Recorder functionality
 - Stream output support
-- Crossfading between tracks
 - Silence detection
 - Fallback mechanism
+- Fade in/out (regular program)
+- Crossfading (fallback only)
 - Native support for **Debian**, **Ubuntu**, **macOS**, and **Docker** (Debian-based)
 
 ## Getting Started
@@ -100,10 +101,13 @@ The **SilenceDetector** analyzes the RMS value of the buffer on a background thr
 
 If **Fallback** is active, the output buffer becomes the render target. The buffer is then passed to **StreamOutput** (if enabled) and finally to the **AudioClient**, which interfaces with the audio hardware.
 
-## Recorder
+### Fallback
+At startup, audio files located in `audio_fallback_path` (including those referenced in m3u playlists) are cached. The maximum duration of cached content is controlled by `preload_time_fallback` and depends on the sample rate and available RAM (which may be lower in a Docker environment than on the host system). The fallback queue reloads automatically once all tracks have been played. Additionally, fallback playback supports "true crossfading" by overlapping two tracks during the transition window and applying smooth, exponential fade curves.
+
+### Recorder
 To enable automatic recording, set `audio_record_path` to a valid directory. Each change of the current show starts a new and stops the previous recording.
 
-## Stream Output
+### Stream Output
 To enable, set `stream_out_url` to a valid icecast url. Retry interval on errors: 5 sec.
 
 ## Known Issues

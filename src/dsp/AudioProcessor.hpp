@@ -89,7 +89,7 @@ public:
     }
 
     void generateFadeCurves() {
-        auto size = fadeOutCurve.size();
+        auto size = fadeInCurve.size();
         float denum = size - 1;
         for (auto i = 0; i < size; ++i) {
             float vol = i / denum;
@@ -98,7 +98,7 @@ public:
 
         size = fadeOutCurve.size();
         denum = size - 1;
-        for (auto i = 0; i < fadeOutCurve.size(); ++i) {
+        for (auto i = 0; i < size; ++i) {
             float vol = (denum-i) / denum;
             fadeOutCurve[i] = vol * vol;
         }
@@ -112,10 +112,10 @@ class Player : public Input, public BufferedSource, public Fader {
     time_t lastLoadAttempt = 0;
 public:
 
-    Player(float tSampleRate, const std::string& name = "", time_t tPreloadTime = 0) :
+    Player(float tSampleRate, const std::string& name = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
         Input(name),
         BufferedSource(),
-        Fader(1, 1, tSampleRate),
+        Fader(tFadeInTime, tFadeOutTime, tSampleRate),
         preloadTime(tPreloadTime)
     {
         generateFadeCurves();
@@ -193,6 +193,14 @@ public:
         schedulingThread = std::thread(&Player::waitForEvents, this);
     }
 
+    void fadeIn() {
+        fadeInCurveIndex = 0;
+    }
+
+    void fadeOut() {
+        fadeOutCurveIndex = 0;
+    }
+
     void waitForEvents() {
         // auto loadTm = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
         auto fadeInTm = std::chrono::system_clock::from_time_t(playItem->start);
@@ -228,14 +236,14 @@ public:
             log.info(Log::Magenta) << "PLAY " << name;
             play();
             // log.info(Log::Magenta) << "FADE IN " << name;
-            fadeInCurveIndex = 0;
+            fadeIn();
 
             // wait until fade-out
             scheduleCV.wait_until(lock, fadeOutTm, [this] { return !isScheduling; });
             if (!isScheduling) return;
 
             // log.info(Log::Magenta) << "FADE OUT " << name;
-            fadeOutCurveIndex = 0;
+            fadeOut();
 
             // wait until stop time
             scheduleCV.wait_until(lock, stopTm, [this] { return !isScheduling; });

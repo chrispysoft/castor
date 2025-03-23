@@ -44,18 +44,12 @@
 namespace castor {
 
 class PlayerFactory {
+    const Config& mConfig;
     // std::mutex mMutex;
-    float mSampleRate;
-    time_t mPreloadTimeFile;
-    time_t mPreloadTimeStream;
-    time_t mPreloadTimeLine;
     
 public:
     PlayerFactory(const Config& tConfig) :
-        mSampleRate(tConfig.sampleRate),
-        mPreloadTimeFile(tConfig.preloadTimeFile),
-        mPreloadTimeStream(tConfig.preloadTimeStream),
-        mPreloadTimeLine(tConfig.preloadTimeLine)
+        mConfig(tConfig)
     {}
 
     std::shared_ptr<audio::Player> createPlayer(std::shared_ptr<PlayItem> tPlayItem) {
@@ -64,11 +58,11 @@ public:
         // std::lock_guard<std::mutex> lock(mMutex);
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (uri.starts_with("line"))
-            return std::make_shared<audio::LinePlayer>(mSampleRate, name, mPreloadTimeLine);
+            return std::make_shared<audio::LinePlayer>(mConfig.sampleRate, name, mConfig.preloadTimeLine, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else if (uri.starts_with("http"))
-            return std::make_shared<audio::StreamPlayer>(mSampleRate, name, mPreloadTimeStream);
+            return std::make_shared<audio::StreamPlayer>(mConfig.sampleRate, name, mConfig.preloadTimeStream, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else
-            return std::make_shared<audio::FilePlayer>(mSampleRate, name, mPreloadTimeFile);
+            return std::make_shared<audio::FilePlayer>(mConfig.sampleRate, name, mConfig.preloadTimeFile, mConfig.programFadeInTime, mConfig.programFadeOutTime);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -119,7 +113,7 @@ public:
         mPlayerFactory(std::make_unique<PlayerFactory>(mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback),
+        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
         mTCPUpdateTimer(1),

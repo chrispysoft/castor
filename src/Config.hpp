@@ -63,6 +63,9 @@ class Config {
     static constexpr const char* kPreloadTimeFile = "3600";
     static constexpr const char* kPreloadTimeStream = "10";
     static constexpr const char* kPreloadTimeFallback = "3600";
+    static constexpr const char* kProgramFadeInTime = "1.0";
+    static constexpr const char* kProgramFadeOutTime = "1.0";
+    static constexpr const char* kFallbackCrossFadeTime = "5.0";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -117,7 +120,10 @@ public:
     int preloadTimeFallback;
 
     int sampleRate = 44100;
-    int audioBufferSize = 1024;
+    int audioBufferSize = 512;
+    float programFadeInTime = 1;
+    float programFadeOutTime = 1;
+    float fallbackCrossFadeTime = 5;
     bool realtimeRendering = true;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
@@ -170,6 +176,9 @@ public:
         preloadTimeFile = std::stoi(get(map, "preload_time_file", kPreloadTimeFile));
         preloadTimeStream = std::stoi(get(map, "preload_time_stream", kPreloadTimeStream));
         preloadTimeFallback = std::stoi(get(map, "preload_time_fallback", kPreloadTimeFallback));
+        programFadeInTime = std::stof(get(map, "program_fade_in_time", kProgramFadeInTime));
+        programFadeOutTime = std::stof(get(map, "program_fade_out_time", kProgramFadeOutTime));
+        fallbackCrossFadeTime = std::stof(get(map, "fallback_cross_fade_time", kFallbackCrossFadeTime));
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -201,7 +210,10 @@ public:
         << "\n\t silenceStopDuration=" << silenceStopDuration
         << "\n\t preloadTimeFile=" << preloadTimeFile
         << "\n\t preloadTimeStream=" << preloadTimeStream
-        << "\n\t preloadTimeFallback=" << preloadTimeFallback;
+        << "\n\t preloadTimeFallback=" << preloadTimeFallback
+        << "\n\t programFadeInTime=" << programFadeInTime
+        << "\n\t programFadeOutTime=" << programFadeOutTime
+        << "\n\t fallbackCrossFadeTime=" << fallbackCrossFadeTime;
     }
 };
 }
