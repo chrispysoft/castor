@@ -39,28 +39,38 @@ class Fallback : public Input {
 
     const double mSampleRate;
     const std::string mFallbackURL;
+    const size_t mBufferTime;
+    const float mCrossFadeTime;
+    const size_t mFadeOutSampleOffset;
     SineOscillator mOscL;
     SineOscillator mOscR;
-    size_t mBufferTime;
     time_t mLastLoadAttempt = 0;
     std::thread mWorker;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mActive = false;
-    std::deque<std::shared_ptr<FilePlayer>> mPlayers = {};
-    std::shared_ptr<FilePlayer> mCurrPlayer = nullptr;
+    std::atomic<int> mActivePlayerIdxA = -1;
+    std::atomic<int> mActivePlayerIdxB = -1;
+    std::deque<std::shared_ptr<FilePlayer>> mPlayers{};
+    std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime) : Input(),
+    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime) : Input(),
         mSampleRate(tSampleRate),
         mFallbackURL(tFallbackURL),
+        mBufferTime(tBufferTime),
+        mCrossFadeTime(tCrossFadeTime),
+        mFadeOutSampleOffset(mSampleRate * 2 * mCrossFadeTime),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mBufferTime(tBufferTime)
+        mMixBuffer(2048)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
     }
 
+    bool isActive() {
+        return mActive;
+    }
     
     void run() {
         if (mFallbackURL.empty()) {
@@ -80,7 +90,8 @@ public:
         log.debug() << "Fallback terminate...";
         mRunning = false;
         if (mWorker.joinable()) mWorker.join();
-        for (auto player : mPlayers) player->stop();
+        for (const auto& player : mPlayers) player->stop();
+        mPlayers.clear();
         log.info() << "Fallback terminated";
     }
 
@@ -94,19 +105,7 @@ public:
                 mLastLoadAttempt = now;
             }
 
-            auto isFinished = [](const std::shared_ptr<Player>& player) {
-                return player->mBuffer->readPosition() >= player->mBuffer->capacity();
-            };
-
-            while (!mPlayers.empty() && isFinished(mPlayers.front())) {
-                mPlayers.front()->stop();
-                mPlayers.pop_front();
-            }
-
-            if (!mPlayers.empty()) {
-                if (mCurrPlayer != mPlayers.front()) mCurrPlayer = mPlayers.front();
-            }
-            else mCurrPlayer = nullptr;
+            control();
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
@@ -120,7 +119,7 @@ public:
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<FilePlayer>(mSampleRate, url);
+                auto player = std::make_shared<FilePlayer>(mSampleRate, url, 0, mCrossFadeTime, mCrossFadeTime);
                 player->load(url);
                 sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
@@ -128,6 +127,8 @@ public:
                     player->stop();
                     return false; // break case
                 }
+                player->play();
+                player->fadeIn();
                 mPlayers.push_back(player);
             }
             catch (const std::exception& e) {
@@ -170,10 +171,47 @@ public:
     }
 
 
+    void control() {
+        if (mPlayers.empty()) return;
+
+        auto shouldFadeOut = [this](const std::shared_ptr<Player>& player) {
+            return player->mBuffer->readPosition() >= player->mBuffer->capacity() - mFadeOutSampleOffset;
+        };
+
+        auto isFinished = [](const std::shared_ptr<Player>& player) {
+            return player->mBuffer->readPosition() >= player->mBuffer->capacity();
+        };
+
+        auto ia = -1;
+        auto ib = -1;
+
+        for (auto i = 0; i < mPlayers.size(); ++i) {
+            const auto& player = mPlayers[i];
+            if (isFinished(player)) continue;
+            ia = i;
+            if (shouldFadeOut(player)) {
+                player->fadeOut();
+                if (ia + 1 < mPlayers.size()) ib = ia + 1;
+            }
+            break;
+        }
+        mActivePlayerIdxA.store(ia);
+        mActivePlayerIdxB.store(ib);
+
+        if (ia == -1 && ib == -1) {
+            mPlayers.clear();
+        }
+    }
+
+
     void start() {
         if (mActive) return;
         log.info(Log::Yellow) << "Fallback start";
         mActive = true;
+        // if (mCurrPlayer) {
+        //     mCurrPlayer->play();
+        //     mCurrPlayer->fadeIn();
+        // }
     }
 
     void stop() {
@@ -182,20 +220,20 @@ public:
         mActive = false;
     }
 
-    bool isActive() {
-        return mActive;
-    }
 
     void process(const sam_t* in, sam_t* out, size_t nframes) {
-        auto nsamples = nframes * 2;
-        auto nread = 0;
-        
-        auto player = mCurrPlayer;
-        if (player) {
-            nread = player->mBuffer->read(out, nsamples);
-        }
-
-        if (nread == 0) {
+        auto playerIdxA = mActivePlayerIdxA.load();
+        auto playerIdxB = mActivePlayerIdxB.load();
+        if (playerIdxA >= 0) {
+            mPlayers[playerIdxA]->process(in, out, nframes);
+            if (playerIdxB >= 0) {
+                mPlayers[playerIdxB]->process(in, mMixBuffer.data(), nframes);
+                for (auto i = 0; i < nframes; ++i) {
+                    out[i*2+0] += mMixBuffer[i*2+0];
+                    out[i*2+1] += mMixBuffer[i*2+1];
+                }
+            }
+        } else {
             for (auto i = 0; i < nframes; ++i) {
                 out[i*2]   += mOscL.process() * kGain;
                 out[i*2+1] += mOscR.process() * kGain;
