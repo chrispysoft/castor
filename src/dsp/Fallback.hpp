@@ -22,7 +22,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
+#include <random>
 #include <set>
 #include <thread>
 #include "SineOscillator.hpp"
@@ -45,6 +47,7 @@ class Fallback : public Input {
     const size_t mBufferTime;
     const float mCrossFadeTime;
     const size_t mFadeOutSampleOffset;
+    const bool mShuffle;
     const bool mSineSynth;
     SineOscillator mOscL;
     SineOscillator mOscR;
@@ -58,12 +61,13 @@ class Fallback : public Input {
     std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, size_t tFrameSize, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tSineSynth) : Input(),
+    Fallback(double tSampleRate, size_t tFrameSize, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tShuffle, bool tSineSynth) : Input(),
         mSampleRate(tSampleRate),
         mFrameSize(tFrameSize),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
         mCrossFadeTime(tCrossFadeTime),
+        mShuffle(tShuffle),
         mSineSynth(tSineSynth),
         mFadeOutSampleOffset(mSampleRate * kChannelCount * mCrossFadeTime),
         mOscL(mSampleRate),
@@ -151,8 +155,15 @@ public:
             if (!entry.is_regular_file()) continue;
             sortedPaths.insert(entry.path());
         }
+        std::vector<std::filesystem::path> paths(sortedPaths.begin(), sortedPaths.end());
 
-        for (const auto& path : sortedPaths) {
+        if (mShuffle) {
+            std::random_device rd;
+            std::mt19937 rng(rd());
+            std::ranges::shuffle(paths, rng);
+        }
+
+        for (const auto& path : paths) {
             const auto& url = path.string();
             if (url.ends_with(".m3u")) {
                 log.debug() << "Fallback opening m3u file " << url;

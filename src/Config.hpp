@@ -67,6 +67,7 @@ class Config {
     static constexpr const char* kProgramFadeOutTime = "1.0";
     static constexpr const char* kFallbackCrossFadeTime = "5.0";
     static constexpr const char* kSampleRate = "44100";
+    static constexpr const char* kFallbackShuffle = "1";
     static constexpr const char* kFallbackSineSynth = "1";
 
     static Map parseConfigFile(const std::string& tPath) {
@@ -125,6 +126,7 @@ public:
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;
+    bool fallbackShuffle;
     bool fallbackSineSynth;
     bool realtimeRendering = true;
 
@@ -182,6 +184,7 @@ public:
         programFadeInTime = std::stof(get(map, "program_fade_in_time", kProgramFadeInTime));
         programFadeOutTime = std::stof(get(map, "program_fade_out_time", kProgramFadeOutTime));
         fallbackCrossFadeTime = std::stof(get(map, "fallback_cross_fade_time", kFallbackCrossFadeTime));
+        fallbackShuffle = std::stoi(get(map, "fallback_shuffle", kFallbackShuffle));
         fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
         
         log.info() << "Config:"

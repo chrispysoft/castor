@@ -9,12 +9,15 @@ audio_playlist_path=./audio/playlist
 # audio_record_path=./audio/recordings
 audio_fallback_path=./audio/fallback
 
-# Fallback preload time (sec.)
+# Caching time (sec.)
 preload_time_file=3600
 preload_time_stream=10
 preload_time_fallback=3600
 
-# Fallback Test Signal (synthesized sine waves, 0 = off)
+# Fallback Track Shuffling (random ordering each reload; 0 = off)
+fallback_shuffle=1
+
+# Fallback Test Signal (synthesized sine waves; 0 = off)
 fallback_sine_synth=1
 
 # Silence Detector
