@@ -113,7 +113,7 @@ public:
         mPlayerFactory(std::make_unique<PlayerFactory>(mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime),
+        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackSineSynth),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
         mTCPUpdateTimer(1),

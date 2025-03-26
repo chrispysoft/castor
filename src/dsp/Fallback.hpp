@@ -42,6 +42,7 @@ class Fallback : public Input {
     const size_t mBufferTime;
     const float mCrossFadeTime;
     const size_t mFadeOutSampleOffset;
+    const bool mSineSynth;
     SineOscillator mOscL;
     SineOscillator mOscR;
     time_t mLastLoadAttempt = 0;
@@ -54,11 +55,12 @@ class Fallback : public Input {
     std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime) : Input(),
+    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tSineSynth) : Input(),
         mSampleRate(tSampleRate),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
         mCrossFadeTime(tCrossFadeTime),
+        mSineSynth(tSineSynth),
         mFadeOutSampleOffset(mSampleRate * 2 * mCrossFadeTime),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
@@ -233,7 +235,8 @@ public:
                     out[i*2+1] += mMixBuffer[i*2+1];
                 }
             }
-        } else {
+        }
+        else if (mSineSynth) {
             for (auto i = 0; i < nframes; ++i) {
                 out[i*2]   += mOscL.process() * kGain;
                 out[i*2+1] += mOscR.process() * kGain;

@@ -122,7 +122,7 @@ public:
             throw std::runtime_error("AudioClient Pa_SetStreamFinishedCallback failed with error "+std::to_string(res));
         }
 
-        log.info() << "AudioClient opened stream with device ids " << iDevID << "," << oDevID << " sample rate " << mSampleRate << ", buffer size " << mBufferSize;
+        log.info() << "AudioClient opened stream with device ids: [" << iDevID << "," << oDevID << "], sample rate: " << mSampleRate << ", frame buffer size: " << mBufferSize;
     }
 
     void stop() {
