@@ -95,6 +95,7 @@ public:
     void terminate() {
         log.debug() << "Fallback terminate...";
         mRunning = false;
+        mActive = false;
         if (mWorker.joinable()) mWorker.join();
         for (const auto& player : mPlayers) player->stop();
         mPlayers.clear();
