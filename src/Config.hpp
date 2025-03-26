@@ -122,7 +122,7 @@ public:
     int preloadTimeFallback;
     int preloadTimeLine = 5;
     int sampleRate;
-    size_t samplesPerFrame = 1024;
+    size_t samplesPerFrame = 512;
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;
