@@ -33,11 +33,14 @@ namespace castor {
 namespace audio {
 
 class Fallback : public Input {
+
+    static constexpr size_t kChannelCount = 2;
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
     static constexpr time_t kLoadRetryInterval = 10;
 
     const double mSampleRate;
+    const size_t mFrameSize;
     const std::string mFallbackURL;
     const size_t mBufferTime;
     const float mCrossFadeTime;
@@ -55,16 +58,17 @@ class Fallback : public Input {
     std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tSineSynth) : Input(),
+    Fallback(double tSampleRate, size_t tFrameSize, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tSineSynth) : Input(),
         mSampleRate(tSampleRate),
+        mFrameSize(tFrameSize),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
         mCrossFadeTime(tCrossFadeTime),
         mSineSynth(tSineSynth),
-        mFadeOutSampleOffset(mSampleRate * 2 * mCrossFadeTime),
+        mFadeOutSampleOffset(mSampleRate * kChannelCount * mCrossFadeTime),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mMixBuffer(2048)
+        mMixBuffer(mFrameSize * kChannelCount)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
@@ -116,12 +120,12 @@ public:
     void loadQueue() {
         log.info(Log::Yellow) << "Fallback loading queue...";
         
-        size_t maxSamples = mSampleRate * mBufferTime * 2;
+        size_t maxSamples = mSampleRate * mBufferTime * kChannelCount;
         size_t sumSamples = 0;
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<FilePlayer>(mSampleRate, url, 0, mCrossFadeTime, mCrossFadeTime);
+                auto player = std::make_shared<FilePlayer>(mSampleRate, mFrameSize, url, 0, mCrossFadeTime, mCrossFadeTime);
                 player->load(url);
                 sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {

@@ -112,7 +112,7 @@ class Player : public Input, public BufferedSource, public Fader {
     time_t lastLoadAttempt = 0;
 public:
 
-    Player(float tSampleRate, const std::string& name = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+    Player(float tSampleRate, size_t tFrameSize, const std::string& name = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
         Input(name),
         BufferedSource(),
         Fader(tFadeInTime, tFadeOutTime, tSampleRate),

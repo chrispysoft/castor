@@ -128,7 +128,8 @@ class StreamPlayer : public Player {
         return util::nextMultiple(tSampleRate * kChannelCount * tPreloadTime * 2, tBlockSize);
     }
 
-    const double mSampleRate;
+    const float mSampleRate;
+    const size_t mFrameSize;
     const size_t mBufferSize;
     std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
@@ -136,10 +137,11 @@ class StreamPlayer : public Player {
     StreamBuffer<sam_t> mStreamBuffer;
 
 public:
-    StreamPlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tSampleRate, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
+    StreamPlayer(float tSampleRate, size_t tFrameSize, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Player(tSampleRate, tFrameSize, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
         mSampleRate(tSampleRate),
-        mBufferSize(calcBufferSize(mSampleRate, tPreloadTime, 2048))
+        mFrameSize(tFrameSize),
+        mBufferSize(calcBufferSize(mSampleRate, tPreloadTime, mFrameSize * kChannelCount))
     {
         category = "STRM";
         mBuffer = &mStreamBuffer;
@@ -157,7 +159,7 @@ public:
         mStreamBuffer.resize(mBufferSize, true);
 
         if (mReader) mReader->cancel();
-        mReader = std::make_unique<CodecReader>(mSampleRate, tURL);
+        mReader = std::make_unique<CodecReader>(mSampleRate, mFrameSize, tURL);
         
         if (playItem) playItem->metadata = mReader->metadata();
 

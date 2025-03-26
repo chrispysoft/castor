@@ -60,7 +60,7 @@ public:
         using namespace std;
 
         auto getDuration = [](const string& path) {
-            auto reader = audio::CodecReader(44100, path);
+            auto reader = audio::CodecReader(44100, 1024, path);
             int duration = ceil(reader.duration());
             if (duration <= 0) {
                 throw std::runtime_error("M3UParser could not get duration");

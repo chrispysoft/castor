@@ -58,11 +58,11 @@ public:
         // std::lock_guard<std::mutex> lock(mMutex);
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (uri.starts_with("line"))
-            return std::make_shared<audio::LinePlayer>(mConfig.sampleRate, name, mConfig.preloadTimeLine, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::LinePlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeLine, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else if (uri.starts_with("http"))
-            return std::make_shared<audio::StreamPlayer>(mConfig.sampleRate, name, mConfig.preloadTimeStream, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::StreamPlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeStream, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else
-            return std::make_shared<audio::FilePlayer>(mConfig.sampleRate, name, mConfig.preloadTimeFile, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::FilePlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeFile, mConfig.programFadeInTime, mConfig.programFadeOutTime);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -111,9 +111,9 @@ public:
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mConfig)),
-        mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.audioBufferSize),
+        mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mConfig.sampleRate, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackSineSynth),
+        mFallback(mConfig.sampleRate, mConfig.samplesPerFrame, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackSineSynth),
         mRecorder(mConfig.sampleRate),
         mStreamOutput(mConfig.sampleRate),
         mTCPUpdateTimer(1),

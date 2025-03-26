@@ -121,7 +121,7 @@ public:
     int preloadTimeFallback;
     int preloadTimeLine = 5;
     int sampleRate;
-    int audioBufferSize = 1024;
+    size_t samplesPerFrame = 1024;
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;

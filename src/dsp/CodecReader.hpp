@@ -31,8 +31,8 @@ namespace audio {
 class CodecReader : public CodecBase {
 
     static constexpr size_t kFrameBufferSize = 16384; // 128 - 2048
-    static constexpr size_t kAudioBufferSize = 1024;
 
+    const size_t mFrameSize;
     size_t mSampleCount;
     double mDuration;
 
@@ -45,8 +45,9 @@ class CodecReader : public CodecBase {
     int mStreamIndex = -1;
     
 public:
-    CodecReader(double tSampleRate, const std::string& tURL, double tSeek = 0) :
+    CodecReader(double tSampleRate, size_t tFrameSize, const std::string& tURL, double tSeek = 0) :
         CodecBase(tSampleRate, kFrameBufferSize, tURL),
+        mFrameSize(tFrameSize),
         mSampleCount(0)
     {
         av_log_set_level(AV_LOG_FATAL);
@@ -167,7 +168,7 @@ public:
         log.debug() << "CodecReader read " << mURL;
 
         // satisfy source buffer with constant block size
-        auto outFrameSize = kAudioBufferSize * kChannelCount;
+        auto outFrameSize = mFrameSize * kChannelCount;
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
