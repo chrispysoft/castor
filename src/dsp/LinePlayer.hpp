@@ -51,8 +51,8 @@ class LinePlayer : public Player {
     LineBuffer<sam_t> mLineBuffer;
 
 public:
-    LinePlayer(float tSampleRate, const std::string& tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tSampleRate, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
+    LinePlayer(float tSampleRate, size_t tFrameSize, const std::string& tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Player(tSampleRate, tFrameSize, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
         mSampleRate(tSampleRate)
     {
         category = "LINE";

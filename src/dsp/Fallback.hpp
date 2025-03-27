@@ -22,7 +22,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
+#include <random>
 #include <set>
 #include <thread>
 #include "SineOscillator.hpp"
@@ -33,15 +35,20 @@ namespace castor {
 namespace audio {
 
 class Fallback : public Input {
+
+    static constexpr size_t kChannelCount = 2;
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
     static constexpr time_t kLoadRetryInterval = 10;
 
     const double mSampleRate;
+    const size_t mFrameSize;
     const std::string mFallbackURL;
     const size_t mBufferTime;
     const float mCrossFadeTime;
     const size_t mFadeOutSampleOffset;
+    const bool mShuffle;
+    const bool mSineSynth;
     SineOscillator mOscL;
     SineOscillator mOscR;
     time_t mLastLoadAttempt = 0;
@@ -54,15 +61,18 @@ class Fallback : public Input {
     std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime) : Input(),
+    Fallback(double tSampleRate, size_t tFrameSize, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tShuffle, bool tSineSynth) : Input(),
         mSampleRate(tSampleRate),
+        mFrameSize(tFrameSize),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
         mCrossFadeTime(tCrossFadeTime),
-        mFadeOutSampleOffset(mSampleRate * 2 * mCrossFadeTime),
+        mShuffle(tShuffle),
+        mSineSynth(tSineSynth),
+        mFadeOutSampleOffset(mSampleRate * kChannelCount * mCrossFadeTime),
         mOscL(mSampleRate),
         mOscR(mSampleRate),
-        mMixBuffer(2048)
+        mMixBuffer(mFrameSize * kChannelCount)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
@@ -89,6 +99,7 @@ public:
     void terminate() {
         log.debug() << "Fallback terminate...";
         mRunning = false;
+        mActive = false;
         if (mWorker.joinable()) mWorker.join();
         for (const auto& player : mPlayers) player->stop();
         mPlayers.clear();
@@ -114,12 +125,12 @@ public:
     void loadQueue() {
         log.info(Log::Yellow) << "Fallback loading queue...";
         
-        size_t maxSamples = mSampleRate * mBufferTime * 2;
+        size_t maxSamples = mSampleRate * mBufferTime * kChannelCount;
         size_t sumSamples = 0;
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<FilePlayer>(mSampleRate, url, 0, mCrossFadeTime, mCrossFadeTime);
+                auto player = std::make_shared<FilePlayer>(mSampleRate, mFrameSize, url, 0, mCrossFadeTime, mCrossFadeTime);
                 player->load(url);
                 sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
@@ -144,8 +155,15 @@ public:
             if (!entry.is_regular_file()) continue;
             sortedPaths.insert(entry.path());
         }
+        std::vector<std::filesystem::path> paths(sortedPaths.begin(), sortedPaths.end());
 
-        for (const auto& path : sortedPaths) {
+        if (mShuffle) {
+            std::random_device rd;
+            std::mt19937 rng(rd());
+            std::ranges::shuffle(paths, rng);
+        }
+
+        for (const auto& path : paths) {
             const auto& url = path.string();
             if (url.ends_with(".m3u")) {
                 log.debug() << "Fallback opening m3u file " << url;
@@ -233,7 +251,8 @@ public:
                     out[i*2+1] += mMixBuffer[i*2+1];
                 }
             }
-        } else {
+        }
+        else if (mSineSynth) {
             for (auto i = 0; i < nframes; ++i) {
                 out[i*2]   += mOscL.process() * kGain;
                 out[i*2+1] += mOscR.process() * kGain;

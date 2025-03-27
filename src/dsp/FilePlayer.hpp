@@ -81,13 +81,15 @@ class FilePlayer : public Player {
     static constexpr size_t kChannelCount = 2;
     
     const double mSampleRate;
+    const size_t mFrameSize;
     FileBuffer<sam_t> mFileBuffer;
     std::unique_ptr<CodecReader> mReader = nullptr;
 
 public:
-    FilePlayer(float tSampleRate, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tSampleRate, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
-        mSampleRate(tSampleRate)
+    FilePlayer(float tSampleRate, size_t tFrameSize, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Player(tSampleRate, tFrameSize, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
+        mSampleRate(tSampleRate),
+        mFrameSize(tFrameSize)
     {
         category = "FILE";
         mBuffer = &mFileBuffer;
@@ -104,7 +106,7 @@ public:
         // eject();
 
         if (mReader) mReader->cancel();
-        mReader = std::make_unique<CodecReader>(mSampleRate, tURL, seek);
+        mReader = std::make_unique<CodecReader>(mSampleRate, mFrameSize, tURL, seek);
 
         if (playItem) playItem->metadata = mReader->metadata();
 

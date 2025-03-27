@@ -9,10 +9,16 @@ audio_playlist_path=./audio/playlist
 # audio_record_path=./audio/recordings
 audio_fallback_path=./audio/fallback
 
-# Fallback preload time (sec.)
+# Caching time (sec.)
 preload_time_file=3600
 preload_time_stream=10
 preload_time_fallback=3600
+
+# Fallback Track Shuffling (random ordering each reload; 0 = off)
+fallback_shuffle=1
+
+# Fallback Test Signal (synthesized sine waves; 0 = off)
+fallback_sine_synth=1
 
 # Silence Detector
 silence_threshold=-90
@@ -27,6 +33,7 @@ fallback_cross_fade_time=5.0
 # Audio Device
 in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio
+sample_rate=44100
 
 # Stream Output (comment-out stream_out_url to disable)
 # stream_out_url=icecast://source:hackme@localhost:8000/radio.mp3

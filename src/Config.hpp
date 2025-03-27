@@ -66,6 +66,9 @@ class Config {
     static constexpr const char* kProgramFadeInTime = "1.0";
     static constexpr const char* kProgramFadeOutTime = "1.0";
     static constexpr const char* kFallbackCrossFadeTime = "5.0";
+    static constexpr const char* kSampleRate = "44100";
+    static constexpr const char* kFallbackShuffle = "1";
+    static constexpr const char* kFallbackSineSynth = "1";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -116,14 +119,15 @@ public:
     int silenceStopDuration;
     int preloadTimeFile;
     int preloadTimeStream;
-    int preloadTimeLine = 5;
     int preloadTimeFallback;
-
-    int sampleRate = 44100;
-    int audioBufferSize = 512;
-    float programFadeInTime = 1;
-    float programFadeOutTime = 1;
-    float fallbackCrossFadeTime = 5;
+    int preloadTimeLine = 5;
+    int sampleRate;
+    size_t samplesPerFrame = 512;
+    float programFadeInTime;
+    float programFadeOutTime;
+    float fallbackCrossFadeTime;
+    bool fallbackShuffle;
+    bool fallbackSineSynth;
     bool realtimeRendering = true;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
@@ -154,6 +158,7 @@ public:
         audioFallbackPath = get(map, "audio_fallback_path", kAudioFallbackPath);
         iDevName = get(map, "in_device_name", kDeviceName);
         oDevName = get(map, "out_device_name", kDeviceName);
+        sampleRate = std::stoi(get(map, "sample_rate", kSampleRate));
         streamOutURL = get(map, "stream_out_url", kStreamOutURL);
         streamOutMetadataURL = get(map, "stream_out_metadata_url", kStreamOutMetadataURL);
         streamOutName = get(map, "stream_out_name", kStreamOutName);
@@ -179,6 +184,8 @@ public:
         programFadeInTime = std::stof(get(map, "program_fade_in_time", kProgramFadeInTime));
         programFadeOutTime = std::stof(get(map, "program_fade_out_time", kProgramFadeOutTime));
         fallbackCrossFadeTime = std::stof(get(map, "fallback_cross_fade_time", kFallbackCrossFadeTime));
+        fallbackShuffle = std::stoi(get(map, "fallback_shuffle", kFallbackShuffle));
+        fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -190,6 +197,7 @@ public:
         << "\n\t audioRecordPath=" << audioRecordPath
         << "\n\t iDevName=" << iDevName
         << "\n\t oDevName=" << oDevName
+        << "\n\t sampleRate=" << sampleRate
         << "\n\t streamOutURL=" << streamOutURL
         << "\n\t streamOutMetadataURL=" << streamOutMetadataURL
         << "\n\t streamOutName=" << streamOutName
@@ -213,7 +221,8 @@ public:
         << "\n\t preloadTimeFallback=" << preloadTimeFallback
         << "\n\t programFadeInTime=" << programFadeInTime
         << "\n\t programFadeOutTime=" << programFadeOutTime
-        << "\n\t fallbackCrossFadeTime=" << fallbackCrossFadeTime;
+        << "\n\t fallbackCrossFadeTime=" << fallbackCrossFadeTime
+        << "\n\t fallbackSineSynth=" << fallbackSineSynth;
     }
 };
 }

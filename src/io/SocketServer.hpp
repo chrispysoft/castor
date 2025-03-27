@@ -186,7 +186,7 @@ private:
 
     void handleClient(int clientSocket) {
         mConnected = true;
-        char buffer[1024];
+        char buffer[32];
 
         try {
             while (true) {
