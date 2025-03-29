@@ -11,7 +11,6 @@ audio_fallback_path=./audio/fallback
 
 # Caching time (sec.)
 preload_time_file=3600
-preload_time_stream=10
 preload_time_fallback=3600
 
 # Fallback Track Shuffling (random ordering each reload; 0 = off)
