@@ -95,11 +95,11 @@ public:
         mBuffer = &mFileBuffer;
     }
     
-    // ~FilePlayer() {
-    //     log.debug() << "FilePlayer " << name << " dealloc...";
-    //     if (state != IDLE) stop();
-    //     log.debug() << "FilePlayer " << name << " dealloced";
-    // }
+    ~FilePlayer() {
+        // log.debug() << "FilePlayer " << name << " dealloc...";
+        if (state != IDLE) stop();
+        log.debug() << "FilePlayer " << name << " dealloced";
+    }
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "FilePlayer load " << tURL << " position " << seek;
@@ -123,12 +123,12 @@ public:
     }
 
     void stop() override {
-        log.debug() << "FilePlayer stop...";
+        log.debug() << "FilePlayer " << name << " stop...";
         Player::stop();
         if (mReader) mReader->cancel();
         mReader = nullptr;
         // mBuffer.reset();
-        log.debug() << "FilePlayer stopped";
+        log.debug() << "FilePlayer " << name << " stopped";
     }
 };
 }

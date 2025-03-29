@@ -23,10 +23,12 @@
 #pragma once
 
 #include <algorithm>
+#include <deque>
 #include <filesystem>
 #include <random>
 #include <set>
 #include <thread>
+#include <mutex>
 #include "SineOscillator.hpp"
 #include "FilePlayer.hpp"
 #include "../util/Log.hpp"
@@ -39,7 +41,7 @@ class Fallback : public Input {
     static constexpr size_t kChannelCount = 2;
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
-    static constexpr time_t kLoadRetryInterval = 10;
+    static constexpr time_t kLoadRetryInterval = 5;
 
     const double mSampleRate;
     const size_t mFrameSize;
@@ -51,12 +53,14 @@ class Fallback : public Input {
     const bool mSineSynth;
     SineOscillator mOscL;
     SineOscillator mOscR;
-    time_t mLastLoadAttempt = 0;
-    std::thread mWorker;
+    time_t mLastLoad = 0;
+    std::thread mControlThread;
+    std::thread mLoadThread;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mActive = false;
     std::atomic<int> mActivePlayerIdxA = -1;
     std::atomic<int> mActivePlayerIdxB = -1;
+    std::mutex mPlayersMutex;
     std::deque<std::shared_ptr<FilePlayer>> mPlayers{};
     std::vector<sam_t> mMixBuffer;
 
@@ -92,7 +96,8 @@ public:
             return;
         }
         mRunning = true;
-        mWorker = std::thread(&Fallback::runSync, this);
+        mControlThread = std::thread(&Fallback::runControl, this);
+        mLoadThread = std::thread(&Fallback::runLoad, this);
         log.debug() << "Fallback running";
     }
 
@@ -100,23 +105,33 @@ public:
         log.debug() << "Fallback terminate...";
         mRunning = false;
         mActive = false;
-        if (mWorker.joinable()) mWorker.join();
+        if (mLoadThread.joinable()) mLoadThread.join();
+        if (mControlThread.joinable()) mControlThread.join();
         for (const auto& player : mPlayers) player->stop();
         mPlayers.clear();
         log.info() << "Fallback terminated";
     }
 
 
-    void runSync() {
+    void runControl() {
         while (mRunning) {
-            auto now = std::time(0);
+            control();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
 
-            if (mPlayers.empty() && now >= mLastLoadAttempt + kLoadRetryInterval) {
-                loadQueue();
-                mLastLoadAttempt = now;
+    void runLoad() {
+        while (mRunning) {
+
+            if (mActivePlayerIdxA == -1 && mActivePlayerIdxB == -1 && mPlayers.size()) {
+                std::lock_guard<std::mutex> lock(mPlayersMutex);
+                mPlayers.clear();
             }
 
-            control();
+            if (mPlayers.empty() && (mLastLoad == 0 || mLastLoad + kLoadRetryInterval <= std::time(0))) {
+                loadQueue();
+                mLastLoad = std::time(0);
+            }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
@@ -130,17 +145,17 @@ public:
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_shared<FilePlayer>(mSampleRate, mFrameSize, url, 0, mCrossFadeTime, mCrossFadeTime);
+                auto player = std::make_unique<FilePlayer>(mSampleRate, mFrameSize, url, 0, mCrossFadeTime, mCrossFadeTime);
                 player->load(url);
                 sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
-                    log.warn() << "Fallback buffer size reached";
+                    log.debug() << "Fallback buffer size reached";
                     player->stop();
                     return false; // break case
                 }
                 player->play();
                 player->fadeIn();
-                mPlayers.push_back(player);
+                mPlayers.push_back(std::move(player));
             }
             catch (const std::exception& e) {
                 log.error() << "Fallback failed to load '" << url << "': " << e.what();
@@ -164,6 +179,7 @@ public:
         }
 
         for (const auto& path : paths) {
+            if (!mRunning) return;
             const auto& url = path.string();
             if (url.ends_with(".m3u")) {
                 log.debug() << "Fallback opening m3u file " << url;
@@ -171,6 +187,7 @@ public:
                 if (!file.is_open()) throw std::runtime_error("Failed to open file");
                 std::string line;
                 while (getline(file, line)) {
+                    if (!mRunning) return;
                     if (line.starts_with("#")) continue;
                     util::stripM3ULine(line);
                     loadNext = pushPlayer(line);
@@ -185,7 +202,9 @@ public:
                 if (!loadNext) break;
             }
         }
-        log.info(Log::Yellow) << "Fallback load queue done size: " << mPlayers.size();
+        auto qsz = mPlayers.size();
+        if (qsz > 0) log.info(Log::Yellow) << "Fallback load done (" << qsz << " tracks)";
+        else log.warn() << "Fallback queue empty - reloading in " << kLoadRetryInterval << " sec...";
     }
 
 
@@ -203,6 +222,8 @@ public:
         auto ia = -1;
         auto ib = -1;
 
+        std::lock_guard<std::mutex> lock(mPlayersMutex);
+        
         for (auto i = 0; i < mPlayers.size(); ++i) {
             const auto& player = mPlayers[i];
             if (isFinished(player)) continue;
@@ -215,15 +236,11 @@ public:
         }
         mActivePlayerIdxA.store(ia);
         mActivePlayerIdxB.store(ib);
-
-        if (ia == -1 && ib == -1) {
-            mPlayers.clear();
-        }
     }
 
 
     void start() {
-        if (mActive) return;
+        if (mActive || !mRunning) return;
         log.info(Log::Yellow) << "Fallback start";
         mActive = true;
         // if (mCurrPlayer) {

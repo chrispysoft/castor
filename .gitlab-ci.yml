@@ -1,0 +1,14 @@
+stages:
+  - build
+
+build_docker_image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker buildx create --use
+    - docker buildx build --platform linux/amd64,linux/arm64 -t crispybitsapp/castor:latest .
+    - docker push crispybitsapp/castor:latest
+  only:
+    - dev
