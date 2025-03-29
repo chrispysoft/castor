@@ -122,7 +122,7 @@ public:
     int preloadTimeFallback;
     int preloadTimeLine = 5;
     int sampleRate;
-    size_t samplesPerFrame = 512;
+    size_t samplesPerFrame = 1024;
     int recorderBitRate = 128000;
     int streamOutBitRate = 320000;
     float programFadeInTime;
