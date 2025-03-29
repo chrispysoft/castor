@@ -121,5 +121,39 @@ public:
 
 };
 
+struct CodecFormat {
+
+    AVCodecID codecID;
+    std::string mimeType;
+
+    CodecFormat(const std::string& tURL) {
+        using namespace util;
+        auto fileType = getFileType(tURL);
+        switch (fileType) {
+            case FileType::MP3: {
+                mimeType = "audio/mpeg";
+                codecID = AV_CODEC_ID_MP3;
+                break;
+            }
+            case FileType::AAC: {
+                mimeType = "audio/aac";
+                codecID = AV_CODEC_ID_AAC;
+                break;
+            }
+            case FileType::OGG: {
+                mimeType = "application/ogg";
+                codecID = AV_CODEC_ID_VORBIS;
+                break;
+            }
+            case FileType::FLAC: {
+                mimeType = "audio/flac";
+                codecID = AV_CODEC_ID_FLAC;
+                break;
+            }
+            default:
+                throw std::runtime_error("Unknown file type");
+        }
+    }
+};
 }
 }

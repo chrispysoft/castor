@@ -54,14 +54,14 @@ public:
         av_dict_set(&mOptions, "reconnect_delay_max", "2", 0);
         av_dict_set(&mOptions, "fflags", "+discardcorrupt+genpts", 0);
 
-        av_dict_set(&mOptions, "content_type", "audio/mpeg", 0);
+        av_dict_set(&mOptions, "content_type", codecFormat.mimeType.c_str(), 0);
         av_dict_set(&mOptions, "user_agent", "ffmpeg", 0);
 
         for (const auto& m : tMetadata) {
             av_dict_set(&mMetadata, m.first.c_str(), m.second.c_str(), 0);
         }
         
-        auto codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
+        auto codec = avcodec_find_encoder(codecFormat.codecID);
         if (!codec) {
             throw std::runtime_error("Recorder encoder not found");
         }

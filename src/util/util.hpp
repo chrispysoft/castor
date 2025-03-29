@@ -92,6 +92,23 @@ std::string getEnvar(const std::string& key) {
     return val == NULL ? std::string("") : std::string(val);
 }
 
+enum class FileType { MP3, AAC, M4A, OGG, OPUS, FLAC, UNKNOWN };
+
+std::string getFileExtension(const std::string& path) {
+    auto dot = path.rfind('.'), slash = path.rfind('/');
+    return (dot != std::string::npos && dot > slash) ? path.substr(dot) : "";
+}
+
+FileType getFileType(const std::string& path) {
+    auto ext = getFileExtension(path);
+    if (ext == ".mp3") return FileType::MP3;
+    if (ext == ".aac") return FileType::AAC;
+    if (ext == ".m4a") return FileType::M4A;
+    if (ext == ".ogg") return FileType::OGG;
+    if (ext == ".opus") return FileType::OPUS;
+    if (ext == ".flac") return FileType::FLAC;
+    return FileType::UNKNOWN;
+}
 
 template <typename T>
 bool contains(const std::deque<T>& tDeque, const T& tItem) {
