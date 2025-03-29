@@ -38,8 +38,8 @@ class StreamOutput {
     std::unique_ptr<io::HTTPClient> mHTTPClient;
 
 public:
-    StreamOutput(double tSampleRate) :
-        mRecorder(tSampleRate),
+    StreamOutput(const AudioStreamFormat& tClientFormat, int tBitRate) :
+        mRecorder(tClientFormat, tBitRate),
         mHTTPClient(std::make_unique<io::HTTPClient>())
     {
         mRecorder.logName = "StreamWriter";

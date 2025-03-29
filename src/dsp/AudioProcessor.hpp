@@ -30,7 +30,6 @@
 #include <thread>
 #include <functional>
 #include "audio.hpp"
-#include "RMS.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -38,12 +37,13 @@ namespace audio {
 
 class Input {
 public:
-
+    const AudioStreamFormat& clientFormat;
     const std::string name;
     std::string category;
     
-    Input(const std::string name = "") :
-        name(name)
+    Input(const AudioStreamFormat& tClientFormat, const std::string tName = "") :
+        clientFormat(tClientFormat),
+        name(tName)
     {}
     
     virtual ~Input() = default;
@@ -112,10 +112,10 @@ class Player : public Input, public BufferedSource, public Fader {
     time_t lastLoadAttempt = 0;
 public:
 
-    Player(float tSampleRate, size_t tFrameSize, const std::string& name = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Input(name),
+    Player(const AudioStreamFormat& tClientFormat, const std::string& tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Input(tClientFormat, tName),
         BufferedSource(),
-        Fader(tFadeInTime, tFadeOutTime, tSampleRate),
+        Fader(tFadeInTime, tFadeOutTime, clientFormat.sampleRate),
         preloadTime(tPreloadTime)
     {
         generateFadeCurves();

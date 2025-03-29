@@ -61,7 +61,6 @@ class Config {
     static constexpr const char* kSilenceStartDuration = "5";
     static constexpr const char* kSilenceStopDuration = "1";
     static constexpr const char* kPreloadTimeFile = "3600";
-    static constexpr const char* kPreloadTimeStream = "10";
     static constexpr const char* kPreloadTimeFallback = "3600";
     static constexpr const char* kProgramFadeInTime = "1.0";
     static constexpr const char* kProgramFadeOutTime = "1.0";
@@ -118,11 +117,13 @@ public:
     int silenceStartDuration;
     int silenceStopDuration;
     int preloadTimeFile;
-    int preloadTimeStream;
     int preloadTimeFallback;
+    int preloadTimeStream = 10;
     int preloadTimeLine = 5;
     int sampleRate;
-    size_t samplesPerFrame = 512;
+    size_t samplesPerFrame = 1024;
+    int recorderBitRate = 128000;
+    int streamOutBitRate = 320000;
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;
@@ -179,7 +180,6 @@ public:
         silenceStartDuration = std::stoi(get(map, "silence_start_duration", kSilenceStartDuration));
         silenceStopDuration = std::stoi(get(map, "silence_stop_duration", kSilenceStopDuration));
         preloadTimeFile = std::stoi(get(map, "preload_time_file", kPreloadTimeFile));
-        preloadTimeStream = std::stoi(get(map, "preload_time_stream", kPreloadTimeStream));
         preloadTimeFallback = std::stoi(get(map, "preload_time_fallback", kPreloadTimeFallback));
         programFadeInTime = std::stof(get(map, "program_fade_in_time", kProgramFadeInTime));
         programFadeOutTime = std::stof(get(map, "program_fade_out_time", kProgramFadeOutTime));
@@ -217,7 +217,6 @@ public:
         << "\n\t silenceStartDuration=" << silenceStartDuration
         << "\n\t silenceStopDuration=" << silenceStopDuration
         << "\n\t preloadTimeFile=" << preloadTimeFile
-        << "\n\t preloadTimeStream=" << preloadTimeStream
         << "\n\t preloadTimeFallback=" << preloadTimeFallback
         << "\n\t programFadeInTime=" << programFadeInTime
         << "\n\t programFadeOutTime=" << programFadeOutTime

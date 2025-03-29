@@ -38,6 +38,8 @@ namespace util {
 class M3UParser {
 public:
 
+    static constexpr audio::AudioStreamFormat kCodecStreamFormat = audio::AudioStreamFormat(44100, 32, 2);
+
     std::unordered_map<size_t, std::vector<std::shared_ptr<PlayItem>>> mMap = {};
 
     void reset() {
@@ -60,7 +62,7 @@ public:
         using namespace std;
 
         auto getDuration = [](const string& path) {
-            auto reader = audio::CodecReader(44100, 1024, path);
+            auto reader = audio::CodecReader(kCodecStreamFormat, path);
             int duration = ceil(reader.duration());
             if (duration <= 0) {
                 throw std::runtime_error("M3UParser could not get duration");

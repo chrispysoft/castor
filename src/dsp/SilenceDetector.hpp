@@ -33,9 +33,9 @@ namespace castor {
 namespace audio {
 class SilenceDetector {
 
-    static constexpr size_t kChannelCount = 2;
     static constexpr size_t kBufferSize = 65536;
-    
+
+    const size_t mChannelCount;
     const float mThresholdLin; // linear (avoids log10 in compute thread)
     const time_t mStartDuration;
     const time_t mStopDuration;
@@ -55,7 +55,8 @@ public:
 
     std::function<void(bool silence)> silenceChangedCallback;
 
-    SilenceDetector(float tThreshold, time_t tStartDuration, time_t tStopDuration) :
+    SilenceDetector(const AudioStreamFormat& tClientFormat, float tThreshold, time_t tStartDuration, time_t tStopDuration) :
+        mChannelCount(tClientFormat.channelCount),
         mThresholdLin(util::dbLinear(tThreshold)),
         mStartDuration(tStartDuration),
         mStopDuration(tStopDuration),
@@ -146,7 +147,7 @@ public:
 
     
     void process(const sam_t* in, size_t nframes) {
-        auto nsamples = nframes * kChannelCount;
+        auto nsamples = nframes * mChannelCount;
         memcpy(mBuffer.data() + mBufferWriteIdx, in, nsamples * sizeof(sam_t));
 
         auto newIdx = mBufferWriteIdx + nsamples;

@@ -32,5 +32,17 @@ namespace audio {
 
 using sam_t = float;
 
+struct AudioStreamFormat {
+    const int sampleRate;
+    const int frameSize;
+    const int channelCount;
+
+    constexpr AudioStreamFormat(int tSampleRate, int tFrameSize, int tChannelCount) :
+        sampleRate(tSampleRate),
+        frameSize(tFrameSize),
+        channelCount(tChannelCount)
+    {}
+};
+
 }
 }

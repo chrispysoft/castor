@@ -32,7 +32,6 @@ class CodecReader : public CodecBase {
 
     static constexpr size_t kFrameBufferSize = 16384; // 128 - 2048
 
-    const size_t mFrameSize;
     size_t mSampleCount;
     double mDuration;
 
@@ -45,9 +44,8 @@ class CodecReader : public CodecBase {
     int mStreamIndex = -1;
     
 public:
-    CodecReader(double tSampleRate, size_t tFrameSize, const std::string& tURL, double tSeek = 0) :
-        CodecBase(tSampleRate, kFrameBufferSize, tURL),
-        mFrameSize(tFrameSize),
+    CodecReader(const AudioStreamFormat& tClientFormat, const std::string& tURL, double tSeek = 0) :
+        CodecBase(tClientFormat, kFrameBufferSize, tURL),
         mSampleCount(0)
     {
         av_log_set_level(AV_LOG_FATAL);
@@ -103,7 +101,7 @@ public:
         }
 
         // log.debug() << "CodecReader alloc resampler...";
-        if (swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mSampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr) < 0) {
+        if (swr_alloc_set_opts2(&mSwrCtx, &mChannelLayout, AV_SAMPLE_FMT_FLT, mClientFormat.sampleRate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr) < 0) {
             throw std::runtime_error("swr_alloc_set_opts failed");
         }
 
@@ -137,7 +135,7 @@ public:
 
         if (mFormatCtx->duration > 0) {
             mDuration = mFormatCtx->duration / (double) AV_TIME_BASE - tSeek;
-            mSampleCount = ceil(mDuration * mSampleRate * kChannelCount) + 1;
+            mSampleCount = ceil(mDuration * mClientFormat.sampleRate * mClientFormat.channelCount) + 1;
         }
 
         log.debug() << "CodecReader inited " << mURL << " (" << mSampleCount << " samples)";
@@ -168,7 +166,7 @@ public:
         log.debug() << "CodecReader read " << mURL;
 
         // satisfy source buffer with constant block size
-        auto outFrameSize = mFrameSize * kChannelCount;
+        auto outFrameSize = mClientFormat.frameSize * mClientFormat.channelCount;
 
         while (!mCancelled && av_read_frame(mFormatCtx, mPacket) >= 0) {
             if (mPacket->stream_index != mStreamIndex) continue;
@@ -176,7 +174,7 @@ public:
 
             while (!mCancelled && avcodec_receive_frame(mCodecCtx, mFrame) >= 0) {
                 auto maxSamples = swr_get_out_samples(mSwrCtx, mFrame->nb_samples);
-                auto maxBufSize = maxSamples * kChannelCount;
+                auto maxBufSize = maxSamples * mClientFormat.channelCount;
                 // if (mFrameBuffer.size() < maxBufSize) mFrameBuffer.resize(maxBufSize); // should not happen with sufficient buffer size
 
                 // reading maxSamples avoids internal buffering but doesn't guarantee full block size
@@ -192,7 +190,7 @@ public:
                 }
 
                 // use fifo to create desired chunks (and reuse frame buffer to save resources)
-                auto fifoWritten = av_audio_fifo_write(mFIFO, (void**) outData, convSamples * kChannelCount);
+                auto fifoWritten = av_audio_fifo_write(mFIFO, (void**) outData, convSamples * mClientFormat.channelCount);
                 auto fifosz = av_audio_fifo_size(mFIFO);
                 // log.debug() << fifoWritten << " written to fifo, size " << fifisz;
 

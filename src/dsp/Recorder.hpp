@@ -27,6 +27,7 @@
 #include <vector>
 #include <stdexcept>
 #include "CodecWriter.hpp"
+#include "audio.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
 
@@ -34,10 +35,10 @@ namespace castor {
 namespace audio {
 class Recorder {
 
-    static constexpr size_t kChannelCount = 2;
     static constexpr size_t kRingBufferSize = 65536;
 
-    const double mSampleRate;
+    const AudioStreamFormat& mClientFormat;
+    const int mBitRate;
     util::RingBuffer<sam_t> mRingBuffer;
     std::unique_ptr<CodecWriter> mWriter = nullptr;
     std::unique_ptr<std::thread> mWorker = nullptr;
@@ -47,8 +48,9 @@ public:
 
     std::string logName = "Recorder";
 
-    Recorder(double tSampleRate) :
-        mSampleRate(tSampleRate),
+    Recorder(const AudioStreamFormat& tClientFormat, int tBitRate) :
+        mClientFormat(tClientFormat),
+        mBitRate(tBitRate),
         mRingBuffer(kRingBufferSize)
     {}
 
@@ -59,7 +61,7 @@ public:
             return;
         }
 
-        mWriter = std::make_unique<CodecWriter>(mSampleRate, tURL, tMetadata);
+        mWriter = std::make_unique<CodecWriter>(mClientFormat, mBitRate, tURL, tMetadata);
         mRunning = true;
 
         log.info(Log::Magenta) << logName << " started";
@@ -96,7 +98,7 @@ public:
 
 
     void process(const sam_t* in, size_t nframes) {
-        auto nsamples = nframes * kChannelCount;
+        auto nsamples = nframes * mClientFormat.channelCount;
         mRingBuffer.write(in, nsamples);
     }
 };

@@ -38,13 +38,10 @@ namespace audio {
 
 class Fallback : public Input {
 
-    static constexpr size_t kChannelCount = 2;
     static constexpr double kGain = 1 / 128.0;
     static constexpr double kBaseFreq = 1000;
     static constexpr time_t kLoadRetryInterval = 5;
 
-    const double mSampleRate;
-    const size_t mFrameSize;
     const std::string mFallbackURL;
     const size_t mBufferTime;
     const float mCrossFadeTime;
@@ -65,18 +62,17 @@ class Fallback : public Input {
     std::vector<sam_t> mMixBuffer;
 
 public:
-    Fallback(double tSampleRate, size_t tFrameSize, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tShuffle, bool tSineSynth) : Input(),
-        mSampleRate(tSampleRate),
-        mFrameSize(tFrameSize),
+    Fallback(const AudioStreamFormat& tClientFormat, const std::string& tFallbackURL, size_t tBufferTime, float tCrossFadeTime, bool tShuffle, bool tSineSynth) :
+        Input(tClientFormat),
         mFallbackURL(tFallbackURL),
         mBufferTime(tBufferTime),
         mCrossFadeTime(tCrossFadeTime),
         mShuffle(tShuffle),
         mSineSynth(tSineSynth),
-        mFadeOutSampleOffset(mSampleRate * kChannelCount * mCrossFadeTime),
-        mOscL(mSampleRate),
-        mOscR(mSampleRate),
-        mMixBuffer(mFrameSize * kChannelCount)
+        mFadeOutSampleOffset(clientFormat.sampleRate * clientFormat.channelCount * mCrossFadeTime),
+        mOscL(clientFormat.sampleRate),
+        mOscR(clientFormat.sampleRate),
+        mMixBuffer(clientFormat.frameSize * clientFormat.channelCount)
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
@@ -140,12 +136,12 @@ public:
     void loadQueue() {
         log.info(Log::Yellow) << "Fallback loading queue...";
         
-        size_t maxSamples = mSampleRate * mBufferTime * kChannelCount;
+        size_t maxSamples = clientFormat.sampleRate * clientFormat.channelCount * mBufferTime;
         size_t sumSamples = 0;
 
         auto pushPlayer = [&](const std::string& url) {
             try {
-                auto player = std::make_unique<FilePlayer>(mSampleRate, mFrameSize, url, 0, mCrossFadeTime, mCrossFadeTime);
+                auto player = std::make_unique<FilePlayer>(clientFormat, url, 0, mCrossFadeTime, mCrossFadeTime);
                 player->load(url);
                 sumSamples += player->mBuffer->capacity();
                 if (sumSamples > maxSamples) {
