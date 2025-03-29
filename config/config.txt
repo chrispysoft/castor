@@ -41,7 +41,7 @@ stream_out_metadata_url=http://source:hackme@localhost:8000/admin/metadata?mount
 stream_out_name=Radio Station
 stream_out_description=Live Stream
 stream_out_genre=Electronic
-stream_out_href=http://localhost:8000/
+stream_out_href=http://localhost:8000/radio.mp3
 
 # API (comment-out to disable)
 # program_url=http://aura.local/steering/api/v1/program/playout/
