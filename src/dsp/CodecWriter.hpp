@@ -30,7 +30,6 @@ namespace audio {
 class CodecWriter : public CodecBase {
 
     static constexpr size_t kFrameBufferSize = 16384;
-    static constexpr int64_t kBitRate = 192000;
     
     AVDictionary* mOptions = nullptr;
     AVDictionary* mMetadata = nullptr;
@@ -42,9 +41,11 @@ class CodecWriter : public CodecBase {
     SwrContext* mSwrCtx = nullptr;
     
 public:
-    CodecWriter(double tSampleRate, const std::string& tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) :
-        CodecBase(tSampleRate, kFrameBufferSize, tURL)
+    CodecWriter(const AudioStreamFormat& tClientFormat, int tBitRate, const std::string& tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) :
+        CodecBase(tClientFormat, kFrameBufferSize, tURL)
     {
+        auto codecFormat = CodecFormat(tURL);
+        
         av_dict_set(&mOptions, "timeout", "5000000", 0); // 5 seconds
         av_dict_set(&mOptions, "buffer_size", "65536", 0); // 64 kB
         av_dict_set(&mOptions, "reconnect", "1", 0);
@@ -70,8 +71,8 @@ public:
             throw std::runtime_error("Failed to allocate codec context");
         }
         mCodecCtx->ch_layout = mChannelLayout;
-        mCodecCtx->bit_rate = kBitRate;
-        mCodecCtx->sample_rate = mSampleRate;
+        mCodecCtx->bit_rate = tBitRate;
+        mCodecCtx->sample_rate = mClientFormat.sampleRate;
         mCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
         if (avformat_alloc_output_context2(&mFormatCtx, nullptr, nullptr, mURL.c_str()) < 0) {
@@ -83,7 +84,7 @@ public:
         if (!mStream) {
             throw std::runtime_error("Failed to create new stream");
         }
-        mStream->time_base = {1, static_cast<int>(mSampleRate)};
+        mStream->time_base = {1, mClientFormat.sampleRate};
         
         if (avcodec_open2(mCodecCtx, codec, nullptr) < 0) {
             throw std::runtime_error("Failed to open codec");
@@ -106,7 +107,7 @@ public:
         }
 
         mSwrCtx = swr_alloc();
-        swr_alloc_set_opts2(&mSwrCtx, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, &mCodecCtx->ch_layout, AV_SAMPLE_FMT_FLT, mSampleRate, 0, nullptr);
+        swr_alloc_set_opts2(&mSwrCtx, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, &mCodecCtx->ch_layout, AV_SAMPLE_FMT_FLT, mClientFormat.sampleRate, 0, nullptr);
         if (!mSwrCtx) {
             throw std::runtime_error("swr_alloc failed");
         }
@@ -131,7 +132,7 @@ public:
             throw std::runtime_error("Failed to allocate frame buffer");
         }
 
-        log.info() << "CodecWriter inited with sample rate " << mSampleRate << " url: " << mURL;
+        log.info() << "CodecWriter inited with sample rate: " << mClientFormat.sampleRate << ", bit rate: " << tBitRate << ", url: " << mURL;
     }
 
     ~CodecWriter() {
@@ -166,7 +167,7 @@ public:
             }
         };
 
-        auto samplesPerFrame = mCodecCtx->frame_size * kChannelCount;
+        auto samplesPerFrame = mCodecCtx->frame_size * mClientFormat.channelCount;
         auto framesWritten = 0;
 
         while (!mCancelled) {

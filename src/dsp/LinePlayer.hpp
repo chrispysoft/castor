@@ -46,14 +46,11 @@ public:
     
 class LinePlayer : public Player {
 
-    static constexpr size_t kChannelCount = 2;
-    const double mSampleRate;
     LineBuffer<sam_t> mLineBuffer;
 
 public:
-    LinePlayer(float tSampleRate, size_t tFrameSize, const std::string& tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tSampleRate, tFrameSize, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
-        mSampleRate(tSampleRate)
+    LinePlayer(const AudioStreamFormat& tClientFormat, const std::string& tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime)
     {
         category = "LINE";
         mBuffer = &mLineBuffer;
@@ -73,7 +70,7 @@ public:
     void load(const std::string& tURL, double seek = 0) override {}
 
     void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
-        auto sampleCount = tFrameCount * kChannelCount;
+        auto sampleCount = tFrameCount * clientFormat.channelCount;
         mLineBuffer.write(tInBuffer, sampleCount);
 
         Player::process(tInBuffer, tOutBuffer, tFrameCount);

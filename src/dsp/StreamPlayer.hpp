@@ -122,14 +122,11 @@ public:
 
 class StreamPlayer : public Player {
 
-    static constexpr size_t kChannelCount = 2;
-
-    static size_t calcBufferSize(float tSampleRate, time_t tPreloadTime, size_t tBlockSize) {
-        return util::nextMultiple(tSampleRate * kChannelCount * tPreloadTime * 2, tBlockSize);
+    static size_t calcBufferSize(int tSampleRate, int tChannelCount, time_t tPreloadTime, size_t tBlockSize) {
+        static constexpr size_t timeMultiplier = 2;
+        return util::nextMultiple(tSampleRate * tChannelCount * tPreloadTime * timeMultiplier, tBlockSize);
     }
 
-    const float mSampleRate;
-    const size_t mFrameSize;
     const size_t mBufferSize;
     std::thread mLoadWorker;
     std::unique_ptr<CodecReader> mReader = nullptr;
@@ -137,11 +134,9 @@ class StreamPlayer : public Player {
     StreamBuffer<sam_t> mStreamBuffer;
 
 public:
-    StreamPlayer(float tSampleRate, size_t tFrameSize, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tSampleRate, tFrameSize, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
-        mSampleRate(tSampleRate),
-        mFrameSize(tFrameSize),
-        mBufferSize(calcBufferSize(mSampleRate, tPreloadTime, mFrameSize * kChannelCount))
+    StreamPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
+        Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
+        mBufferSize(calcBufferSize(clientFormat.sampleRate, clientFormat.channelCount, tPreloadTime, clientFormat.frameSize * clientFormat.channelCount))
     {
         category = "STRM";
         mBuffer = &mStreamBuffer;
@@ -159,7 +154,7 @@ public:
         mStreamBuffer.resize(mBufferSize, true);
 
         if (mReader) mReader->cancel();
-        mReader = std::make_unique<CodecReader>(mSampleRate, mFrameSize, tURL);
+        mReader = std::make_unique<CodecReader>(clientFormat, tURL);
         
         if (playItem) playItem->metadata = mReader->metadata();
 

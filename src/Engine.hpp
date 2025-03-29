@@ -44,11 +44,13 @@
 namespace castor {
 
 class PlayerFactory {
+    const audio::AudioStreamFormat& mClientFormat;
     const Config& mConfig;
     // std::mutex mMutex;
     
 public:
-    PlayerFactory(const Config& tConfig) :
+    PlayerFactory(const audio::AudioStreamFormat& tClientFormat, const Config& tConfig) :
+        mClientFormat(tClientFormat),
         mConfig(tConfig)
     {}
 
@@ -58,11 +60,11 @@ public:
         // std::lock_guard<std::mutex> lock(mMutex);
         // log.debug(Log::Magenta) << "PlayerFactory createPlayer " << name;
         if (uri.starts_with("line"))
-            return std::make_shared<audio::LinePlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeLine, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::LinePlayer>(mClientFormat, name, mConfig.preloadTimeLine, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else if (uri.starts_with("http"))
-            return std::make_shared<audio::StreamPlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeStream, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::StreamPlayer>(mClientFormat, name, mConfig.preloadTimeStream, mConfig.programFadeInTime, mConfig.programFadeOutTime);
         else
-            return std::make_shared<audio::FilePlayer>(mConfig.sampleRate, mConfig.samplesPerFrame, name, mConfig.preloadTimeFile, mConfig.programFadeInTime, mConfig.programFadeOutTime);
+            return std::make_shared<audio::FilePlayer>(mClientFormat, name, mConfig.preloadTimeFile, mConfig.programFadeInTime, mConfig.programFadeOutTime);
     }
 
     void returnPlayer(std::shared_ptr<audio::Player> tPlayer) {
@@ -74,6 +76,7 @@ public:
 class Engine : public audio::Client::Renderer {
 
     const Config& mConfig;
+    const audio::AudioStreamFormat mClientFormat;
     std::unique_ptr<Calendar> mCalendar;
     std::unique_ptr<io::TCPServer> mTCPServer;
     std::unique_ptr<api::Client> mAPIClient;
@@ -107,15 +110,16 @@ class Engine : public audio::Client::Renderer {
 public:
     Engine(const Config& tConfig) :
         mConfig(tConfig),
+        mClientFormat(mConfig.sampleRate, mConfig.samplesPerFrame, 2),
         mCalendar(std::make_unique<Calendar>(mConfig)),
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
-        mPlayerFactory(std::make_unique<PlayerFactory>(mConfig)),
+        mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
-        mSilenceDet(mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
-        mFallback(mConfig.sampleRate, mConfig.samplesPerFrame, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackShuffle, mConfig.fallbackSineSynth),
-        mRecorder(mConfig.sampleRate),
-        mStreamOutput(mConfig.sampleRate),
+        mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
+        mFallback(mClientFormat, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackShuffle, mConfig.fallbackSineSynth),
+        mRecorder(mClientFormat, mConfig.recorderBitRate),
+        mStreamOutput(mClientFormat, mConfig.streamOutBitRate),
         mTCPUpdateTimer(1),
         mEjectTimer(1),
         mReportTimer(mConfig.healthReportInterval)

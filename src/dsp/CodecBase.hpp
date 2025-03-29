@@ -36,6 +36,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 #include "audio.hpp"
+#include "../util/util.hpp"
 #include "../util/Log.hpp"
 
 namespace castor {
@@ -43,9 +44,8 @@ namespace audio {
 
 class CodecBase {
 protected:
-    static constexpr size_t kChannelCount = 2;
 
-    const double mSampleRate;
+    const AudioStreamFormat& mClientFormat;
     const std::string mURL;
     std::atomic<bool> mCancelled = false;
     std::vector<sam_t> mFrameBuffer;
@@ -54,13 +54,13 @@ protected:
     
 
 public:
-    CodecBase(double tSampleRate, size_t tFrameBufferSize, const std::string& tURL) :
-        mSampleRate(tSampleRate),
+    CodecBase(const AudioStreamFormat& tClientFormat, size_t tFrameBufferSize, const std::string& tURL) :
+        mClientFormat(tClientFormat),
         mURL(tURL),
         mFrameBuffer(tFrameBufferSize)
     {
         av_log_set_level(AV_LOG_FATAL);
-        av_channel_layout_default(&mChannelLayout, kChannelCount);
+        av_channel_layout_default(&mChannelLayout, mClientFormat.channelCount);
     }
 
     ~CodecBase() {
