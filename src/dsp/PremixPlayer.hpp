@@ -93,6 +93,11 @@ public:
         mFadeInCurveIdx = 0;
         mFadeOutCurveIdx = 0;
     }
+
+    void reset() {
+        this->mWritePos = 0;
+        this->mReadPos = 0;
+    }
 };
 
 class PremixPlayer : public Player {
@@ -132,6 +137,10 @@ public:
     }
 
     size_t numTracks() { return mTrackPositions.size(); }
+
+    void reset() {
+        mPremixBuffer.reset();
+    }
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "PremixPlayer load " << tURL << " position " << seek;
