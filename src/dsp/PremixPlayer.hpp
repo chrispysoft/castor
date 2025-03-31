@@ -144,7 +144,7 @@ public:
         auto sampleCount = mReader->sampleCount();
         
         if (writePos + sampleCount >= mPremixBuffer.capacity()) {
-            log.error() << "buffer limit reached";
+            log.debug() << "Track duration exceeds buffer size";
             throw 0; // std::runtime_error("Buffer limit reached");
         }
 
