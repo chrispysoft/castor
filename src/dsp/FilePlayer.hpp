@@ -34,6 +34,7 @@ namespace audio {
 
 template <typename T>
 class FileBuffer : public SourceBuffer<T> {
+protected:
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mWritePos = 0;
     size_t mCapacity = 0;
