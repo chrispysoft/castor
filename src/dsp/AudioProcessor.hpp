@@ -195,6 +195,7 @@ public:
 
     void fadeIn() {
         fadeInCurveIndex = 0;
+        fadeOutCurveIndex = -1;
     }
 
     void fadeOut() {
