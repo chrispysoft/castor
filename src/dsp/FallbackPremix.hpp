@@ -56,6 +56,7 @@ namespace audio {
     std::atomic<bool> mActive = false;
     std::shared_ptr<PlayItem> mCurrTrack = nullptr;
     PremixPlayer mPremixPlayer;
+    std::shared_ptr<api::Program> mProgram;
 
 public:
     std::function<void(std::shared_ptr<PlayItem> item)> startCallback = nullptr;
@@ -70,15 +71,18 @@ public:
         mFadeOutSampleOffset(clientFormat.sampleRate * clientFormat.channelCount * mCrossFadeTime),
         mOscL(clientFormat.sampleRate),
         mOscR(clientFormat.sampleRate),
-        mPremixPlayer(tClientFormat, "fallback", tBufferTime, 1, 0.5, mCrossFadeTime)
+        mPremixPlayer(tClientFormat, "fallback", tBufferTime, 1, 0.5, mCrossFadeTime),
+        mProgram(std::make_shared<api::Program>())
     {
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
         mPremixPlayer.startCallback = [this](auto itm) { this->onTrackStart(itm); };
+        mProgram->showName = "AutoDJ";
     }
 
     void onTrackStart(std::shared_ptr<PlayItem> tItem) {
         mCurrTrack = tItem;
+        if (mCurrTrack) mCurrTrack->program = mProgram;
         notifyTrackStart();
     }
 

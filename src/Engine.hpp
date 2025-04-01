@@ -126,6 +126,7 @@ public:
     {
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
+        mFallback.startCallback = [this](auto itm) { this->onPlayerStart(itm); };
         mReportTimer.callback = [this] { postStatus(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mAudioClient.setRenderer(this);

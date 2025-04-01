@@ -75,7 +75,7 @@ public:
         mMixBuffer(clientFormat.frameSize * clientFormat.channelCount)
     {
         mOscL.setFrequency(kBaseFreq);
-        mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));        
+        mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
     }
 
     bool isActive() {

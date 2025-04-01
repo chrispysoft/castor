@@ -131,7 +131,7 @@ public:
         mPremixBuffer.resize(bufsize, false);
         mBuffer = &mPremixBuffer;
         mMonitorThread = std::thread(&PremixPlayer::runMonitor, this);
-        log.debug() << "PremixPlayer" << name << " alloc done";
+        log.debug() << "PremixPlayer " << name << " alloc done";
     }
     
     ~PremixPlayer() {
@@ -156,7 +156,6 @@ public:
 
     void load(const std::string& tURL, double seek = 0) override {
         log.info() << "PremixPlayer load " << tURL << " position " << seek;
-        // eject();
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(clientFormat, tURL, seek);
@@ -200,7 +199,6 @@ public:
         Player::stop();
         if (mReader) mReader->cancel();
         mReader = nullptr;
-        // mBuffer.reset();
         log.debug() << "PremixPlayer " << name << " stopped";
     }
 
@@ -236,7 +234,7 @@ private:
             if (!mRunning) return;
         }
 
-        log.info() << "PremixPlayer passed track marker stop: " << marker.stop;
+        log.debug() << "PremixPlayer passed track marker stop: " << marker.stop;
 
         mTrackMarkers.pop();
     }
