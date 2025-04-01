@@ -69,11 +69,11 @@ public:
 
     void load(const std::string& tURL, double seek = 0) override {}
 
-    void process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
+    size_t process(const sam_t* tInBuffer, sam_t* tOutBuffer, size_t tFrameCount) override {
         auto sampleCount = tFrameCount * clientFormat.channelCount;
         mLineBuffer.write(tInBuffer, sampleCount);
 
-        Player::process(tInBuffer, tOutBuffer, tFrameCount);
+        return Player::process(tInBuffer, tOutBuffer, tFrameCount);
     }
 };
 }

@@ -109,6 +109,7 @@ class PremixPlayer : public Player {
         std::shared_ptr<PlayItem> item;
     };
 
+    const float mCrossFadeTime;
     PremixBuffer<sam_t> mPremixBuffer;
     std::unique_ptr<CodecReader> mReader = nullptr;
     std::atomic<bool> mRunning = true;
@@ -118,8 +119,9 @@ class PremixPlayer : public Player {
     std::queue<TrackMarker> mTrackMarkers;
 
 public:
-    PremixPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
-        Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime)
+    PremixPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0, float tCrossFadeTime = 1) :
+        Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
+        mCrossFadeTime(tCrossFadeTime)
     {
         auto sampleCount = clientFormat.sampleRate * clientFormat.channelCount * tPreloadTime;
         auto pagesize = sysconf(_SC_PAGE_SIZE);
@@ -140,9 +142,12 @@ public:
         log.debug() << "PremixPlayer " << name << " dealloced";
     }
 
+    std::function<void(std::shared_ptr<PlayItem> item)> startCallback = nullptr;
+
     size_t numTracks() { return mTrackMarkers.size(); }
 
     void eject() {
+        log.info() << "PremixPlayer eject";
         mPremixBuffer.reset();
         while (mTrackMarkers.size()) mTrackMarkers.pop();
     }
@@ -169,18 +174,19 @@ public:
 
         if (playItem) playItem->metadata = mReader->metadata();
 
-        long xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * 5;
+        auto xfadeTime = mReader->duration() > 60 ? mCrossFadeTime : 1;
+        log.debug() << "Using crossfade time " << xfadeTime;
+        long xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeTime;
         long xfadeBegin = static_cast<long>(writePos) - xfadeSamples;
-        if (xfadeBegin >= 0) {
-            auto xfadeEnd = writePos + xfadeSamples;
-            mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
-        }
+        if (xfadeBegin < 0) xfadeBegin = 0;
+        auto xfadeEnd = writePos + xfadeSamples;
+        mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
 
         mReader->read(mPremixBuffer);
         mReader = nullptr;
 
-        size_t trackBeg = writePos + 1;
-        size_t trackEnd = writePos + sampleCount;
+        size_t trackBeg = writePos;
+        size_t trackEnd = mPremixBuffer.writePosition() - 1;
         mTrackMarkers.push({trackBeg, trackEnd, playItem});
 
         log.debug() << "PremixPlayer load done " << tURL;
@@ -196,9 +202,10 @@ public:
     }
 
 
-    void process(const sam_t* in, sam_t* out, size_t nframes) override {
-        Player::process(in, out, nframes);
+    size_t process(const sam_t* in, sam_t* out, size_t nframes) override {
+        auto processed = Player::process(in, out, nframes);
         mBufferReadIdxCV.notify_one();
+        return processed;
     }
 
 
@@ -217,16 +224,16 @@ private:
         }
 
         auto marker = mTrackMarkers.front();
-        log.info() << "PremixPlayer passed track marker start " << marker.start;
+        log.info() << "PremixPlayer passed track marker start: " << marker.start;
         if (startCallback) startCallback(marker.item);
 
         {
             std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
-            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().stop < mPremixBuffer.readPosition(); });
+            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().stop <= mPremixBuffer.readPosition(); });
             if (!mRunning) return;
         }
 
-        log.info() << "PremixPlayer passed track marker start " << marker.stop;
+        log.info() << "PremixPlayer passed track marker stop: " << marker.stop;
 
         mTrackMarkers.pop();
     }
