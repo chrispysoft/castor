@@ -117,6 +117,7 @@ class PremixPlayer : public Player {
     std::mutex mBufferReadIdxMutex;
     std::condition_variable mBufferReadIdxCV;
     std::queue<TrackMarker> mTrackMarkers;
+    double mPrevTrackDuration = 0;
 
 public:
     PremixPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0, float tCrossFadeTime = 1) :
@@ -150,6 +151,7 @@ public:
         log.info() << "PremixPlayer eject";
         mPremixBuffer.reset();
         while (mTrackMarkers.size()) mTrackMarkers.pop();
+        mPrevTrackDuration = 0;
     }
 
     void load(const std::string& tURL, double seek = 0) override {
@@ -174,7 +176,7 @@ public:
 
         if (playItem) playItem->metadata = mReader->metadata();
 
-        auto xfadeTime = mReader->duration() > 60 ? mCrossFadeTime : 1;
+        auto xfadeTime = mPrevTrackDuration > 60 ? mCrossFadeTime : 1;
         log.debug() << "Using crossfade time " << xfadeTime;
         long xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeTime;
         long xfadeBegin = static_cast<long>(writePos) - xfadeSamples;
@@ -183,6 +185,7 @@ public:
         mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
 
         mReader->read(mPremixBuffer);
+        mPrevTrackDuration = mReader->duration();
         mReader = nullptr;
 
         size_t trackBeg = writePos;
