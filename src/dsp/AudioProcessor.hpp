@@ -205,7 +205,7 @@ public:
     void waitForEvents() {
         // auto loadTm = std::chrono::system_clock::from_time_t(playItem->start - preloadTime);
         auto fadeInTm = std::chrono::system_clock::from_time_t(playItem->start);
-        auto fadeOutTm = std::chrono::system_clock::from_time_t(playItem->end - (time_t) round(fadeOutTime));
+        auto fadeOutTm = std::chrono::system_clock::from_time_t(playItem->end) - std::chrono::milliseconds(static_cast<long>(fadeOutTime * 1000));
         auto stopTm = std::chrono::system_clock::from_time_t(playItem->end);
         
         {
