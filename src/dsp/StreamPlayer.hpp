@@ -170,14 +170,14 @@ public:
     }
 
     void stop() override {
-        log.debug() << "StreamPlayer stop...";
+        log.debug() << "StreamPlayer " << name << " stop...";
         Player::stop();
         if (mReader) mReader->cancel();
         mStreamBuffer.resize(0, false);
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
         
-        log.debug() << "StreamPlayer stopped";
+        log.debug() << "StreamPlayer " << name << " stopped";
     }
 
 };
