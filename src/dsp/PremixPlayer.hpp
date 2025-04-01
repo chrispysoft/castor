@@ -162,7 +162,8 @@ public:
 
         int writePos = mPremixBuffer.writePosition();
         auto sampleCount = mReader->sampleCount();
-        
+        auto duration = round(mReader->duration());
+
         if (writePos + sampleCount >= mPremixBuffer.capacity()) {
             log.debug() << "Track duration exceeds buffer size";
             throw 0; // std::runtime_error("Buffer limit reached");
@@ -170,7 +171,7 @@ public:
 
         if (!playItem) {
             log.debug() << "PremixPlayer create play item...";
-            playItem = std::make_shared<PlayItem>(0, 0, tURL);
+            playItem = std::make_shared<PlayItem>(0, duration, tURL);
         }
 
         if (playItem) playItem->metadata = mReader->metadata();
@@ -184,7 +185,7 @@ public:
         mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
 
         mReader->read(mPremixBuffer);
-        mPrevTrackDuration = mReader->duration();
+        mPrevTrackDuration = duration;
         mReader = nullptr;
 
         size_t trackBeg = writePos;
