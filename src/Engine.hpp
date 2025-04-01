@@ -228,7 +228,6 @@ public:
 
     void cleanPlayers() {
         while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
             mPlayers.pop_front();
         }
     }
