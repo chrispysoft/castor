@@ -34,7 +34,7 @@
 #include "dsp/LinePlayer.hpp"
 #include "dsp/FilePlayer.hpp"
 #include "dsp/StreamPlayer.hpp"
-#include "dsp/Fallback.hpp"
+#include "dsp/FallbackPremix.hpp"
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
@@ -83,7 +83,7 @@ class Engine : public audio::Client::Renderer {
     std::unique_ptr<PlayerFactory> mPlayerFactory;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
-    audio::Fallback mFallback;
+    audio::FallbackPremix mFallback;
     audio::Recorder mRecorder;
     audio::StreamOutput mStreamOutput;
     std::atomic<bool> mRunning = false;
@@ -415,9 +415,9 @@ public:
         }
 
         mSilenceDet.process(out, nframes);
-        if (mFallback.isActive()) {
+        //if (mFallback.isActive()) {
             mFallback.process(in, out, nframes);
-        }
+        //}
 
         if (mRecorder.isRunning()) {
             mRecorder.process(out, nframes);
