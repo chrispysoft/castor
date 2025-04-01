@@ -34,7 +34,7 @@
 #include "dsp/LinePlayer.hpp"
 #include "dsp/FilePlayer.hpp"
 #include "dsp/StreamPlayer.hpp"
-#include "dsp/Fallback.hpp"
+#include "dsp/FallbackPremix.hpp"
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
@@ -83,7 +83,7 @@ class Engine : public audio::Client::Renderer {
     std::unique_ptr<PlayerFactory> mPlayerFactory;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
-    audio::Fallback mFallback;
+    audio::FallbackPremix mFallback;
     audio::Recorder mRecorder;
     audio::StreamOutput mStreamOutput;
     std::atomic<bool> mRunning = false;
@@ -126,6 +126,7 @@ public:
     {
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
+        mFallback.startCallback = [this](auto itm) { this->onPlayerStart(itm); };
         mReportTimer.callback = [this] { postStatus(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mAudioClient.setRenderer(this);
@@ -228,7 +229,6 @@ public:
 
     void cleanPlayers() {
         while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
             mPlayers.pop_front();
         }
     }
@@ -415,9 +415,9 @@ public:
         }
 
         mSilenceDet.process(out, nframes);
-        if (mFallback.isActive()) {
+        //if (mFallback.isActive()) {
             mFallback.process(in, out, nframes);
-        }
+        //}
 
         if (mRecorder.isRunning()) {
             mRecorder.process(out, nframes);

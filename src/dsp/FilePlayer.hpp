@@ -34,6 +34,7 @@ namespace audio {
 
 template <typename T>
 class FileBuffer : public SourceBuffer<T> {
+protected:
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mWritePos = 0;
     size_t mCapacity = 0;
@@ -67,7 +68,7 @@ public:
     }
 
     size_t read(T* tData, size_t tLen) override {
-        auto readable = std::min(tLen, mCapacity - mReadPos);
+        auto readable = std::min(tLen, mWritePos - mReadPos);
         if (readable == 0) return 0;
         memcpy(tData, &mBuffer[mReadPos], readable * sizeof(T));
         mReadPos += readable;

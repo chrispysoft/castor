@@ -47,7 +47,7 @@ public:
     {}
     
     virtual ~Input() = default;
-    virtual void process(const sam_t* in, sam_t* out, size_t nframes) = 0;
+    virtual size_t process(const sam_t* in, sam_t* out, size_t nframes) = 0;
 };
 
 
@@ -195,6 +195,7 @@ public:
 
     void fadeIn() {
         fadeInCurveIndex = 0;
+        fadeOutCurveIndex = -1;
     }
 
     void fadeOut() {
@@ -358,17 +359,17 @@ public:
 
     // temporary fade workaround
 
-    virtual void process(const sam_t* in, sam_t* out, size_t nframes) override {
+    virtual size_t process(const sam_t* in, sam_t* out, size_t nframes) override {
 
-        if (fadeInCurveIndex == -1 || fadeOutCurveIndex == -2) return; // don't process if not started fade in yet or fade out done
+        if (fadeInCurveIndex == -1 || fadeOutCurveIndex == -2) return 0; // don't process if not started fade in yet or fade out done
 
         auto sampleCount = nframes * 2;
         auto samplesRead = mBuffer->read(out, sampleCount);
-        auto samplesLeft = sampleCount - samplesRead;
+        auto framesRead = samplesRead / 2;
 
         if (fadeInCurveIndex >= 0) {
             // log.debug() << "fade in";
-            for (auto i = 0; i < samplesRead/2 && fadeInCurveIndex < fadeInCurve.size(); ++i) {
+            for (auto i = 0; i < framesRead && fadeInCurveIndex < fadeInCurve.size(); ++i) {
                 out[i*2+0] *= fadeInCurve[fadeInCurveIndex]; 
                 out[i*2+1] *= fadeInCurve[fadeInCurveIndex++]; 
             }
@@ -379,13 +380,13 @@ public:
         else if (fadeOutCurveIndex >= 0) {
             // log.debug() << "fade out";
             size_t i;
-            for (i = 0; i < samplesRead/2 && fadeOutCurveIndex < fadeOutCurve.size(); ++i) {
+            for (i = 0; i < framesRead && fadeOutCurveIndex < fadeOutCurve.size(); ++i) {
                 out[i*2+0] *= fadeOutCurve[fadeOutCurveIndex]; 
                 out[i*2+1] *= fadeOutCurve[fadeOutCurveIndex++]; 
             }
 
             if (fadeOutCurveIndex >= fadeOutCurve.size()) {
-                while (i < samplesRead/2) {
+                while (i < framesRead) {
                     out[i*2+0] = 0;
                     out[i*2+1] = 0;
                     ++i;
@@ -393,6 +394,8 @@ public:
                 fadeOutCurveIndex = -2;
             }
         }
+
+        return framesRead;
     }
 };
 }
