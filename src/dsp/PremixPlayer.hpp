@@ -24,6 +24,7 @@
 
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 #include "AudioProcessor.hpp"
 #include "CodecReader.hpp"
@@ -53,8 +54,8 @@ public:
                 assert(mFadeOutCurveIdx+1 < mFadeOutCurve.size()-1);
                 auto iL = i * 2;
                 auto iR = iL + 1;
-                auto ch1L =  this->mBuffer[this->mWritePos + iL] * mFadeOutCurve[mFadeOutCurveIdx];
-                auto ch1R =  this->mBuffer[this->mWritePos + iR] * mFadeOutCurve[mFadeOutCurveIdx++];
+                auto ch1L = this->mBuffer[this->mWritePos + iL] * mFadeOutCurve[mFadeOutCurveIdx];
+                auto ch1R = this->mBuffer[this->mWritePos + iR] * mFadeOutCurve[mFadeOutCurveIdx++];
                 auto ch2L = tData[iL] * mFadeInCurve[mFadeInCurveIdx];
                 auto ch2R = tData[iR] * mFadeInCurve[mFadeInCurveIdx++];
                 this->mBuffer[this->mWritePos + iL] = ch1L + ch2L;
@@ -102,16 +103,19 @@ public:
 
 class PremixPlayer : public Player {
 
+    struct TrackMarker {
+        size_t start;
+        size_t stop;
+        std::shared_ptr<PlayItem> item;
+    };
+
     PremixBuffer<sam_t> mPremixBuffer;
     std::unique_ptr<CodecReader> mReader = nullptr;
-    std::deque<std::shared_ptr<PlayItem>> mTracks;
     std::atomic<bool> mRunning = true;
-    std::atomic<size_t> mBufferReadIdx = 0;
     std::thread mMonitorThread;
     std::mutex mBufferReadIdxMutex;
     std::condition_variable mBufferReadIdxCV;
-    std::queue<size_t> mTrackPositions;
-    std::map<size_t, std::shared_ptr<PlayItem>> mTrackMap;
+    std::queue<TrackMarker> mTrackMarkers;
 
 public:
     PremixPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
@@ -136,10 +140,11 @@ public:
         log.debug() << "PremixPlayer " << name << " dealloced";
     }
 
-    size_t numTracks() { return mTrackPositions.size(); }
+    size_t numTracks() { return mTrackMarkers.size(); }
 
-    void reset() {
+    void eject() {
         mPremixBuffer.reset();
+        while (mTrackMarkers.size()) mTrackMarkers.pop();
     }
 
     void load(const std::string& tURL, double seek = 0) override {
@@ -164,19 +169,19 @@ public:
 
         if (playItem) playItem->metadata = mReader->metadata();
 
-        int xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * 5;
-        int xfadeBegin = writePos - xfadeSamples;
+        long xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * 5;
+        long xfadeBegin = static_cast<long>(writePos) - xfadeSamples;
         if (xfadeBegin >= 0) {
-            int xfadeEnd = writePos + xfadeSamples;
+            auto xfadeEnd = writePos + xfadeSamples;
             mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
         }
 
         mReader->read(mPremixBuffer);
         mReader = nullptr;
 
-        auto trackPos = writePos + 1;
-        mTrackPositions.push(trackPos);
-        mTrackMap[trackPos] = playItem;
+        size_t trackBeg = writePos + 1;
+        size_t trackEnd = writePos + sampleCount;
+        mTrackMarkers.push({trackBeg, trackEnd, playItem});
 
         log.debug() << "PremixPlayer load done " << tURL;
     }
@@ -205,23 +210,25 @@ private:
     }
 
     void monitor() {
-        std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
-        mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackPositions.size() && mTrackPositions.front() < mPremixBuffer.readPosition(); });
-        if (!mRunning) return;
-
-        auto trackPos = mTrackPositions.front();
-        mTrackPositions.pop();
-
-        log.info() << "PremixPlayer passed track change marker " << trackPos;
-
-        try {
-            auto item = mTrackMap.at(trackPos);
-            mTrackMap.erase(trackPos);
-            if (startCallback) startCallback(item);
+        {
+            std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
+            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().start < mPremixBuffer.readPosition(); });
+            if (!mRunning) return;
         }
-        catch (const std::exception& e) {
-            log.error() << "Failed to get item in map: " << e.what();
+
+        auto marker = mTrackMarkers.front();
+        log.info() << "PremixPlayer passed track marker start " << marker.start;
+        if (startCallback) startCallback(marker.item);
+
+        {
+            std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
+            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().stop < mPremixBuffer.readPosition(); });
+            if (!mRunning) return;
         }
+
+        log.info() << "PremixPlayer passed track marker start " << marker.stop;
+
+        mTrackMarkers.pop();
     }
 };
 }
