@@ -109,7 +109,9 @@ class PremixPlayer : public Player {
         std::shared_ptr<PlayItem> item;
     };
 
-    const float mCrossFadeTime;
+    const float mCrossFadeTimeMusic;
+    const float mCrossFadeTimeVoice = 1;
+    const float mMaxVoiceTime = 60;
     PremixBuffer<sam_t> mPremixBuffer;
     std::unique_ptr<CodecReader> mReader = nullptr;
     std::atomic<bool> mRunning = true;
@@ -122,7 +124,7 @@ class PremixPlayer : public Player {
 public:
     PremixPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0, float tCrossFadeTime = 1) :
         Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
-        mCrossFadeTime(tCrossFadeTime)
+        mCrossFadeTimeMusic(tCrossFadeTime)
     {
         auto sampleCount = clientFormat.sampleRate * clientFormat.channelCount * tPreloadTime;
         auto pagesize = sysconf(_SC_PAGE_SIZE);
@@ -162,7 +164,8 @@ public:
 
         int writePos = mPremixBuffer.writePosition();
         auto sampleCount = mReader->sampleCount();
-        
+        auto duration = round(mReader->duration());
+
         if (writePos + sampleCount >= mPremixBuffer.capacity()) {
             log.debug() << "Track duration exceeds buffer size";
             throw 0; // std::runtime_error("Buffer limit reached");
@@ -170,21 +173,24 @@ public:
 
         if (!playItem) {
             log.debug() << "PremixPlayer create play item...";
-            playItem = std::make_shared<PlayItem>(0, 0, tURL);
+            playItem = std::make_shared<PlayItem>(0, duration, tURL);
         }
 
         if (playItem) playItem->metadata = mReader->metadata();
 
-        auto xfadeTime = mPrevTrackDuration > 60 ? mCrossFadeTime : 1;
-        log.debug() << "Using crossfade time " << xfadeTime;
-        long xfadeSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeTime;
-        long xfadeBegin = static_cast<long>(writePos) - xfadeSamples;
+        auto xfadeOutTime = mPrevTrackDuration > mMaxVoiceTime ? mCrossFadeTimeMusic : mCrossFadeTimeVoice;
+        auto xfadeInTime = duration > mMaxVoiceTime ? mCrossFadeTimeMusic : mCrossFadeTimeVoice;
+        log.debug() << "PremixPlayer using crossfade times: " << xfadeOutTime << ", " << xfadeInTime;
+
+        long xfadeOutSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeOutTime;
+        long xfadeInSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeInTime;
+        long xfadeBegin = static_cast<long>(writePos) - xfadeOutSamples;
         if (xfadeBegin < 0) xfadeBegin = 0;
-        auto xfadeEnd = writePos + xfadeSamples;
+        auto xfadeEnd = writePos + xfadeInSamples;
         mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
 
         mReader->read(mPremixBuffer);
-        mPrevTrackDuration = mReader->duration();
+        mPrevTrackDuration = duration;
         mReader = nullptr;
 
         size_t trackBeg = writePos;

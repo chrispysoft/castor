@@ -20,12 +20,13 @@
  *  to the source code under the terms of the GNU Affero General Public License.
  */
 
-#include <string>
-#include <vector>
-#include <deque>
-#include <ranges>
 #include <atomic>
+#include <deque>
+#include <optional>
+#include <ranges>
+#include <string>
 #include <thread>
+#include <vector>
 #include "Config.hpp"
 #include "Calendar.hpp"
 #include "io/TCPServer.hpp"
@@ -105,6 +106,7 @@ class Engine : public audio::Client::Renderer {
     util::AsyncWorker<std::shared_ptr<PlayItem>> mItemChangeWorker;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
+    time_t mStartTime;
     
     
 public:
@@ -122,7 +124,8 @@ public:
         mStreamOutput(mClientFormat, mConfig.streamOutBitRate),
         mTCPUpdateTimer(1),
         mEjectTimer(1),
-        mReportTimer(mConfig.healthReportInterval)
+        mReportTimer(mConfig.healthReportInterval),
+        mStartTime(std::time(0))
     {
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
@@ -389,10 +392,17 @@ public:
     void postStatus() {
         if (mConfig.healthURL.empty()) return;
         try {
-            // nlohmann::json j = mCalendar.items();
-            // std::stringstream s;
-            // s << j;
-            mAPIClient->postHealth({true, util::currTimeFmtMs(), ":)"});
+            auto uptime = std::time(0) - mStartTime;
+            auto rms = util::linearDB(mSilenceDet.currentRMS());
+            auto players = getPlayers();
+            nlohmann::json j = {
+                {"uptime", uptime},
+                {"queue", players.size()},
+                {"rms", rms},
+                {"fallback", mFallback.isActive()}
+            };
+            
+            mAPIClient->postHealth({true, util::currTimeFmtMs(), j.dump()});
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();

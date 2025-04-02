@@ -60,7 +60,7 @@ public:
         
         auto res = mHTTPClientProgram.get(url);
         if (res.code != 200) {
-            throw std::runtime_error("APIClient getProgram failed: " + std::to_string(res.code) + " " + res.response);
+            throw std::runtime_error("APIClient getProgram failed: " + res.response + " (" + std::to_string(res.code) + ")");
         }
 
         nlohmann::json j = nlohmann::json::parse(res.response);
@@ -79,7 +79,7 @@ public:
 
         auto res = mHTTPClientProgram.get(url);
         if (res.code != 200) {
-            throw std::runtime_error("APIClient getMedia failed: " + std::to_string(res.code) + " " + res.response);
+            throw std::runtime_error("APIClient getMedia failed: " + res.response + " (" + std::to_string(res.code) + ")");
         }
 
         nlohmann::json j = nlohmann::json::parse(res.response);
@@ -93,25 +93,26 @@ public:
 
         nlohmann::json j = item;
         auto jstr = j.dump();
-
         debug << jstr;
 
         auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postPlaylog failed: " + std::to_string(res.code) + " " + res.response);
+            throw std::runtime_error("APIClient postPlaylog failed: " + res.response + " (" + std::to_string(res.code) + ")");
         }
     }
 
     void postHealth(const Health& health) {
         const auto& url = mConfig.healthURL;
-        log.debug() << "APIClient postHealth " << url;
+        auto debug = log.debug();
+        debug << "APIClient postHealth " << url;
 
         nlohmann::json j = health;
         auto jstr = j.dump();
+        debug << jstr;
 
         auto res = mHTTPClientPlaylog.post(url, jstr);
         if (res.code != 204) {
-            throw std::runtime_error("APIClient postHealth failed: " + std::to_string(res.code) + " " + res.response);
+            throw std::runtime_error("APIClient postHealth failed: " + res.response + " (" + std::to_string(res.code) + ")");
         }
     }
 };
