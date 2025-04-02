@@ -425,9 +425,15 @@ public:
         }
 
         mSilenceDet.process(out, nframes);
-        //if (mFallback.isActive()) {
-            mFallback.process(in, out, nframes);
-        //}
+        mFallback.process(in, out, nframes);
+
+        if (mConfig.outputGain != 0) {
+            float gain = util::dbLinear(mConfig.outputGain);
+            for (auto i = 0; i < nframes; ++i) {
+                out[i*2+0] *= gain;
+                out[i*2+1] *= gain;
+            }
+        }
 
         if (mRecorder.isRunning()) {
             mRecorder.process(out, nframes);

@@ -124,6 +124,7 @@ public:
     size_t samplesPerFrame = 1024;
     int recorderBitRate = 128000;
     int streamOutBitRate = 320000;
+    float outputGain = -9;
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;
