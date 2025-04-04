@@ -251,7 +251,7 @@ private:
         }
 
         auto marker = mTrackMarkers.front();
-        log.info() << "PremixPlayer passed track marker start: " << marker.start;
+        log.debug() << "PremixPlayer passed track marker start: " << marker.start;
         if (startCallback) startCallback(marker.item);
 
         {

@@ -332,6 +332,8 @@ public:
             programChanged();
         }
 
+        log.info(Log::Cyan) << "Track changed to '" << tItem->uri << "'";
+
         postPlaylog(tItem);
     }
 
