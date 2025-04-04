@@ -36,8 +36,10 @@ namespace audio {
 
 template <typename T>
 class PremixBuffer : public FileBuffer<T> {
-    size_t mXFadeBeginPos = INT32_MAX;
-    size_t mXFadeEndPos = 0;
+    size_t mFadeOutPos = UINT32_MAX;
+    size_t mFadeOutLen = 0;
+    size_t mFadeInPos = UINT32_MAX;
+    size_t mFadeInLen = 0;
     size_t mFadeInCurveIdx = 0;
     size_t mFadeOutCurveIdx = 0;
     std::vector<T> mFadeInCurve;
@@ -48,14 +50,13 @@ public:
     size_t write(const T* tData, size_t tLen) override {
         auto writable = std::min(tLen, this->mCapacity - this->mWritePos);
         if (writable == 0) return 0;
-        if (this->mWritePos >= mXFadeBeginPos && this->mWritePos <= mXFadeEndPos - tLen) { // xfade transition
+        if (this->mWritePos >= mFadeInPos && this->mWritePos <= mFadeInPos + mFadeInLen*2 - tLen) {
             for (auto i = 0; i < writable / 2; ++i) {
                 assert(mFadeInCurveIdx+1 < mFadeInCurve.size()-1);
-                assert(mFadeOutCurveIdx+1 < mFadeOutCurve.size()-1);
                 auto iL = i * 2;
                 auto iR = iL + 1;
-                auto ch1L = this->mBuffer[this->mWritePos + iL] * mFadeOutCurve[mFadeOutCurveIdx];
-                auto ch1R = this->mBuffer[this->mWritePos + iR] * mFadeOutCurve[mFadeOutCurveIdx++];
+                auto ch1L = this->mBuffer[this->mWritePos + iL];
+                auto ch1R = this->mBuffer[this->mWritePos + iR];
                 auto ch2L = tData[iL] * mFadeInCurve[mFadeInCurveIdx];
                 auto ch2R = tData[iR] * mFadeInCurve[mFadeInCurveIdx++];
                 this->mBuffer[this->mWritePos + iL] = ch1L + ch2L;
@@ -67,32 +68,47 @@ public:
         this->mWritePos += writable;
         return writable;
     }
-    
-    void setCrossFadeZone(size_t tXFadeBeginPos, size_t tXFadeEndPos) {
-        mXFadeBeginPos = tXFadeBeginPos;
-        mXFadeEndPos = tXFadeEndPos;
-        this->mWritePos = mXFadeBeginPos;
 
-        auto fadeLen = (mXFadeEndPos - mXFadeBeginPos) / 2;
-        if (mFadeInCurve.size() != fadeLen) {
-            mFadeInCurve.resize(fadeLen);
-            float denum = fadeLen - 1;
-            for (auto i = 0; i < fadeLen; ++i) {
-                float vol = i / denum;
-                mFadeInCurve[i] = vol * vol;
+    void setFadeZone(size_t tFadeOutPos, size_t tFadeOutLen, size_t tFadeInPos, size_t tFadeInLen) {
+        mFadeOutPos = tFadeOutPos;
+        mFadeOutLen = tFadeOutLen;
+        mFadeInPos = tFadeInPos;
+        mFadeInLen = tFadeInLen;
+
+        if (mFadeOutCurve.size() != tFadeOutLen) {
+            mFadeOutCurve.resize(tFadeOutLen);
+            float denum = tFadeOutLen - 1;
+            for (auto i = 0; i < tFadeOutLen; ++i) {
+                auto f = i / denum;
+                auto v = std::min(2.0f - f * 2.0f, 1.0f);
+                mFadeOutCurve[i] = v * v * v;
             }
         }
-        if (mFadeOutCurve.size() != fadeLen) {
-            mFadeOutCurve.resize(fadeLen);
-            float denum = fadeLen - 1;
-            for (auto i = 0; i < fadeLen; ++i) {
-                float vol = (denum-i) / denum;
-                mFadeOutCurve[i] = vol * vol;
+
+        if (mFadeInCurve.size() != tFadeInLen) {
+            mFadeInCurve.resize(tFadeInLen);
+            float denum = tFadeInLen - 1;
+            for (auto i = 0; i < tFadeInLen; ++i) {
+                auto f = i / denum;
+                auto v = std::min(f * 2.0f, 1.0f);
+                mFadeInCurve[i] = v * v * v;
             }
         }
 
         mFadeInCurveIdx = 0;
         mFadeOutCurveIdx = 0;
+
+        this->mWritePos = mFadeInPos;;
+    }
+
+    void renderFadeOut() {
+        auto start = this->mWritePos - mFadeOutLen * 2;
+        for (auto i = 0; i < mFadeOutLen; ++i) {
+            auto iL = i * 2;
+            auto iR = iL + 1;
+            this->mBuffer[start + iL] *= mFadeOutCurve[iL];
+            this->mBuffer[start + iR] *= mFadeOutCurve[iR];
+        }
     }
 
     void reset() {
@@ -182,16 +198,20 @@ public:
         auto xfadeInTime = duration > mMaxVoiceTime ? mCrossFadeTimeMusic : mCrossFadeTimeVoice;
         log.debug() << "PremixPlayer using crossfade times: " << xfadeOutTime << ", " << xfadeInTime;
 
-        long xfadeOutSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeOutTime;
-        long xfadeInSamples = clientFormat.sampleRate * clientFormat.channelCount * xfadeInTime;
-        long xfadeBegin = static_cast<long>(writePos) - xfadeOutSamples;
-        if (xfadeBegin < 0) xfadeBegin = 0;
-        auto xfadeEnd = writePos + xfadeInSamples;
-        mPremixBuffer.setCrossFadeZone(xfadeBegin, xfadeEnd);
+        long fadeOutLen = clientFormat.sampleRate * xfadeOutTime;
+        long fadeInLen = clientFormat.sampleRate * xfadeInTime;
+        long fadeOutPos = static_cast<long>(writePos) - fadeOutLen * clientFormat.channelCount;
+        if (fadeOutPos < 0) fadeOutPos = 0;
+        long fadeInPos = static_cast<long>(writePos) - fadeInLen * clientFormat.channelCount;
+        if (fadeInPos < 0) fadeInPos = 0;
+
+        mPremixBuffer.setFadeZone(fadeOutPos, fadeOutLen, fadeInPos, fadeInLen);
 
         mReader->read(mPremixBuffer);
-        mPrevTrackDuration = duration;
         mReader = nullptr;
+
+        mPremixBuffer.renderFadeOut();
+        mPrevTrackDuration = duration;
 
         size_t trackBeg = writePos;
         size_t trackEnd = mPremixBuffer.writePosition() - 1;
