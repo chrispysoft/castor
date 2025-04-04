@@ -106,8 +106,8 @@ public:
         for (auto i = 0; i < mFadeOutLen; ++i) {
             auto iL = i * 2;
             auto iR = iL + 1;
-            this->mBuffer[start + iL] *= mFadeOutCurve[iL];
-            this->mBuffer[start + iR] *= mFadeOutCurve[iR];
+            this->mBuffer[start + iL] *= mFadeOutCurve[i];
+            this->mBuffer[start + iR] *= mFadeOutCurve[i];
         }
     }
 
