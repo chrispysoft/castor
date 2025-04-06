@@ -55,7 +55,9 @@ public:
     void resize(size_t tCapacity, bool tOverwrite) override {
         mReadPos = 0;
         mWritePos = 0;
-        mBuffer.resize(tCapacity);
+        auto pagesize = sysconf(_SC_PAGE_SIZE);
+        auto bufsize = util::nextMultiple(tCapacity, pagesize / sizeof(sam_t));
+        mBuffer.resize(bufsize);
         mCapacity = tCapacity;
     }
 
@@ -106,11 +108,7 @@ public:
         if (playItem) playItem->metadata = mReader->metadata();
 
         auto sampleCount = mReader->sampleCount();
-
-        auto pagesize = sysconf(_SC_PAGE_SIZE);
-        auto bufsize = util::nextMultiple(sampleCount, pagesize / sizeof(sam_t));
-        
-        mFileBuffer.resize(bufsize, false);
+        mFileBuffer.resize(sampleCount, false);
         mReader->read(mFileBuffer);
         mReader = nullptr;
 
