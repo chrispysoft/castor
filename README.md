@@ -110,6 +110,9 @@ To enable automatic recording, set `audio_record_path` to a valid directory. Eac
 ### Stream Output
 To enable, set `stream_out_url` to a valid icecast url. Retry interval on errors: 5 sec.
 
+### Web Control
+Castor can be monitored and controlled through its built-in API and web server, operating **independently of any external APIs**. Use for maintenance only and expose service with care.
+
 ## Known Issues
 
 - Fallback stops and starts at the same track position without fading in/out
