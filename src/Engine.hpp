@@ -29,7 +29,9 @@
 #include <vector>
 #include "Config.hpp"
 #include "Calendar.hpp"
+#include "ctl/RemoteControl.hpp"
 #include "io/TCPServer.hpp"
+#include "io/WebService.hpp"
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
@@ -82,6 +84,10 @@ class Engine : public audio::Client::Renderer {
     std::unique_ptr<io::TCPServer> mTCPServer;
     std::unique_ptr<api::Client> mAPIClient;
     std::unique_ptr<PlayerFactory> mPlayerFactory;
+    ctl::RemoteControl mRemote;
+    ctl::Parameters mParameters;
+    ctl::Status mStatus;
+    std::unique_ptr<io::WebService> mWebService;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
     audio::FallbackPremix mFallback;
@@ -116,6 +122,8 @@ public:
         mCalendar(std::make_unique<Calendar>(mConfig)),
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
+        mParameters(mConfig.parametersPath),
+        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlStaticPath, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
@@ -133,6 +141,11 @@ public:
         mReportTimer.callback = [this] { postStatus(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mAudioClient.setRenderer(this);
+        mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
+        mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
+        mRemote.registerCommand("f1\n", [this] { mFallback.start(); });
+        mRemote.registerCommand("f0\n", [this] { mFallback.stop(); });
+        mRemote.registerCommand("s\n", [this] { updateStatus(); });
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -170,11 +183,14 @@ public:
             log.error() << "Engine failed to start TCP server: " << e.what();
         }
         log.info() << "Engine started";
+
+        mWebService->start();
     }
 
     void stop() {
         log.debug() << "Engine stopping...";
         mRunning = false;
+        mWebService->stop();
         mTCPServer->stop();
         mCalendar->stop();
         mReportTimer.stop();
@@ -220,8 +236,12 @@ public:
                 mScheduleItems.clear();
             }
 
-            if (mTCPServer->connected() && mTCPUpdateTimer.query()) {
-                updateStatus();
+            if (true) { // webservice is client connected
+                mStatus.rmsLin = mSilenceDet.currentRMS();
+                nlohmann::json j = {};
+                for (auto player : mPlayers) if (player) j += player->getStatusJSON();
+                mStatus.players = j;
+                mStatus.fallbackActive = mFallback.isActive();
             }
 
             setPlayers(mPlayers);
@@ -429,8 +449,8 @@ public:
         mSilenceDet.process(out, nframes);
         mFallback.process(in, out, nframes);
 
-        if (mConfig.outputGain != 0) {
-            float gain = util::dbLinear(mConfig.outputGain);
+        if (mParameters.get().outputGain != 0) {
+            float gain = util::dbLinear(mParameters.get().outputGain);
             for (auto i = 0; i < nframes; ++i) {
                 out[i*2+0] *= gain;
                 out[i*2+1] *= gain;

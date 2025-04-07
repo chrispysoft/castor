@@ -339,6 +339,25 @@ public:
     //     return stats;
     // }
 
+    nlohmann::json getStatusJSON() {
+        nlohmann::json j = {
+            {"state", getState()},
+            {"name", name},
+            {"category", category},
+            {"start", util::timefmt(playItem->start, "%H:%M:%S")},
+            {"end", util::timefmt(playItem->end, "%H:%M:%S")},
+            {"status", stateStr()},
+            {"loaded", writeProgress()},
+            {"played", readProgress()},
+            {"size", bufferSizeMiB()}
+        };
+        if (playItem) {
+            j["start"] = playItem->start;
+            j["end"] = playItem->end;
+            j["uri"] = playItem->uri;
+        }
+        return j;
+    }
 
     void tryLoad() {
         state = LOAD;
