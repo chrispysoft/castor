@@ -31,5 +31,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libportaudio2 \
     ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 COPY --from=builder /build/castor /usr/local/bin/castor
+COPY parameters.json /app/parameters.json
+COPY www /app/www
 CMD ["castor"]

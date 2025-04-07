@@ -169,6 +169,7 @@ public:
     }
 
     virtual void stop() {
+        if (state == IDLE) return;
         state = IDLE;
         isScheduling = false;
         scheduleCV.notify_all();
@@ -280,7 +281,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem->end) && state == IDLE;
+        return std::time(0) > (playItem->end) && (state == IDLE || state == FAIL);
     }
 
 
@@ -339,6 +340,25 @@ public:
     //     return stats;
     // }
 
+    nlohmann::json getStatusJSON() {
+        nlohmann::json j = {
+            {"state", getState()},
+            {"name", name},
+            {"category", category},
+            {"start", util::timefmt(playItem->start, "%H:%M:%S")},
+            {"end", util::timefmt(playItem->end, "%H:%M:%S")},
+            {"status", stateStr()},
+            {"loaded", writeProgress()},
+            {"played", readProgress()},
+            {"size", bufferSizeMiB()}
+        };
+        if (playItem) {
+            j["start"] = playItem->start;
+            j["end"] = playItem->end;
+            j["uri"] = playItem->uri;
+        }
+        return j;
+    }
 
     void tryLoad() {
         state = LOAD;

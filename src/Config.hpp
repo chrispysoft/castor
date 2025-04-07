@@ -132,6 +132,11 @@ public:
     bool fallbackSineSynth;
     bool realtimeRendering = true;
 
+    std::string parametersPath = "./parameters.json";
+    std::string webControlStaticPath = "./www";
+    std::string webControlHost = "0.0.0.0";
+    int webControlPort = 8889;
+
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
         auto envKey = mapKey;
         std::transform(envKey.begin(), envKey.end(), envKey.begin(), [](unsigned char c){ return std::toupper(c); });

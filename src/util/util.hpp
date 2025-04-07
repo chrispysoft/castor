@@ -64,13 +64,28 @@ std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
 }
 
 std::time_t parseDatetime(const std::string& datetime) {
+    std::smatch match;
+    std::regex isoRegex(R"(^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(Z|([+-]\d{2}):?(\d{2}))?$)");
+
+    if (!std::regex_match(datetime, match, isoRegex)) throw std::runtime_error("Invalid ISO 8601 format: " + datetime);
+
+    std::string dt = match[1];
+    std::string tz = match[2];
     std::tm t{};
-    std::istringstream ss(datetime);
+    std::istringstream ss(dt);
     ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
-    if (ss.fail()) {
-        throw std::runtime_error("Failed to parse datetime: " + datetime);
+
+    if (ss.fail()) throw std::runtime_error("Failed to parse datetime: " + datetime);
+
+    auto ts = timegm(&t);
+
+    if (tz.size() && tz != "Z") {
+        auto hours = std::stoi(match[3]);
+        auto minutes = std::stoi(match[4]);
+        auto offset = (hours * 3600) + (minutes * 60);
+        ts -= offset;
     }
-    std::time_t ts = mktime(&t);
+
     return ts;
 }
 
