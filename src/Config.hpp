@@ -68,6 +68,10 @@ class Config {
     static constexpr const char* kSampleRate = "44100";
     static constexpr const char* kFallbackShuffle = "1";
     static constexpr const char* kFallbackSineSynth = "1";
+    static constexpr const char* kWebControlHost = "127.0.0.1";
+    static constexpr const char* kWebControlPort = "8889";
+    static constexpr const char* kWebControlStatic = "1";
+    static constexpr const char* kWebControlStaticPath = "./www";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -109,6 +113,10 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string calendarCachePath;
+    std::string webControlHost;
+    std::string webControlStaticPath;
+    bool webControlStatic;
+    int webControlPort;
     int logLevel;
     int calendarRefreshInterval;
     int healthReportInterval;
@@ -133,9 +141,6 @@ public:
     bool realtimeRendering = true;
 
     std::string parametersPath = "./parameters.json";
-    std::string webControlStaticPath = "./www";
-    std::string webControlHost = "0.0.0.0";
-    int webControlPort = 8889;
 
     static std::string get(Map& map, std::string mapKey, std::string defaultValue) {
         auto envKey = mapKey;
@@ -192,6 +197,10 @@ public:
         fallbackCrossFadeTime = std::stof(get(map, "fallback_cross_fade_time", kFallbackCrossFadeTime));
         fallbackShuffle = std::stoi(get(map, "fallback_shuffle", kFallbackShuffle));
         fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
+        webControlHost = get(map, "web_control_host", kWebControlHost);
+        webControlPort = std::stoi(get(map, "web_control_port", kWebControlPort));
+        webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
+        webControlStaticPath = (webControlStatic) ? kWebControlStaticPath : "";
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -219,6 +228,9 @@ public:
         << "\n\t healthReportInterval=" << healthReportInterval
         << "\n\t calendarCachePath=" << calendarCachePath
         << "\n\t tcpPort=" << tcpPort
+        << "\n\t webControlHost=" << webControlHost
+        << "\n\t webControlPort=" << webControlPort
+        << "\n\t webControlStatic=" << webControlStatic
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration
         << "\n\t silenceStopDuration=" << silenceStopDuration
