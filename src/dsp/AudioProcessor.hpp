@@ -169,6 +169,7 @@ public:
     }
 
     virtual void stop() {
+        if (state == IDLE) return;
         state = IDLE;
         isScheduling = false;
         scheduleCV.notify_all();
@@ -280,7 +281,7 @@ public:
     }
 
     bool isFinished() const {
-        return std::time(0) > (playItem->end) && state == IDLE;
+        return std::time(0) > (playItem->end) && (state == IDLE || state == FAIL);
     }
 
 
