@@ -77,7 +77,7 @@ public:
         mOscL.setFrequency(kBaseFreq);
         mOscR.setFrequency(kBaseFreq * (5.0 / 4.0));
         mPremixPlayer.startCallback = [this](auto itm) { this->onTrackStart(itm); };
-        mProgram->showName = "FROmat++";
+        mProgram->showName = "Fallback";
     }
 
     void onTrackStart(std::shared_ptr<PlayItem> tItem) {
