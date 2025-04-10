@@ -235,7 +235,6 @@ public:
             }
 
             if (mWebService->isClientConnected()) {
-                log.info() << "Engine web client connected";
                 updateWebService();
             }
 

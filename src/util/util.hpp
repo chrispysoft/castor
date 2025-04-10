@@ -182,7 +182,7 @@ public:
     }
 
     void write(const T* tData, size_t tLen) {
-        std::lock_guard<std::mutex> lock(mMutex);
+        // std::lock_guard<std::mutex> lock(mMutex);
 
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
