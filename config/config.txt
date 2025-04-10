@@ -53,3 +53,8 @@ health_report_interval=10
 
 # TCP Server
 tcp_port=1234
+
+# Web Control
+web_control_host=127.0.0.1
+web_control_port=8889
+web_control_static=1

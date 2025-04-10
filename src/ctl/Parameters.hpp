@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <iostream>
 #include <iomanip>
 #include <ctime>
@@ -34,25 +35,44 @@ namespace castor {
 namespace ctl {
 
 struct ParameterTree {
-    float inputGain = 0.0f;
-    float outputGain = 0.0f;
+    static constexpr float kMaxGain = 24.0f;
+
+    std::atomic<float> inputGain{0.0f};
+    std::atomic<float> outputGain{0.0f};
+
+    ParameterTree() = default;
+
+    ParameterTree(const ParameterTree& other) {
+        inputGain.store(other.inputGain.load());
+        outputGain.store(other.outputGain.load());
+    }
+
+    ParameterTree& operator=(const ParameterTree& other) {
+        if (this != &other) {
+            inputGain.store(other.inputGain.load());
+            outputGain.store(other.outputGain.load());
+        }
+        return *this;
+    }
 };
 
 void from_json(const nlohmann::json& j, ParameterTree& t) {
-    j.at("inputGain").get_to(t.inputGain);
-    j.at("outputGain").get_to(t.outputGain);
+    t.inputGain.store(j.at("inputGain"));
+    t.outputGain.store(j.at("outputGain"));
 }
 
 void to_json(nlohmann::json& j, const ParameterTree& t) {
     j = nlohmann::json{
-        {"inputGain", t.inputGain},
-        {"outputGain", t.outputGain},
+        {"inputGain", t.inputGain.load()},
+        {"outputGain", t.outputGain.load()}
     };
 }
 
 bool validate(const ParameterTree& t) {
-    if (t.inputGain < -24 || t.inputGain > 24) return false;
-    if (t.outputGain < -24 || t.outputGain > 24) return false;
+    const auto& max = ParameterTree::kMaxGain;
+    const auto& min = -max;
+    if (t.inputGain < min || t.inputGain > max) return false;
+    if (t.outputGain < min || t.outputGain > max) return false;
     return true;
 }
 

@@ -99,10 +99,8 @@ class Engine : public audio::Client::Renderer {
     std::thread mLoadThread;
     std::mutex mScheduleItemsMutex;
     std::mutex mPlayersMutex;
-    std::deque<std::shared_ptr<audio::Player>> mPlayers{};
-    std::atomic<std::deque<std::shared_ptr<audio::Player>>*> mActivePlayers{};
-    std::deque<std::shared_ptr<audio::Player>> mActivePlayersBuf1, mActivePlayersBuf2;
-    // std::shared_ptr<audio::Player> mActivePlayer = nullptr;
+    std::atomic<std::deque<std::shared_ptr<audio::Player>>*> mPlayers{};
+    std::deque<std::shared_ptr<audio::Player>> mPlayersBuf1, mPlayersBuf2;
     
     std::shared_ptr<api::Program> mCurrProgram = nullptr;
     std::vector<std::shared_ptr<PlayItem>> mScheduleItems;
@@ -199,8 +197,8 @@ public:
         if (mLoadThread.joinable()) mLoadThread.join();
         mRecorder.stop();
         mFallback.terminate();
-        for (const auto& player : mPlayers) player->stop();
-        mPlayers.clear();
+        for (const auto& player : mPlayersBuf1) player->stop();
+        for (const auto& player : mPlayersBuf2) player->stop();
         mStreamOutput.stop();
         mAudioClient.stop();
         log.info() << "Engine stopped";
@@ -209,15 +207,15 @@ public:
 
     // thread-safe getter and setter for player queue
     std::deque<std::shared_ptr<audio::Player>> getPlayers() {
-        auto playersPtr = mActivePlayers.load(std::memory_order_acquire);
+        auto playersPtr = mPlayers.load(std::memory_order_acquire);
         if (!playersPtr) return {};
         return *playersPtr;
     }
 
     void setPlayers(const std::deque<std::shared_ptr<audio::Player>>& tPlayers) {
-        auto inactiveBuffer = (mActivePlayers.load() == &mActivePlayersBuf1) ? &mActivePlayersBuf2 : &mActivePlayersBuf1;
+        auto inactiveBuffer = (mPlayers.load() == &mPlayersBuf1) ? &mPlayersBuf2 : &mPlayersBuf1;
         *inactiveBuffer = tPlayers;
-        mActivePlayers.store(inactiveBuffer, std::memory_order_release);
+        mPlayers.store(inactiveBuffer, std::memory_order_release);
     }
     
 
@@ -236,25 +234,21 @@ public:
                 mScheduleItems.clear();
             }
 
-            if (true) { // webservice is client connected
-                mStatus.rmsLin = mSilenceDet.currentRMS();
-                nlohmann::json j = {};
-                for (auto player : mPlayers) if (player) j += player->getStatusJSON();
-                mStatus.players = j;
-                mStatus.fallbackActive = mFallback.isActive();
+            if (mWebService->isClientConnected()) {
+                updateWebService();
             }
-
-            setPlayers(mPlayers);
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
 
     void cleanPlayers() {
-        while (!mPlayers.empty() && mPlayers.front()->isFinished()) {
-            mPlayers.front()->stop();
-            mPlayers.pop_front();
+        auto players = getPlayers();
+        while (players.size() && players.front()->isFinished()) {
+            players.front()->stop();
+            players.pop_front();
         }
+        setPlayers(players);
     }
 
     void refreshPlayers() {
@@ -264,7 +258,7 @@ public:
             return lhs && rhs && *lhs == *rhs;
         };
 
-        auto oldPlayers = mPlayers;
+        auto oldPlayers = getPlayers();
         std::deque<std::shared_ptr<audio::Player>> newPlayers;
 
         // push existing players matching new play items
@@ -290,7 +284,7 @@ public:
             }
         }
 
-        mPlayers = std::move(newPlayers);
+        setPlayers(newPlayers);
     }
 
 
@@ -384,19 +378,29 @@ public:
     void updateStatus() {
         // strstr.flush();
         // strstr << "\x1b[5A";
+        auto players = getPlayers();
         strstr << "____________________________________________________________________________________________________________\n";
         strstr << "RMS: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
         strstr << "Fallback: " << (mFallback.isActive() ? "ACTIVE" : "INACTIVE") << '\n';
-        strstr << "Player queue (" << mPlayers.size() << " items):\n";
+        strstr << "Player queue (" << players.size() << " items):\n";
 
         audio::Player::getStatusHeader(strstr);
-        for (auto player : mPlayers) {
+        for (auto player : players) {
             if (player) player->getStatus(strstr);
         }
         strstr << std::endl;
 
         mTCPServer->pushStatus(strstr.str());
         // log.debug() << statusSS.str();
+    }
+
+    void updateWebService() {
+        auto players = getPlayers();
+        mStatus.rmsLin = mSilenceDet.currentRMS();
+        nlohmann::json j = {};
+        for (auto player : players) if (player) j += player->getStatusJSON();
+        mStatus.players = j;
+        mStatus.fallbackActive = mFallback.isActive();
     }
 
 
