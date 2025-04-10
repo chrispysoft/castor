@@ -20,6 +20,7 @@
  *  to the source code under the terms of the GNU Affero General Public License.
  */
 
+#include <atomic>
 #include <string>
 #include <httplib.h>
 #include <json.hpp>
@@ -32,6 +33,8 @@ namespace io {
 
 class WebService {
 
+    static constexpr time_t kClientConnectedTimeout = 1;
+
     using Handler = httplib::Server::Handler;
     using Request = httplib::Request;
     using Response = httplib::Response;
@@ -43,6 +46,7 @@ class WebService {
     const std::string mStaticPath;
     ctl::Parameters& mParameters;
     ctl::Status& mStatus;
+    std::atomic<time_t> mLastClientRequest = 0;
 
 public:
     WebService(const std::string& tHost, int tPort, const std::string& tStaticPath, ctl::Parameters& tParameters, ctl::Status& tStatus) :
@@ -66,10 +70,16 @@ public:
 
     httplib::Server::Handler intercept(InterceptionHandler handler) {
         return [this, handler](const Request& req, Response& res) {
+            log.debug() << "WebService request from " << req.remote_addr << " " << req.path;
+            mLastClientRequest = std::time(0);
             auto auth = req.get_header_value("Authorization");
             if (mToken.empty() || auth == "Bearer " + mToken) (this->*handler)(req, res);
             else res.status = 401;
         };
+    }
+
+    bool isClientConnected() {
+        return std::time(0) - mLastClientRequest <= kClientConnectedTimeout;
     }
 
     void start() {

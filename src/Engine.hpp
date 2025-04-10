@@ -236,12 +236,9 @@ public:
                 mScheduleItems.clear();
             }
 
-            if (true) { // webservice is client connected
-                mStatus.rmsLin = mSilenceDet.currentRMS();
-                nlohmann::json j = {};
-                for (auto player : mPlayers) if (player) j += player->getStatusJSON();
-                mStatus.players = j;
-                mStatus.fallbackActive = mFallback.isActive();
+            if (mWebService->isClientConnected()) {
+                log.info() << "Engine web client connected";
+                updateWebService();
             }
 
             setPlayers(mPlayers);
@@ -397,6 +394,15 @@ public:
 
         mTCPServer->pushStatus(strstr.str());
         // log.debug() << statusSS.str();
+    }
+
+    void updateWebService() {
+        auto players = getPlayers();
+        mStatus.rmsLin = mSilenceDet.currentRMS();
+        nlohmann::json j = {};
+        for (auto player : players) if (player) j += player->getStatusJSON();
+        mStatus.players = j;
+        mStatus.fallbackActive = mFallback.isActive();
     }
 
 
