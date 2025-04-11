@@ -141,9 +141,9 @@ public:
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
         mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
-        mRemote.registerCommand("f1\n", [this] { mFallback.start(); });
-        mRemote.registerCommand("f0\n", [this] { mFallback.stop(); });
-        mRemote.registerCommand("s\n", [this] { updateStatus(); });
+        mRemote.registerCommand("f1", [this] { mFallback.start(); });
+        mRemote.registerCommand("f0", [this] { mFallback.stop(); });
+        mRemote.registerCommand("s", [this] { updateStatus(); });
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {

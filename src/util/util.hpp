@@ -102,6 +102,11 @@ void stripM3ULine(std::string& line) {
     line = std::regex_replace(line, removeRgx, "");
 }
 
+std::string stripLF(const std::string& line) {
+    std::regex removeRgx("[\\n]");
+    return std::regex_replace(line, removeRgx, "");
+}
+
 std::string getEnvar(const std::string& key) {
     char* val = getenv(key.c_str());
     return val == NULL ? std::string("") : std::string(val);
