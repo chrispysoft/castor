@@ -58,3 +58,5 @@ tcp_port=1234
 web_control_host=127.0.0.1
 web_control_port=8889
 web_control_static=1
+web_control_auth_user=castor
+web_control_auth_pass=beaver

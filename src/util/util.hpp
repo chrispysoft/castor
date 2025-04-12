@@ -112,6 +112,14 @@ std::string getEnvar(const std::string& key) {
     return val == NULL ? std::string("") : std::string(val);
 }
 
+std::string readRawFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) throw std::runtime_error("Failed to open file: " + path);
+    std::ostringstream oss;
+    oss << file.rdbuf();
+    return oss.str();
+}
+
 enum class FileType { MP3, AAC, M4A, OGG, OPUS, FLAC, UNKNOWN };
 
 std::string getFileExtension(const std::string& path) {
