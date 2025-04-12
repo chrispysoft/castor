@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Castor Web UI</title>
+  <title>Castor Remote Control</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -118,6 +118,8 @@
 </body>
 
 <script>
+
+    var bearerToken = null;
     
     const statusMap = {
         0: { label: "STOP", color: "gray" },
@@ -144,9 +146,36 @@
         postParameters();
     });
 
+    async function getToken() {
+        try {
+            const response = await fetch('/token');
+            const data = await response.json();
+            console.log('Received token:', data);
+            bearerToken = data.token;
+        } catch (err) {
+            console.error('Error fetching token', err);
+        }
+    }
+
+    async function getAuthorized(url) {
+        return await fetch(url, {
+            headers: {
+                authorization: `Bearer ${bearerToken}`
+            }
+        })
+    }
+
+    async function postAuthorized(url, data) {
+        return await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${bearerToken}` },
+            body: JSON.stringify(data)
+        })
+    }
+
     async function getParameters() {
         try {
-            const response = await fetch('/parameters');
+            const response = await getAuthorized('/parameters');
             const data = await response.json();
             inputGain.value = data.inputGain;
             inputGainValue.textContent = data.inputGain;
@@ -163,11 +192,7 @@
             outputGain: Number(outputGain.value)
         };
         try {
-            await fetch('/parameters', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            await postAuthorized('/parameters', data);
         } catch (err) {
             console.error('Error posting parameters:', err);
         }
@@ -175,12 +200,13 @@
 
     async function getStatus() {
         try {
-            const response = await fetch('/status');
+            const response = await getAuthorized('/status');
             const data = await response.json();
             meterBar.style.width = `${data.rmsLin * 100}%`;
 
             playerTable.innerHTML = "";
-            data.players.forEach(row => {
+            var players = data.players ? data.players : [];
+            players.forEach(row => {
                 const tr = document.createElement("tr");
                 const tdStart = document.createElement("td");
                 const tdEnd = document.createElement("td");
@@ -197,8 +223,8 @@
                 statusSpan.textContent = status.label;
                 statusSpan.style.color = status.color;
                 tdState.appendChild(statusSpan);
-                tdLoaded.textContent = (row.loaded * 100).toFixed(2); // + " %";
-                tdPlayed.textContent = (row.played * 100).toFixed(2); // + " %";
+                tdLoaded.textContent = Math.round(row.loaded * 100); // + " %";
+                tdPlayed.textContent = Math.round(row.played * 100); // + " %";
                 tdSize.textContent = row.size.toFixed(2); // + " MB";
 
                 tdLoaded.classList.add("number");
@@ -218,7 +244,11 @@
         }
     }
 
-    window.onload = getParameters;
-    setInterval(getStatus, 250);
+    window.onload = async () => {
+        await getToken();
+        await getParameters();
+        setInterval(getStatus, 250);
+    };
+    
 </script>
 </html>

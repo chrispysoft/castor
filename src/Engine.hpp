@@ -121,7 +121,7 @@ public:
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mParameters(mConfig.parametersPath),
-        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlStaticPath, mParameters, mStatus)),
+        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlStaticPath, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
@@ -141,9 +141,9 @@ public:
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
         mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
-        mRemote.registerCommand("f1\n", [this] { mFallback.start(); });
-        mRemote.registerCommand("f0\n", [this] { mFallback.stop(); });
-        mRemote.registerCommand("s\n", [this] { updateStatus(); });
+        mRemote.registerCommand("f1", [this] { mFallback.start(); });
+        mRemote.registerCommand("f0", [this] { mFallback.stop(); });
+        mRemote.registerCommand("s", [this] { updateStatus(); });
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {

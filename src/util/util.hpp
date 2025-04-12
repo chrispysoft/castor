@@ -102,9 +102,22 @@ void stripM3ULine(std::string& line) {
     line = std::regex_replace(line, removeRgx, "");
 }
 
+std::string stripLF(const std::string& line) {
+    std::regex removeRgx("[\\n]");
+    return std::regex_replace(line, removeRgx, "");
+}
+
 std::string getEnvar(const std::string& key) {
     char* val = getenv(key.c_str());
     return val == NULL ? std::string("") : std::string(val);
+}
+
+std::string readRawFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) throw std::runtime_error("Failed to open file: " + path);
+    std::ostringstream oss;
+    oss << file.rdbuf();
+    return oss.str();
 }
 
 enum class FileType { MP3, AAC, M4A, OGG, OPUS, FLAC, UNKNOWN };

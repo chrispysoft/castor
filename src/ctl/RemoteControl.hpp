@@ -67,13 +67,14 @@ public:
 
 
     void executeCommand(const std::string& name, const std::string& argument = "") {
-        auto it = mCommands.find(name);
+        auto cmd = util::stripLF(name);
+        auto it = mCommands.find(cmd);
         if (it != mCommands.end()) {
-            log.info() << "RemoteControl executing command: " << name;
+            log.info() << "RemoteControl executing command: " << cmd;
             /*std::string result = */ it->second();
             //callback(result);
         } else {
-            log.error() << "RemoteControl unknown command: " << name;
+            log.error() << "RemoteControl unknown command: " << cmd;
             //callback("ERROR: Unknown command");
         }
     }

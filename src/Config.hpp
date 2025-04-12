@@ -72,6 +72,9 @@ class Config {
     static constexpr const char* kWebControlPort = "8889";
     static constexpr const char* kWebControlStatic = "1";
     static constexpr const char* kWebControlStaticPath = "./www";
+    static constexpr const char* kWebControlAuthUser = "castor";
+    static constexpr const char* kWebControlAuthPass = "beaver";
+    static constexpr const char* kWebControlAuthToken = "";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -115,6 +118,9 @@ public:
     std::string calendarCachePath;
     std::string webControlHost;
     std::string webControlStaticPath;
+    std::string webControlAuthUser;
+    std::string webControlAuthPass;
+    std::string webControlAuthToken;
     bool webControlStatic;
     int webControlPort;
     int logLevel;
@@ -201,6 +207,9 @@ public:
         webControlPort = std::stoi(get(map, "web_control_port", kWebControlPort));
         webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
         webControlStaticPath = (webControlStatic) ? kWebControlStaticPath : "";
+        webControlAuthUser = get(map, "web_control_auth_user", kWebControlAuthUser);
+        webControlAuthPass = get(map, "web_control_auth_pass", kWebControlAuthPass);
+        webControlAuthToken = get(map, "web_control_auth_token", kWebControlAuthToken);
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -231,6 +240,7 @@ public:
         << "\n\t webControlHost=" << webControlHost
         << "\n\t webControlPort=" << webControlPort
         << "\n\t webControlStatic=" << webControlStatic
+        << "\n\t webControlAuthUser=" << webControlAuthUser
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration
         << "\n\t silenceStopDuration=" << silenceStopDuration
