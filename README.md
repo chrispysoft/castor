@@ -125,7 +125,8 @@ Castor is built to work with [AURA](https://aura.radio/). These open-source libr
 - [libcurl](https://curl.se/) – for network communications
 - [PortAudio](https://www.portaudio.com/) – for audio I/O
 - [FFmpeg](https://www.ffmpeg.org/) – for multimedia file handling
-- [nlohmann/json](https://github.com/nlohmann/json) – a header-only JSON library for data serialization
+- [nlohmann/json](https://github.com/nlohmann/json) – header-only JSON library
+- [cpp-httplib](https://github.com/yhirose/cpp-httplib) – header-only HTTP/HTTPS library
 
 The scheduling logic in Castor is based on an existing Python implementation of **AURA-engine**, which served as the foundation for the design of the current C++ version.
 
