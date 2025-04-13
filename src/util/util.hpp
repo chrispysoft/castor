@@ -173,9 +173,9 @@ static float dbLinear(float db) {
 template <typename T>
 class RingBuffer {
     size_t mCapacity;
-    size_t mSize = 0;
-    size_t mHead = 0;
-    size_t mTail = 0;
+    std::atomic<size_t> mSize = 0;
+    std::atomic<size_t> mHead = 0;
+    std::atomic<size_t> mTail = 0;
     std::vector<T> mBuffer;
     std::mutex mMutex;
     std::condition_variable mCV;
