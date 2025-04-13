@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY src/ src/
 COPY include/ include/
+COPY www/ www/
 COPY CMakeLists.txt .
 RUN mkdir /build && cd /build && \
     cmake /app && \
