@@ -161,10 +161,17 @@ public:
     void start() {
         log.debug() << "WebService starting...";
 
-        mServer.Options(R"(.*)", [](const Request&, Response& res) {
-            res.set_header("Access-Control-Allow-Origin", "*");
-            res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            res.set_header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+        mServer.set_default_headers({
+            {"Access-Control-Allow-Origin", "http://" + mHost + ":" + std::to_string(mPort)},
+            {"Access-Control-Allow-Credentials", "true"},
+            {"Access-Control-Allow-Headers", "Authorization, Content-Type"},
+            {"Access-Control-Allow-Methods", "GET, POST"},
+            {"X-Frame-Options", "SAMEORIGIN"},
+            {"X-Content-Type-Options", "nosniff"}
+        });
+
+        mServer.set_logger([](const Request& req, const Response& res) {
+            log.debug() << "WebService request: " << req.method << " " << req.path << " " << res.status;
         });
 
         //mServer.set_error_handler(std::bind(&WebService::errorHandler, this, std::placeholders::_1, std::placeholders::_2));
