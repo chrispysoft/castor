@@ -121,7 +121,7 @@ public:
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mParameters(mConfig.parametersPath),
-        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlStaticPath, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mParameters, mStatus)),
+        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mConfig.webControlStatic, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),

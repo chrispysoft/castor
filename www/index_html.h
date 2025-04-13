@@ -1,0 +1,309 @@
+static const char* kStaticHTML = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Castor Remote Control</title>
+    <style>
+    body {
+        font-family: "Segoe UI", sans-serif;
+        margin: 30px;
+        background-color: #121212;
+        color: #f1f1f1;
+    }
+
+    h2 {
+        margin-bottom: 20px;
+        color: #ffffff;
+    }
+
+    label {
+        display: block;
+        margin-top: 25px;
+        font-weight: 600;
+    }
+
+    input[type="range"] {
+        width: 300px;
+        accent-color: #00c853;
+    }
+
+    span {
+        margin-left: 10px;
+        /* color: #a8ff60; */
+        font-weight: bold;
+    }
+
+    .bar-container {
+        width: 100%;
+        background: #2e2e2e;
+        height: 20px;
+        border-radius: 10px;
+        margin-top: 15px;
+        box-shadow: inset 0 0 4px #00000080;
+    }
+
+    .bar-fill {
+        height: 100%;
+        background: linear-gradient(to right, #00e676, #69f0ae);
+        width: 0%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 30px;
+        font-size: 14px;
+        background-color: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 6px;
+        overflow: hidden;
+        font-family: monospace;
+    }
+
+    th, td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #333;
+        text-align: left;
+    }
+
+    thead {
+        background-color: #2c2c2c;
+        color: #00e676;
+    }
+
+    tr:nth-child(even) {
+        background-color: #1a1a1a;
+    }
+
+    td.number {
+        text-align: right;
+        font-family: monospace;
+    }
+
+    .meterBarBackground {
+        background: #eee;
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+    .meterBarFill {
+        background: limegreen;
+        border-radius: 0px;
+        position: absolute;
+        bottom: 0;
+    }
+    .meterBarBackground, .meterBarFill {
+        width: 20px;
+        height: 150px;
+    }
+    </style>
+</head>
+<body>
+    <h1>Castor Remote Control</h1>
+    <h2>Gain</h2>
+    <table style="width: 200px;">
+        <tr>
+            <td><input type="range" id="inputGain" min="-24" max="24" value="0" orient="vertical" style="width: 20px; height: 150px;"></td>
+            <td><input type="range" id="outputGain" min="-24" max="24" value="0" orient="vertical" style="width: 20px; height: 150px;"></td>
+        </tr>
+        <tr>
+            <td><span id="inputGainValue">0</span><br/>dB<label for="inputGain">Input</label></td>
+            <td><span id="outputGainValue">0</span><br/>dB<label for="outputGain">Output</label></td>
+        </tr>
+    </table>
+    <h2>Meter</h2>
+    <table style="width: 200px;">
+        <tr>
+            <td>
+                <div class="meterBarBackground">
+                    <div id="meterBar" class="meterBarFill"></div>
+                </div>      
+            </td>
+        </tr>
+        <tr>
+            <td>    
+                <span id="meterLabel">0</span><br/>dBFS
+            </td>
+        </tr>
+    </table>
+    <h2>Fallback</h2>
+    <span id="fallbackActive"></span>
+    <h2>Player</h2>
+    <table id="playerTable" border="1">
+        <thead>
+            <tr>
+                <th>Start</th>
+                <th>End</th>
+                <th>State</th>
+                <th>Loaded</th>
+                <th>Played</th>
+                <th>Size MB</th>
+                <th>URI</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+
+<script>
+
+    var bearerToken = null;
+    
+    const statusMap = {
+        0: { label: "STOP", color: "silver" },
+        1: { label: "SCHD", color: "blue" },
+        2: { label: "LOAD", color: "fuchsia" },
+        3: { label: "CUE ", color: "yellow" },
+        4: { label: "PLAY", color: "limegreen" },
+        5: { label: "FAIL", color: "red" },
+    };
+
+    const inputGain = document.getElementById('inputGain');
+    const inputGainValue = document.getElementById('inputGainValue');
+    const outputGain = document.getElementById('outputGain');
+    const outputGainValue = document.getElementById('outputGainValue');
+    const meterBar = document.getElementById('meterBar');
+    const meterLabel = document.getElementById('meterLabel');
+    const fallbackActive = document.getElementById('fallbackActive');
+    const playerTable = document.getElementById("playerTable").getElementsByTagName("tbody")[0];
+
+    function linearToDB(value) {
+        return 20.0 * Math.log10(value);
+    }
+
+    function dbToUI(value) {
+        const min = -90.0;
+        const max =   0.0;
+        if (value < min) return 0;
+        return (value - min) / (max - min) * 100;
+    }
+
+    inputGain.addEventListener('input', (event) => {
+        inputGainValue.textContent = event.target.value;
+        postParameters();
+    });
+    outputGain.addEventListener('input', (event) => {
+        outputGainValue.textContent = event.target.value;
+        postParameters();
+    });
+
+    async function getToken() {
+        try {
+            const response = await fetch('/token');
+            bearerToken = await response.json();
+            console.log('Received token:', bearerToken);
+        } catch (err) {
+            bearerToken = null;
+            console.error('Error fetching token', err);
+        }
+    }
+
+    async function getAuthorized(url) {
+        return await fetch(url, {
+            headers: {
+                authorization: `Bearer ${bearerToken.token}`
+            }
+        })
+    }
+
+    async function postAuthorized(url, data) {
+        return await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${bearerToken.token}` },
+            body: JSON.stringify(data)
+        })
+    }
+
+    async function getParameters() {
+        try {
+            const response = await getAuthorized('/parameters');
+            const data = await response.json();
+            inputGain.value = data.inputGain;
+            inputGainValue.textContent = data.inputGain;
+            outputGain.value = data.outputGain;
+            outputGainValue.textContent = data.outputGain;
+        } catch (err) {
+            console.error('Error fetching initial slider value:', err);
+        }
+    }
+
+    async function postParameters() {
+        const data = {
+            inputGain: Number(inputGain.value),
+            outputGain: Number(outputGain.value)
+        };
+        try {
+            await postAuthorized('/parameters', data);
+        } catch (err) {
+            console.error('Error posting parameters:', err);
+        }
+    }
+
+    async function getStatus() {
+        try {
+            const response = await getAuthorized('/status');
+            const data = await response.json();
+            const rmsDB = linearToDB(data.rmsLin);
+            const rmsUI = dbToUI(rmsDB);
+            meterBar.style.height = `${rmsUI}%`;
+            meterLabel.textContent = rmsDB.toFixed(2);
+            fallbackActive.textContent = data.fallbackActive ? "ACTIVE" : "INACTIVE";
+            fallbackActive.style.color = data.fallbackActive ? "red" : "green";
+
+            playerTable.innerHTML = "";
+            var players = data.players ? data.players : [];
+            players.forEach(row => {
+                const tr = document.createElement("tr");
+                const tdStart = document.createElement("td");
+                const tdEnd = document.createElement("td");
+                const tdURL = document.createElement("td");
+                const tdState = document.createElement("td");
+                const tdLoaded = document.createElement("td");
+                const tdPlayed = document.createElement("td");
+                const tdSize = document.createElement("td");
+                tdStart.textContent = new Date(row.start * 1000).toLocaleTimeString();
+                tdEnd.textContent = new Date(row.end * 1000).toLocaleTimeString();
+                tdURL.textContent = row.uri;
+                const status = statusMap[row.state];
+                const statusSpan = document.createElement("span");
+                statusSpan.textContent = status.label;
+                statusSpan.style.color = status.color;
+                tdState.appendChild(statusSpan);
+                tdLoaded.textContent = Math.round(row.loaded * 100);
+                tdPlayed.textContent = Math.round(row.played * 100);
+                tdSize.textContent = row.size.toFixed(2) + " MiB";
+
+                tdLoaded.classList.add("number");
+                tdPlayed.classList.add("number");
+
+                tr.appendChild(tdStart);
+                tr.appendChild(tdEnd);
+                tr.appendChild(tdState);
+                tr.appendChild(tdLoaded);
+                tr.appendChild(tdPlayed);
+                tr.appendChild(tdSize);
+                tr.appendChild(tdURL);
+                playerTable.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('Error fetching initial slider value:', err);
+        }
+    }
+
+    window.onload = async () => {
+        await getToken();
+        const tokenTimeout = bearerToken ? (bearerToken.timeout - 1) * 1000 : 1000;
+        setInterval(async () => {
+            await getToken();
+        }, tokenTimeout);
+        await getParameters();
+        setInterval(getStatus, 250);
+    };
+    
+</script>
+</html>
+)rawliteral";

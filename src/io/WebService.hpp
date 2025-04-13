@@ -31,6 +31,7 @@
 #include "../ctl/Parameters.hpp"
 #include "../ctl/Status.hpp"
 #include "../util/Log.hpp"
+#include "../www/index_html.h"
 
 namespace castor {
 namespace io {
@@ -91,26 +92,25 @@ private:
     httplib::Server mServer;
     const std::string mHost;
     const int mPort;
-    const std::string mStaticPath;
     const AuthConf mAuthConf;
-    std::string mStaticContent;
+    const bool mServeStatic;
+    const std::string mStaticContent;
     std::unique_ptr<StaticContentToken> mStaticToken = nullptr;
     ctl::Parameters& mParameters;
     ctl::Status& mStatus;
     std::atomic<time_t> mLastClientRequest = 0;
     std::mutex mInterceptionMutex;
-    bool mServeStatic = true;
 
     typedef void(WebService::*InterceptionHandler)(const Request& req, Response& res);
 
 public:
-    WebService(const std::string& tHost, int tPort, const std::string& tStaticPath, const std::string& tAuthUser, const std::string& tAuthPass, const std::string& tAuthToken, ctl::Parameters& tParameters, ctl::Status& tStatus) :
+    WebService(const std::string& tHost, int tPort, const std::string& tAuthUser, const std::string& tAuthPass, const std::string& tAuthToken, bool tServeStatic, ctl::Parameters& tParameters, ctl::Status& tStatus) :
         mServer(),
         mHost(tHost),
         mPort(tPort),
-        mStaticPath(tStaticPath),
-        mStaticContent(),
+        mStaticContent(kStaticHTML),
         mAuthConf(AuthConf{tAuthUser, tAuthPass, tAuthToken}),
+        mServeStatic(tServeStatic),
         mParameters(tParameters),
         mStatus(tStatus)
     {}
@@ -180,12 +180,11 @@ public:
         mServer.Get ("/parameters", interceptAPI(&WebService::getParameters));
         mServer.Post("/parameters", interceptAPI(&WebService::postParameters));
         if (mServeStatic) {
-            loadStaticContent();
             mServer.Get("/token", interceptStatic(&WebService::getStaticToken));
             mServer.Get("/", interceptStatic(&WebService::getStatic));
         }
         
-        log.info() << "WebService listening on " << mHost << ":" << mPort << " (static: " << mStaticPath << ")";
+        log.info() << "WebService listening on " << mHost << ":" << mPort;
         mServer.listen(mHost, mPort);
     }
 
@@ -238,18 +237,6 @@ private:
         res.set_content(mStaticToken->json, "text/html");
     }
 
-
-    void loadStaticContent() {
-        try {
-            auto indexFile = mStaticPath + "/index.html";
-            mStaticContent = util::readRawFile(indexFile);
-            log.info() << "WebService loaded static content from: " << indexFile;
-        }
-        catch (const std::exception& e) {
-            log.error() << "WebService failed to load static content: " << e.what();
-            mStaticContent = "<html><body><h1>Static content not found</h1></body></html>";
-        }
-    }
 };
 
 }

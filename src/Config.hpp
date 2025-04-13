@@ -70,11 +70,10 @@ class Config {
     static constexpr const char* kFallbackSineSynth = "1";
     static constexpr const char* kWebControlHost = "127.0.0.1";
     static constexpr const char* kWebControlPort = "8889";
-    static constexpr const char* kWebControlStatic = "1";
-    static constexpr const char* kWebControlStaticPath = "./www";
     static constexpr const char* kWebControlAuthUser = "castor";
     static constexpr const char* kWebControlAuthPass = "beaver";
     static constexpr const char* kWebControlAuthToken = "";
+    static constexpr const char* kWebControlStatic = "1";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -117,7 +116,6 @@ public:
     std::string clockURL;
     std::string calendarCachePath;
     std::string webControlHost;
-    std::string webControlStaticPath;
     std::string webControlAuthUser;
     std::string webControlAuthPass;
     std::string webControlAuthToken;
@@ -205,11 +203,10 @@ public:
         fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
         webControlHost = get(map, "web_control_host", kWebControlHost);
         webControlPort = std::stoi(get(map, "web_control_port", kWebControlPort));
-        webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
-        webControlStaticPath = (webControlStatic) ? kWebControlStaticPath : "";
         webControlAuthUser = get(map, "web_control_auth_user", kWebControlAuthUser);
         webControlAuthPass = get(map, "web_control_auth_pass", kWebControlAuthPass);
         webControlAuthToken = get(map, "web_control_auth_token", kWebControlAuthToken);
+        webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
