@@ -149,10 +149,10 @@
     async function getToken() {
         try {
             const response = await fetch('/token');
-            const data = await response.json();
-            console.log('Received token:', data);
-            bearerToken = data.token;
+            bearerToken = await response.json();
+            console.log('Received token:', bearerToken);
         } catch (err) {
+            bearerToken = null;
             console.error('Error fetching token', err);
         }
     }
@@ -160,7 +160,7 @@
     async function getAuthorized(url) {
         return await fetch(url, {
             headers: {
-                authorization: `Bearer ${bearerToken}`
+                authorization: `Bearer ${bearerToken.token}`
             }
         })
     }
@@ -168,7 +168,7 @@
     async function postAuthorized(url, data) {
         return await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${bearerToken}` },
+            headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${bearerToken.token}` },
             body: JSON.stringify(data)
         })
     }
@@ -246,6 +246,10 @@
 
     window.onload = async () => {
         await getToken();
+        const tokenTimeout = bearerToken ? (bearerToken.timeout - 1) * 1000 : 1000;
+        setInterval(async () => {
+            await getToken();
+        }, tokenTimeout);
         await getParameters();
         setInterval(getStatus, 250);
     };
