@@ -18,7 +18,6 @@
 
     label {
         display: block;
-        margin-top: 25px;
         font-weight: 600;
     }
 
@@ -102,18 +101,17 @@
 </head>
 <body>
     <h1>Castor Remote Control</h1>
-    <h2>Gain</h2>
+    <div style="display: grid; grid-template-columns: 220px auto;">
     <table style="width: 200px;">
         <tr>
             <td><input type="range" id="inputGain" min="-24" max="24" value="0" orient="vertical" style="width: 20px; height: 150px;"></td>
             <td><input type="range" id="outputGain" min="-24" max="24" value="0" orient="vertical" style="width: 20px; height: 150px;"></td>
         </tr>
         <tr>
-            <td><span id="inputGainValue">0</span><br/>dB<label for="inputGain">Input</label></td>
-            <td><span id="outputGainValue">0</span><br/>dB<label for="outputGain">Output</label></td>
+            <td><span id="inputGainValue">0</span> dB<label for="inputGain">Input</label></td>
+            <td><span id="outputGainValue">0</span> dB<label for="outputGain">Output</label></td>
         </tr>
     </table>
-    <h2>Meter</h2>
     <table style="width: 200px;">
         <tr>
             <td>
@@ -128,6 +126,7 @@
             </td>
         </tr>
     </table>
+</div>
     <h2>Fallback</h2>
     <span id="fallbackActive"></span>
     <h2>Player</h2>
