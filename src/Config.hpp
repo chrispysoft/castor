@@ -40,6 +40,13 @@ class Config {
     static constexpr const char* kAudioPlaylistPath = "";
     static constexpr const char* kAudioFallbackPath = "";
     static constexpr const char* kAudioRecordPath = "";
+    static constexpr const char* kRecordSchedulePath = "";
+    static constexpr const char* kRecordScheduleFormat = "mp3";
+    static constexpr const char* kRecordScheduleBitRate = "320000";
+    static constexpr const char* kRecordBlockPath = "";
+    static constexpr const char* kRecordBlockFormat = "ogg";
+    static constexpr const char* kRecordBlockBitRate = "128000";
+    static constexpr const char* kRecordBlockDuration = "3600";
     static constexpr const char* kDeviceName = "default";
     static constexpr const char* kStreamOutURL = "";
     static constexpr const char* kStreamOutMetadataURL = "";
@@ -70,11 +77,10 @@ class Config {
     static constexpr const char* kFallbackSineSynth = "1";
     static constexpr const char* kWebControlHost = "127.0.0.1";
     static constexpr const char* kWebControlPort = "8889";
-    static constexpr const char* kWebControlStatic = "1";
-    static constexpr const char* kWebControlStaticPath = "./www";
     static constexpr const char* kWebControlAuthUser = "castor";
     static constexpr const char* kWebControlAuthPass = "beaver";
     static constexpr const char* kWebControlAuthToken = "";
+    static constexpr const char* kWebControlStatic = "1";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -102,6 +108,24 @@ public:
     std::string audioPlaylistPath;
     std::string audioFallbackPath;
     std::string audioRecordPath;
+
+    std::string recordSchedulePath;
+    std::string recordScheduleFormat;
+    int recordScheduleBitRate;
+
+    std::string recordBlockPath;
+    std::string recordBlockFormat;
+    int recordBlockBitRate;
+    int recordBlockDuration;
+
+    int preloadTimeFile;
+    int preloadTimeFallback;
+    int preloadTimeStream = 10;
+    int preloadTimeLine = 5;
+
+    bool fallbackShuffle;
+    bool fallbackSineSynth;
+
     std::string iDevName;
     std::string oDevName;
     std::string streamOutURL;
@@ -117,7 +141,6 @@ public:
     std::string clockURL;
     std::string calendarCachePath;
     std::string webControlHost;
-    std::string webControlStaticPath;
     std::string webControlAuthUser;
     std::string webControlAuthPass;
     std::string webControlAuthToken;
@@ -130,20 +153,13 @@ public:
     int silenceThreshold;
     int silenceStartDuration;
     int silenceStopDuration;
-    int preloadTimeFile;
-    int preloadTimeFallback;
-    int preloadTimeStream = 10;
-    int preloadTimeLine = 5;
     int sampleRate;
     size_t samplesPerFrame = 1024;
-    int recorderBitRate = 128000;
     int streamOutBitRate = 320000;
     float outputGain = -9;
     float programFadeInTime;
     float programFadeOutTime;
     float fallbackCrossFadeTime;
-    bool fallbackShuffle;
-    bool fallbackSineSynth;
     bool realtimeRendering = true;
 
     std::string parametersPath = "./parameters.json";
@@ -177,6 +193,13 @@ public:
         iDevName = get(map, "in_device_name", kDeviceName);
         oDevName = get(map, "out_device_name", kDeviceName);
         sampleRate = std::stoi(get(map, "sample_rate", kSampleRate));
+        recordSchedulePath = get(map, "record_schedule_path", kRecordSchedulePath);
+        recordScheduleFormat = get(map, "record_schedule_format", kRecordScheduleFormat);
+        recordScheduleBitRate = std::stoi(get(map, "record_schedule_bitrate", kRecordScheduleBitRate));
+        recordBlockPath = get(map, "record_block_path", kRecordBlockPath);
+        recordBlockFormat = get(map, "record_block_format", kRecordBlockFormat);
+        recordBlockBitRate = std::stoi(get(map, "record_block_bitrate", kRecordBlockBitRate));
+        recordBlockDuration = std::stoi(get(map, "record_block_duration", kRecordBlockDuration));
         streamOutURL = get(map, "stream_out_url", kStreamOutURL);
         streamOutMetadataURL = get(map, "stream_out_metadata_url", kStreamOutMetadataURL);
         streamOutName = get(map, "stream_out_name", kStreamOutName);
@@ -205,11 +228,10 @@ public:
         fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
         webControlHost = get(map, "web_control_host", kWebControlHost);
         webControlPort = std::stoi(get(map, "web_control_port", kWebControlPort));
-        webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
-        webControlStaticPath = (webControlStatic) ? kWebControlStaticPath : "";
         webControlAuthUser = get(map, "web_control_auth_user", kWebControlAuthUser);
         webControlAuthPass = get(map, "web_control_auth_pass", kWebControlAuthPass);
         webControlAuthToken = get(map, "web_control_auth_token", kWebControlAuthToken);
+        webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -219,6 +241,13 @@ public:
         << "\n\t audioPlaylistPath=" << audioPlaylistPath
         << "\n\t audioFallbackPath=" << audioFallbackPath
         << "\n\t audioRecordPath=" << audioRecordPath
+        << "\n\t recordSchedulePath=" << recordSchedulePath
+        << "\n\t recordScheduleFormat=" << recordScheduleFormat
+        << "\n\t recordScheduleBitRate=" << recordScheduleBitRate
+        << "\n\t recordBlockPath=" << recordBlockPath
+        << "\n\t recordBlockFormat=" << recordBlockFormat
+        << "\n\t recordBlockBitRate=" << recordBlockBitRate
+        << "\n\t recordBlockDuration=" << recordBlockDuration
         << "\n\t iDevName=" << iDevName
         << "\n\t oDevName=" << oDevName
         << "\n\t sampleRate=" << sampleRate

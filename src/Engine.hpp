@@ -91,7 +91,8 @@ class Engine : public audio::Client::Renderer {
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
     audio::FallbackPremix mFallback;
-    audio::Recorder mRecorder;
+    audio::Recorder mScheduleRecorder;
+    audio::Recorder mBlockRecorder;
     audio::StreamOutput mStreamOutput;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mScheduleItemsChanged = false;
@@ -107,6 +108,7 @@ class Engine : public audio::Client::Renderer {
     util::ManualTimer mTCPUpdateTimer;
     util::ManualTimer mEjectTimer;
     util::AsyncTimer mReportTimer;
+    util::AsyncAlignedTimer mBlockRecordTimer;
     util::AsyncWorker<std::shared_ptr<PlayItem>> mItemChangeWorker;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
@@ -121,22 +123,25 @@ public:
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mParameters(mConfig.parametersPath),
-        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlStaticPath, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mParameters, mStatus)),
+        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mConfig.webControlStatic, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
         mFallback(mClientFormat, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackShuffle, mConfig.fallbackSineSynth),
-        mRecorder(mClientFormat, mConfig.recorderBitRate),
+        mScheduleRecorder(mClientFormat, mConfig.recordScheduleBitRate),
+        mBlockRecorder(mClientFormat, mConfig.recordBlockBitRate),
         mStreamOutput(mClientFormat, mConfig.streamOutBitRate),
         mTCPUpdateTimer(1),
         mEjectTimer(1),
         mReportTimer(mConfig.healthReportInterval),
+        mBlockRecordTimer(mConfig.recordBlockDuration),
         mStartTime(std::time(0))
     {
         mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
         mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
         mFallback.startCallback = [this](auto itm) { this->onPlayerStart(itm); };
         mReportTimer.callback = [this] { postStatus(); };
+        mBlockRecordTimer.callback = [this] { recordBlockChanged(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
@@ -144,6 +149,8 @@ public:
         mRemote.registerCommand("f1", [this] { mFallback.start(); });
         mRemote.registerCommand("f0", [this] { mFallback.stop(); });
         mRemote.registerCommand("s", [this] { updateStatus(); });
+        mScheduleRecorder.logName = "Schedule Recorder";
+        mBlockRecorder.logName = "Block Recorder";
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -166,6 +173,9 @@ public:
         mLoadThread = std::thread(&Engine::runLoad, this);
         mReportTimer.start();
         mItemChangeWorker.start();
+        if (mConfig.recordBlockPath.size()) {
+            mBlockRecordTimer.start();
+        }
 
         try {
             if (!mConfig.streamOutURL.empty()) mStreamOutput.start(mConfig.streamOutURL);
@@ -195,7 +205,8 @@ public:
         mItemChangeWorker.stop();
         if (mScheduleThread.joinable()) mScheduleThread.join();
         if (mLoadThread.joinable()) mLoadThread.join();
-        mRecorder.stop();
+        mScheduleRecorder.stop();
+        mBlockRecorder.stop();
         mFallback.terminate();
         for (const auto& player : mPlayersBuf1) player->stop();
         for (const auto& player : mPlayersBuf2) player->stop();
@@ -355,14 +366,14 @@ public:
     void programChanged() {
         log.info(Log::Cyan) << "Program changed to '" << mCurrProgram->showName << "'";
 
-        if (mCurrProgram && mConfig.audioRecordPath.size() > 0) {
-            mRecorder.stop();
+        if (mCurrProgram && mConfig.recordSchedulePath.size()) {
+            mScheduleRecorder.stop();
 
             if (mCurrProgram->showId > 1) {
-                auto recURL = mConfig.audioRecordPath + "/" + util::utcFmt() + "_" + mCurrProgram->showName + ".mp3";
+                auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordSchedulePath + "/" + util::utcFmt() + "_" + mCurrProgram->showName + "." + mConfig.recordScheduleFormat;
                 try {
                     std::unordered_map<std::string, std::string> metadata = {}; // {{"artist", item->program->showName }, {"title", item->program->episodeTitle}};
-                    mRecorder.start(recURL, metadata);
+                    mScheduleRecorder.start(recURL, metadata);
                 }
                 catch (const std::runtime_error& e) {
                     log.error() << "Engine failed to start recorder for url: " << recURL << " " << e.what();
@@ -371,6 +382,17 @@ public:
         }
     }
 
+    void recordBlockChanged() {
+        log.debug() << "Engine timeBlockChanged";
+        mBlockRecorder.stop();
+        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::utcFmt() + "." + mConfig.recordBlockFormat;
+        try {
+            mBlockRecorder.start(recURL);
+        }
+        catch (const std::runtime_error& e) {
+            log.error() << "Engine failed to start block recorder: " << e.what();
+        }
+    }
 
     // temporary monitoring "UI" 
     std::ostringstream strstr;
@@ -462,8 +484,12 @@ public:
             }
         }
 
-        if (mRecorder.isRunning()) {
-            mRecorder.process(out, nframes);
+        if (mScheduleRecorder.isRunning()) {
+            mScheduleRecorder.process(out, nframes);
+        }
+
+        if (mBlockRecorder.isRunning()) {
+            mBlockRecorder.process(out, nframes);
         }
 
         if (mStreamOutput.isRunning()) {
