@@ -1,5 +1,5 @@
-stages:
-  - build
+variables:
+  IMAGE_NAME: crispybitsapp/castor
 
 build_docker_image:
   stage: build
@@ -11,7 +11,6 @@ build_docker_image:
     - docker buildx create --use --name multiarch-builder || docker buildx use multiarch-builder
     - docker buildx inspect --bootstrap
   script:
+    - export TAG=$(echo "$CI_COMMIT_REF_NAME" | tr '/' '-' | tr -cd '[:alnum:]-_.')
     - echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-    - docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 -t crispybitsapp/castor:dev --push .
-  only:
-    - dev
+    - docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 -t $IMAGE_NAME:$TAG --push .
