@@ -6,7 +6,7 @@ log_path=./logs/castor.log
 socket_path=./socket/castor.socket
 audio_source_path=./audio/source
 audio_playlist_path=./audio/playlist
-# audio_record_path=./audio/recordings
+audio_record_path=./audio/record
 audio_fallback_path=./audio/fallback
 
 # Caching time (sec.)
@@ -34,7 +34,18 @@ in_device_name=Soundcraft Signature 12 MTK: USB Audio
 out_device_name=Soundcraft Signature 12 MTK: USB Audio
 sample_rate=44100
 
-# Stream Output (comment-out stream_out_url to disable)
+# Schedule Recording (leave path empty to disable)
+record_schedule_path=schedule
+record_schedule_format=mp3
+record_schedule_bitrate=320000
+
+# Block Recording (leave path empty to disable)
+record_block_path=block
+record_block_format=ogg
+record_block_bitrate=128000
+record_block_duration=300
+
+# Stream Output (leave stream_out_url empty to disable)
 # stream_out_url=icecast://source:hackme@localhost:8000/radio.mp3
 stream_out_metadata_url=http://source:hackme@localhost:8000/admin/metadata?mount=/radio.mp3
 stream_out_name=Radio Station

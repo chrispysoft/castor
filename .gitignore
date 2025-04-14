@@ -1,4 +1,5 @@
-audio/recordings/*
+audio/record/schedule/*
+audio/record/block/*
 build
 logs/*
 .vscode

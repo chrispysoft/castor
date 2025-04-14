@@ -263,6 +263,7 @@ public:
 
 
 class AsyncTimer {
+protected:
     const std::chrono::seconds mInterval;
     std::atomic<bool> mRunning = false;
     std::thread mThread;
@@ -293,11 +294,44 @@ public:
     }
 
 private:
-    void run() {
+    virtual void run() {
         while (mRunning.load()) {
             {
                 std::unique_lock<std::mutex> lock(mMutex);
                 if (mCV.wait_for(lock, mInterval, [this]{ return !mRunning.load(std::memory_order_acquire); })) return;
+            }
+            if (callback) callback();
+        }
+    }
+};
+
+
+class AsyncAlignedTimer : public AsyncTimer {
+public:
+    AsyncAlignedTimer(time_t tIntervalSec) :
+        AsyncTimer(tIntervalSec)
+    {}
+
+private:
+    std::chrono::system_clock::time_point nextAlignedTime() const {
+        auto now = std::chrono::system_clock::now();
+        auto now_time_t = std::chrono::system_clock::to_time_t(now);
+        auto tm = std::localtime(&now_time_t);
+        auto passedSec = tm->tm_min * 60 + tm->tm_sec;
+        int nextAligned = ((passedSec / mInterval.count()) + 1) * mInterval.count();
+        tm->tm_min = 0;
+        tm->tm_sec = 0;
+        auto nextBase = std::chrono::system_clock::from_time_t(std::mktime(tm));
+        return nextBase + std::chrono::seconds(nextAligned);
+    }
+
+    void run() override {
+        if (callback) callback();
+        while (mRunning.load()) {
+            auto nextTimePt = nextAlignedTime();
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                if (mCV.wait_until(lock, nextTimePt, [this]{ return !mRunning.load(std::memory_order_acquire); })) return;
             }
             if (callback) callback();
         }
