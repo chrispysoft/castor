@@ -43,7 +43,7 @@ record_schedule_bitrate=320000
 record_block_path=block
 record_block_format=ogg
 record_block_bitrate=128000
-record_block_duration=300
+record_block_duration=3600
 
 # Stream Output (leave stream_out_url empty to disable)
 # stream_out_url=icecast://source:hackme@localhost:8000/radio.mp3
