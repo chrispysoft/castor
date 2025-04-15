@@ -113,6 +113,8 @@ class Engine : public audio::Client::Renderer {
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
     time_t mStartTime;
+    float mOutputGainLog = 0.0f;
+    std::atomic<float> mOutputGainLin = 1.0f;
     
     
 public:
@@ -247,6 +249,14 @@ public:
 
             if (mWebService->isClientConnected()) {
                 updateWebService();
+            }
+
+            // convert output gain on demand on this thread as a temp workaround
+            auto outGainLog = mParameters.get().outputGain.load();
+            if (outGainLog != mOutputGainLog) {
+                mOutputGainLog = outGainLog;
+                mOutputGainLin = util::dbLinear(mOutputGainLog);
+                log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -462,7 +472,7 @@ public:
     // realtime thread or called by manual render function
     
     void renderCallback(const audio::sam_t* in,  audio::sam_t* out, size_t nframes) override {
-        auto nsamples = nframes * 2;
+        auto nsamples = nframes * mClientFormat.channelCount;
         memset(out, 0, nsamples * sizeof(audio::sam_t));
 
         auto players = getPlayers();
@@ -476,11 +486,13 @@ public:
         mSilenceDet.process(out, nframes);
         mFallback.process(in, out, nframes);
 
-        if (mParameters.get().outputGain != 0) {
-            float gain = util::dbLinear(mParameters.get().outputGain);
+        if (mOutputGainLin != 1.0f) {
+            // log.debug() << "Engine output gain " << mOutputGainLin;
             for (auto i = 0; i < nframes; ++i) {
-                out[i*2+0] *= gain;
-                out[i*2+1] *= gain;
+                auto iL = i * mClientFormat.channelCount;
+                auto iR = iL + 1;
+                out[iL] *= mOutputGainLin;
+                out[iR] *= mOutputGainLin;
             }
         }
 
