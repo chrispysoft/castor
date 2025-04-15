@@ -64,7 +64,7 @@ class Config {
     static constexpr const char* kCalendarCachePath = "./cache/calendar.json";
     static constexpr const char* kHealthReportInterval = "60";
     static constexpr const char* kTCPPort = "0";
-    static constexpr const char* kSilenceThreshold = "-90";
+    static constexpr const char* kSilenceThreshold = "-80";
     static constexpr const char* kSilenceStartDuration = "5";
     static constexpr const char* kSilenceStopDuration = "1";
     static constexpr const char* kPreloadTimeFile = "3600";
