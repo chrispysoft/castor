@@ -20,7 +20,7 @@ fallback_shuffle=1
 fallback_sine_synth=1
 
 # Silence Detector
-silence_threshold=-90
+silence_threshold=-80
 silence_start_duration=10
 silence_stop_duration=1
 

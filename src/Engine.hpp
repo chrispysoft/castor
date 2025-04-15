@@ -487,7 +487,6 @@ public:
         mFallback.process(in, out, nframes);
 
         if (mOutputGainLin != 1.0f) {
-            // log.debug() << "Engine output gain " << mOutputGainLin;
             for (auto i = 0; i < nframes; ++i) {
                 auto iL = i * mClientFormat.channelCount;
                 auto iR = iL + 1;
