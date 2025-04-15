@@ -58,7 +58,11 @@ std::string timefmt(const time_t& tTime, const char* tFormat) {
     return strstr.str();
 }
 
-std::string utcFmt(const time_t& tTime = std::time(nullptr)) {
+std::string fileTimestamp() {
+    return timefmt(std::time(0), "%Y-%m-%dT%H-%M-%S");
+}
+
+std::string utcFmt(const time_t& tTime = std::time(0)) {
     static constexpr const char* fmt = "%Y-%m-%dT%H:%M:%S";
     return timefmt(tTime, fmt);
 }

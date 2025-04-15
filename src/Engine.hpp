@@ -380,7 +380,7 @@ public:
             mScheduleRecorder.stop();
 
             if (mCurrProgram->showId > 1) {
-                auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordSchedulePath + "/" + util::utcFmt() + "_" + mCurrProgram->showName + "." + mConfig.recordScheduleFormat;
+                auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordSchedulePath + "/" + util::fileTimestamp() + "_" + mCurrProgram->showName + "." + mConfig.recordScheduleFormat;
                 try {
                     std::unordered_map<std::string, std::string> metadata = {}; // {{"artist", item->program->showName }, {"title", item->program->episodeTitle}};
                     mScheduleRecorder.start(recURL, metadata);
@@ -395,7 +395,7 @@ public:
     void recordBlockChanged() {
         log.debug() << "Engine timeBlockChanged";
         mBlockRecorder.stop();
-        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::utcFmt() + "." + mConfig.recordBlockFormat;
+        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::fileTimestamp() + "." + mConfig.recordBlockFormat;
         try {
             mBlockRecorder.start(recURL);
         }
