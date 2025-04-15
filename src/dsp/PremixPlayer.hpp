@@ -114,6 +114,7 @@ public:
     void reset() {
         this->mWritePos = 0;
         this->mReadPos = 0;
+        memset(this->mBuffer.data(), 0, mFadeInLen * 2 * sizeof(T));
     }
 };
 
