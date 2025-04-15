@@ -187,12 +187,8 @@ public:
             throw 0; // std::runtime_error("Buffer limit reached");
         }
 
-        if (!playItem) {
-            log.debug() << "PremixPlayer create play item...";
-            playItem = std::make_shared<PlayItem>(0, duration, tURL);
-        }
-
-        if (playItem) playItem->metadata = mReader->metadata();
+        auto item = std::make_shared<PlayItem>(0, duration, tURL);
+        item->metadata = mReader->metadata();
 
         auto xfadeOutTime = mPrevTrackDuration > mMaxVoiceTime ? mCrossFadeTimeMusic : mCrossFadeTimeVoice;
         auto xfadeInTime = duration > mMaxVoiceTime ? mCrossFadeTimeMusic : mCrossFadeTimeVoice;
@@ -215,7 +211,7 @@ public:
 
         size_t trackBeg = writePos;
         size_t trackEnd = mPremixBuffer.writePosition() - 1;
-        mTrackMarkers.push({trackBeg, trackEnd, playItem});
+        mTrackMarkers.push({trackBeg, trackEnd, item});
 
         log.debug() << "PremixPlayer load done " << tURL;
     }
@@ -256,7 +252,7 @@ private:
 
         {
             std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
-            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().stop <= mPremixBuffer.readPosition(); });
+            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.front().stop <= mPremixBuffer.readPosition(); });
             if (!mRunning) return;
         }
 
