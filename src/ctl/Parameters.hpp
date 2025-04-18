@@ -23,11 +23,12 @@
 #pragma once
 
 #include <atomic>
-#include <iostream>
-#include <iomanip>
+#include <condition_variable>
 #include <ctime>
-#include <fstream>
+#include <iostream>
+#include <mutex>
 #include <sstream>
+#include <thread>
 #include <json.hpp>
 #include "../util/Log.hpp"
 
@@ -80,17 +81,30 @@ bool validate(const ParameterTree& t) {
 class Parameters {
     const std::string mParametersPath;;
     ParameterTree mParameterTree;
+    std::atomic<bool> mRunning = true;
+    std::atomic<bool> mParametersChanged = false;
+    std::mutex mNotifyMutex;
+    std::condition_variable mNotifyCV;
+    std::thread mNotifyThread;
 
 public:
+
+    std::function<void()> onParametersChanged;
     
     Parameters(const std::string& tParametersPath) :
-        mParametersPath(tParametersPath)
+        mParametersPath(tParametersPath),
+        mNotifyThread(&Parameters::runNotify, this)
     {
         load();
     }
 
     ~Parameters() {
+        log.debug() << "Parameters destruct...";
+        mRunning.store(false, std::memory_order_release);
+        mNotifyCV.notify_one();
+        if (mNotifyThread.joinable()) mNotifyThread.join();
         save();
+        log.debug() << "Parameters destructed";
     }
 
     const ParameterTree& get() const {
@@ -104,6 +118,7 @@ public:
             mParameterTree = p;
             log.debug() << "Parameters set done";
             save();
+            triggerNotify();
         }
         catch (const std::exception& e) {
             log.error() << "Parameters set failed: " << e.what();
@@ -133,6 +148,21 @@ private:
         }
         catch (const std::exception& e) {
             log.error() << "Parameters save failed: " << e.what();
+        }
+    }
+
+    void triggerNotify() {
+        mParametersChanged.store(true, std::memory_order_release);
+        mNotifyCV.notify_one();
+    }
+
+    void runNotify() {
+        while (mRunning) {
+            std::unique_lock<std::mutex> lock(mNotifyMutex);
+            mNotifyCV.wait(lock, [this] { return !mRunning.load(std::memory_order_acquire) || mParametersChanged.load(std::memory_order_acquire); });
+            if (!mRunning.load(std::memory_order_acquire)) return;
+            if (onParametersChanged) onParametersChanged();
+            mParametersChanged.store(false, std::memory_order_relaxed);
         }
     }
 };

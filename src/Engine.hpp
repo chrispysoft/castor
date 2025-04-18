@@ -145,6 +145,7 @@ public:
         mReportTimer.callback = [this] { postStatus(); };
         mBlockRecordTimer.callback = [this] { recordBlockChanged(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
+        mParameters.onParametersChanged = [this] { this->onParametersChanged(); };
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
         mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
@@ -251,14 +252,6 @@ public:
                 updateWebService();
             }
 
-            // convert output gain on demand on this thread as a temp workaround
-            auto outGainLog = mParameters.get().outputGain.load();
-            if (outGainLog != mOutputGainLog) {
-                mOutputGainLog = outGainLog;
-                mOutputGainLin = util::dbLinear(mOutputGainLog);
-                log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
-            }
-
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
@@ -347,6 +340,16 @@ public:
         }
 
         mItemChangeWorker.async(tItem); // playItemChanged async on same thread
+    }
+
+    void onParametersChanged() {
+        auto params = mParameters.get();
+        auto outGainLog = params.outputGain.load();
+        if (outGainLog != mOutputGainLog) {
+            mOutputGainLog = outGainLog;
+            mOutputGainLin = util::dbLinear(mOutputGainLog);
+            log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
+        }
     }
 
 
