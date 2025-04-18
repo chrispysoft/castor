@@ -35,19 +35,30 @@
 namespace castor {
 namespace audio {
 
-class Input {
+class AudioProcessor {
 public:
     const AudioStreamFormat& clientFormat;
+    
+    AudioProcessor(const AudioStreamFormat& tClientFormat) :
+        clientFormat(tClientFormat)
+    {}
+    
+    virtual ~AudioProcessor() = default;
+    virtual size_t process(const sam_t* in, sam_t* out, size_t nframes) = 0;
+};
+
+
+class Input : public AudioProcessor {
+public:
     const std::string name;
     std::string category;
     
     Input(const AudioStreamFormat& tClientFormat, const std::string tName = "") :
-        clientFormat(tClientFormat),
+        AudioProcessor(tClientFormat),
         name(tName)
     {}
     
     virtual ~Input() = default;
-    virtual size_t process(const sam_t* in, sam_t* out, size_t nframes) = 0;
 };
 
 
