@@ -132,8 +132,10 @@ public:
         generateFadeCurves();
     }
 
-    ~Player() {
+    virtual ~Player() {
+        log.debug() << "Player " << name << " dealloc...";
         if (schedulingThread.joinable()) schedulingThread.join();
+        log.debug() << "Player " << name << " dealloced";
     }
 
     enum State {
