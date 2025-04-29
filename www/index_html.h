@@ -175,7 +175,7 @@ static const char* kStaticHTML = R"rawliteral(
     }
 
     function dbToUI(value) {
-        const min = -90.0;
+        const min = -60.0;
         const max =   0.0;
         if (value < min) return 0;
         return (value - min) / (max - min) * 100;
