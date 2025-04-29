@@ -118,11 +118,16 @@ public:
             mParameterTree = p;
             log.debug() << "Parameters set done";
             save();
-            triggerNotify();
+            publish();
         }
         catch (const std::exception& e) {
             log.error() << "Parameters set failed: " << e.what();
         }
+    }
+
+    void publish() {
+        mParametersChanged.store(true, std::memory_order_release);
+        mNotifyCV.notify_one();
     }
 
 private:
@@ -149,11 +154,6 @@ private:
         catch (const std::exception& e) {
             log.error() << "Parameters save failed: " << e.what();
         }
-    }
-
-    void triggerNotify() {
-        mParametersChanged.store(true, std::memory_order_release);
-        mNotifyCV.notify_one();
     }
 
     void runNotify() {

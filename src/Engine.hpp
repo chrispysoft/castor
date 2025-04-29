@@ -146,6 +146,7 @@ public:
         mBlockRecordTimer.callback = [this] { recordBlockChanged(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
         mParameters.onParametersChanged = [this] { this->onParametersChanged(); };
+        mParameters.publish();
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
         mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
