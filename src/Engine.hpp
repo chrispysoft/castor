@@ -145,6 +145,7 @@ public:
         mReportTimer.callback = [this] { postStatus(); };
         mBlockRecordTimer.callback = [this] { recordBlockChanged(); };
         mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
+        mParameters.onParametersChanged = [this] { this->onParametersChanged(); };
         mAudioClient.setRenderer(this);
         mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
         mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
@@ -251,14 +252,6 @@ public:
                 updateWebService();
             }
 
-            // convert output gain on demand on this thread as a temp workaround
-            auto outGainLog = mParameters.get().outputGain.load();
-            if (outGainLog != mOutputGainLog) {
-                mOutputGainLog = outGainLog;
-                mOutputGainLin = util::dbLinear(mOutputGainLog);
-                log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
-            }
-
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
@@ -349,6 +342,16 @@ public:
         mItemChangeWorker.async(tItem); // playItemChanged async on same thread
     }
 
+    void onParametersChanged() {
+        auto params = mParameters.get();
+        auto outGainLog = params.outputGain.load();
+        if (outGainLog != mOutputGainLog) {
+            mOutputGainLog = outGainLog;
+            mOutputGainLin = util::dbLinear(mOutputGainLog);
+            log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
+        }
+    }
+
 
     // playitem and program change handler
 
@@ -380,7 +383,7 @@ public:
             mScheduleRecorder.stop();
 
             if (mCurrProgram->showId > 1) {
-                auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordSchedulePath + "/" + util::utcFmt() + "_" + mCurrProgram->showName + "." + mConfig.recordScheduleFormat;
+                auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordSchedulePath + "/" + util::fileTimestamp() + "_" + mCurrProgram->showName + "." + mConfig.recordScheduleFormat;
                 try {
                     std::unordered_map<std::string, std::string> metadata = {}; // {{"artist", item->program->showName }, {"title", item->program->episodeTitle}};
                     mScheduleRecorder.start(recURL, metadata);
@@ -395,7 +398,7 @@ public:
     void recordBlockChanged() {
         log.debug() << "Engine timeBlockChanged";
         mBlockRecorder.stop();
-        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::utcFmt() + "." + mConfig.recordBlockFormat;
+        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::fileTimestamp() + "." + mConfig.recordBlockFormat;
         try {
             mBlockRecorder.start(recURL);
         }

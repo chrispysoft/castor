@@ -35,12 +35,12 @@ out_device_name=Soundcraft Signature 12 MTK: USB Audio
 sample_rate=44100
 
 # Schedule Recording (leave path empty to disable)
-record_schedule_path=schedule
+# record_schedule_path=schedule
 record_schedule_format=mp3
 record_schedule_bitrate=320000
 
 # Block Recording (leave path empty to disable)
-record_block_path=block
+# record_block_path=block
 record_block_format=ogg
 record_block_bitrate=128000
 record_block_duration=3600

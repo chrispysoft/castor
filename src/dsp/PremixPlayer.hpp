@@ -133,6 +133,7 @@ class PremixPlayer : public Player {
     std::unique_ptr<CodecReader> mReader = nullptr;
     std::atomic<bool> mRunning = true;
     std::thread mMonitorThread;
+    std::mutex mTrackMarkersMutex;
     std::mutex mBufferReadIdxMutex;
     std::condition_variable mBufferReadIdxCV;
     std::queue<TrackMarker> mTrackMarkers;
@@ -164,12 +165,22 @@ public:
 
     std::function<void(std::shared_ptr<PlayItem> item)> startCallback = nullptr;
 
-    size_t numTracks() { return mTrackMarkers.size(); }
+    size_t numTracks() {
+        size_t size;
+        {
+            std::lock_guard<std::mutex> lock(mTrackMarkersMutex);
+            size = mTrackMarkers.size();
+        }
+        return size;
+    }
 
     void eject() {
         log.info() << "PremixPlayer eject";
         mPremixBuffer.reset();
-        while (mTrackMarkers.size()) mTrackMarkers.pop();
+        {
+            std::lock_guard<std::mutex> lock(mTrackMarkersMutex);
+            while (!mTrackMarkers.empty()) mTrackMarkers.pop();
+        }
         mPrevTrackDuration = 0;
     }
 
@@ -179,7 +190,7 @@ public:
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(clientFormat, tURL, seek);
 
-        int writePos = mPremixBuffer.writePosition();
+        long writePos = mPremixBuffer.writePosition();
         auto sampleCount = mReader->sampleCount();
         auto duration = round(mReader->duration());
 
@@ -212,7 +223,11 @@ public:
 
         size_t trackBeg = writePos;
         size_t trackEnd = mPremixBuffer.writePosition() - 1;
-        mTrackMarkers.push({trackBeg, trackEnd, item});
+
+        {
+            std::lock_guard<std::mutex> lock(mTrackMarkersMutex);
+            mTrackMarkers.push({trackBeg, trackEnd, item});
+        }
 
         log.debug() << "PremixPlayer load done " << tURL;
     }
@@ -247,19 +262,27 @@ private:
             if (!mRunning) return;
         }
 
-        auto marker = mTrackMarkers.front();
+        TrackMarker marker;
+        {
+            std::lock_guard<std::mutex> lock(mTrackMarkersMutex);
+            marker = mTrackMarkers.front();
+        }
+
         log.debug() << "PremixPlayer passed track marker start: " << marker.start;
         if (startCallback) startCallback(marker.item);
 
         {
             std::unique_lock<std::mutex> lock(mBufferReadIdxMutex);
-            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.front().stop <= mPremixBuffer.readPosition(); });
+            mBufferReadIdxCV.wait(lock, [&] { return !mRunning || mTrackMarkers.size() && mTrackMarkers.front().stop <= mPremixBuffer.readPosition(); });
             if (!mRunning) return;
         }
 
         log.debug() << "PremixPlayer passed track marker stop: " << marker.stop;
 
-        mTrackMarkers.pop();
+        {
+            std::lock_guard<std::mutex> lock(mTrackMarkersMutex);
+            if (!mTrackMarkers.empty()) mTrackMarkers.pop();
+        }
     }
 };
 }
