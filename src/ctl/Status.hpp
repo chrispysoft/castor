@@ -35,20 +35,23 @@ struct Status {
     time_t currTime = 0;
     int elapsed = 0;
     int remaining = 0;
-    float rmsLin = 0.0f;
+    float rmsLinIn = 0.0f;
+    float rmsLinOut = 0.0f;
     bool fallbackActive = false;
     nlohmann::json players;
 };
 
 void from_json(const nlohmann::json& j, Status& s) {
-    j.at("rmsLin").get_to(s.rmsLin);
+    j.at("rmsLinIn").get_to(s.rmsLinIn);
+    j.at("rmsLinOut").get_to(s.rmsLinOut);
     j.at("fallbackActive").get_to(s.fallbackActive);
     j.at("players").get_to(s.players);
 }
 
 void to_json(nlohmann::json& j, const Status& s) {
     j = nlohmann::json{
-        {"rmsLin", s.rmsLin},
+        {"rmsLinIn", s.rmsLinIn},
+        {"rmsLinOut", s.rmsLinOut},
         {"fallbackActive", s.fallbackActive},
         {"players", s.players}
     };
