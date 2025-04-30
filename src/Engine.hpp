@@ -90,6 +90,7 @@ class Engine : public audio::Client::Renderer {
     std::unique_ptr<io::WebService> mWebService;
     audio::Client mAudioClient;
     audio::SilenceDetector mSilenceDet;
+    audio::SilenceDetector mInputMeter;
     audio::FallbackPremix mFallback;
     audio::Recorder mScheduleRecorder;
     audio::Recorder mBlockRecorder;
@@ -129,6 +130,7 @@ public:
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
+        mInputMeter(mClientFormat, 0, 0, 0),
         mFallback(mClientFormat, mConfig.audioFallbackPath, mConfig.preloadTimeFallback, mConfig.fallbackCrossFadeTime, mConfig.fallbackShuffle, mConfig.fallbackSineSynth),
         mScheduleRecorder(mClientFormat, mConfig.recordScheduleBitRate),
         mBlockRecorder(mClientFormat, mConfig.recordBlockBitRate),
@@ -416,7 +418,8 @@ public:
         // strstr << "\x1b[5A";
         auto players = getPlayers();
         strstr << "____________________________________________________________________________________________________________\n";
-        strstr << "RMS: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
+        strstr << "RMS In:  " << std::fixed << std::setprecision(2) << util::linearDB(mInputMeter.currentRMS()) << " dB\n";
+        strstr << "RMS Out: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
         strstr << "Fallback: " << (mFallback.isActive() ? "ACTIVE" : "INACTIVE") << '\n';
         strstr << "Player queue (" << players.size() << " items):\n";
 
@@ -432,7 +435,8 @@ public:
 
     void updateWebService() {
         auto players = getPlayers();
-        mStatus.rmsLin = mSilenceDet.currentRMS();
+        mStatus.rmsLinIn = mInputMeter.currentRMS();
+        mStatus.rmsLinOut = mSilenceDet.currentRMS();
         nlohmann::json j = {};
         for (auto player : players) if (player) j += player->getStatusJSON();
         mStatus.players = j;
@@ -476,8 +480,9 @@ public:
     // realtime thread or called by manual render function
     
     void renderCallback(const audio::sam_t* in,  audio::sam_t* out, size_t nframes) override {
-        auto nsamples = nframes * mClientFormat.channelCount;
-        memset(out, 0, nsamples * sizeof(audio::sam_t));
+        memset(out, 0, nframes * mClientFormat.channelCount * sizeof(audio::sam_t));
+
+        mInputMeter.process(in, nframes);
 
         auto players = getPlayers();
         for (const auto& player : players) {

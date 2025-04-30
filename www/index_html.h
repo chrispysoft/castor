@@ -13,41 +13,23 @@ static const char* kStaticHTML = R"rawliteral(
     }
 
     h2 {
+        margin-top: 40px;
         margin-bottom: 20px;
         color: #ffffff;
     }
 
     label {
         display: block;
-        font-weight: 600;
+        font-weight: bold;
     }
 
     input[type="range"] {
-        width: 300px;
         accent-color: #00c853;
     }
 
     span {
         margin-left: 10px;
-        /* color: #a8ff60; */
         font-weight: bold;
-    }
-
-    .bar-container {
-        width: 100%;
-        background: #2e2e2e;
-        height: 20px;
-        border-radius: 10px;
-        margin-top: 15px;
-        box-shadow: inset 0 0 4px #00000080;
-    }
-
-    .bar-fill {
-        height: 100%;
-        background: linear-gradient(to right, #00e676, #69f0ae);
-        width: 0%;
-        border-radius: 10px;
-        transition: width 0.3s ease;
     }
 
     table {
@@ -77,23 +59,37 @@ static const char* kStaticHTML = R"rawliteral(
         background-color: #1a1a1a;
     }
 
-    td.number {
+    .trackTable td.number {
         text-align: right;
         font-family: monospace;
     }
 
+    .controlItemTable td {
+        text-align: center;
+        vertical-align: middle;
+        width: 50%;
+    }
+
+    .controlItemTable .slider {
+        width: 20px;
+        height: 150px;
+    }
+    
     .meterBarBackground {
+        display: inline-block;
         background: #eee;
         border-radius: 4px;
         position: relative;
         overflow: hidden;
     }
+
     .meterBarFill {
         background: limegreen;
         border-radius: 0px;
         position: absolute;
         bottom: 0;
     }
+    
     .meterBarBackground, .meterBarFill {
         width: 20px;
         height: 150px;
@@ -102,36 +98,44 @@ static const char* kStaticHTML = R"rawliteral(
 </head>
 <body>
     <h1>Castor Remote Control</h1>
-    <div style="display: grid; grid-template-columns: 220px auto;">
-    <table style="width: 200px;">
-        <tr>
-            <td><input type="range" id="inputGain" min="-24" max="24" value="0" step="0.1" orient="vertical" style="width: 20px; height: 150px;"></td>
-            <td><input type="range" id="outputGain" min="-24" max="24" value="0" step="0.1" orient="vertical" style="width: 20px; height: 150px;"></td>
-        </tr>
-        <tr>
-            <td><span id="inputGainValue">0</span> dB<label for="inputGain">Input</label></td>
-            <td><span id="outputGainValue">0</span> dB<label for="outputGain">Output</label></td>
-        </tr>
-    </table>
-    <table style="width: 200px;">
-        <tr>
-            <td>
-                <div class="meterBarBackground">
-                    <div id="meterBar" class="meterBarFill"></div>
-                </div>      
-            </td>
-        </tr>
-        <tr>
-            <td>    
-                <span id="meterLabel">0</span><br/>dBFS
-            </td>
-        </tr>
-    </table>
-</div>
+    <div style="display: flex; gap: 20px;">
+        <table class="controlItemTable" style="width: 220px;">
+            <tr>
+                <td><input type="range" id="inputGain" min="-24" max="24" value="0" step="0.1" orient="vertical" class="slider" ></td>
+                <td><input type="range" id="outputGain" min="-24" max="24" value="0" step="0.1" orient="vertical" class="slider" ></td>
+            </tr>
+            <tr>
+                <td><span id="inputGainValue">0</span> dB<label for="inputGain">IN</label></td>
+                <td><span id="outputGainValue">0</span> dB<label for="outputGain">OUT</label></td>
+            </tr>
+        </table>
+        <table class="controlItemTable" style="width: 220px;">
+            <tr>
+                <td>
+                    <div class="meterBarBackground">
+                        <div id="meterBarIn" class="meterBarFill"></div>
+                    </div>
+                </td>
+                <td>
+                    <div class="meterBarBackground">
+                        <div id="meterBarOut" class="meterBarFill"></div>
+                    </div>      
+                </td>
+            </tr>
+            <tr>
+                <td>    
+                    <span id="meterLabelIn"></span> dB<br/>IN
+                </td>
+                <td>    
+                    <span id="meterLabelOut"></span> dB<br/>OUT
+                </td>
+            </tr>
+        </table>
+    </div>
     <h2>Fallback</h2>
     <span id="fallbackActive"></span>
     <h2>Player</h2>
-    <table id="playerTable" border="1">
+    <table id="trackTable" class="trackTable" border="1">
         <thead>
             <tr>
                 <th>Start</th>
@@ -168,10 +172,14 @@ static const char* kStaticHTML = R"rawliteral(
     const meterBar = document.getElementById('meterBar');
     const meterLabel = document.getElementById('meterLabel');
     const fallbackActive = document.getElementById('fallbackActive');
-    const playerTable = document.getElementById("playerTable").getElementsByTagName("tbody")[0];
+    const trackTable = document.getElementById("trackTable").getElementsByTagName("tbody")[0];
 
     function linearToDB(value) {
         return 20.0 * Math.log10(value);
+    }
+
+    function dbToText(value) {
+        return isFinite(value) ? value.toFixed(1) : "-∞";
     }
 
     function dbToUI(value) {
@@ -222,9 +230,9 @@ static const char* kStaticHTML = R"rawliteral(
             const response = await getAuthorized('/parameters');
             const data = await response.json();
             inputGain.value = data.inputGain;
-            inputGainValue.textContent = data.inputGain;
+            inputGainValue.textContent = data.inputGain.toFixed(1);
             outputGain.value = data.outputGain;
-            outputGainValue.textContent = data.outputGain;
+            outputGainValue.textContent = data.outputGain.toFixed(1);
         } catch (err) {
             console.error('Error fetching initial slider value:', err);
         }
@@ -246,14 +254,20 @@ static const char* kStaticHTML = R"rawliteral(
         try {
             const response = await getAuthorized('/status');
             const data = await response.json();
-            const rmsDB = linearToDB(data.rmsLin);
-            const rmsUI = dbToUI(rmsDB);
-            meterBar.style.height = `${rmsUI}%`;
-            meterLabel.textContent = rmsDB.toFixed(2);
+            const rmsDBIn = linearToDB(data.rmsLinIn);
+            const rmsDBOut = linearToDB(data.rmsLinOut);
+            const rmsDBTextIn = dbToText(rmsDBIn);
+            const rmsDBTextOut = dbToText(rmsDBOut);
+            const rmsUIIn = dbToUI(rmsDBIn);
+            const rmsUIOut = dbToUI(rmsDBOut);
+            meterBarIn.style.height = `${rmsUIIn}%`;
+            meterLabelIn.textContent = rmsDBTextIn;
+            meterBarOut.style.height = `${rmsUIOut}%`;
+            meterLabelOut.textContent = rmsDBTextOut;
             fallbackActive.textContent = data.fallbackActive ? "ACTIVE" : "INACTIVE";
             fallbackActive.style.color = data.fallbackActive ? "red" : "green";
 
-            playerTable.innerHTML = "";
+            trackTable.innerHTML = "";
             var players = data.players ? data.players : [];
             players.forEach(row => {
                 const tr = document.createElement("tr");
@@ -286,7 +300,7 @@ static const char* kStaticHTML = R"rawliteral(
                 tr.appendChild(tdPlayed);
                 tr.appendChild(tdSize);
                 tr.appendChild(tdURL);
-                playerTable.appendChild(tr);
+                trackTable.appendChild(tr);
             });
         } catch (err) {
             console.error('Error fetching initial slider value:', err);
