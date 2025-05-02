@@ -39,6 +39,7 @@ class StreamBuffer : public SourceBuffer<T> {
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mSize = 0;
     size_t mCapacity = 0;
+    size_t mCapacityMask = 0;
     std::vector<T> mBuffer;
     std::mutex mMutex;
     std::condition_variable mCV;
@@ -56,11 +57,13 @@ public:
     }
 
     void resize(size_t tCapacity) override {
+        assert(tCapacity == 0 || std::has_single_bit(tCapacity)); // allow 0 or pow2s only
         mReadPos = 0;
         mWritePos = 0;
         mSize = 0;
         mBuffer.resize(tCapacity);
         mCapacity = tCapacity;
+        mCapacityMask = mCapacity > 0 ? mCapacity - 1 : 0;
     }
 
     size_t write(const T* tData, size_t tLen) override {
@@ -73,13 +76,6 @@ public:
 
         if (mCapacity == 0) return 0;
 
-        // size_t freeSpace = mCapacity - mSize.load(std::memory_order_relaxed);
-        // if (tLen > freeSpace) {
-        //     if (!mOverwrite) return 0;
-        //     mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_relaxed);
-        //     mSize -= tLen;
-        // }
-
         auto writable = std::min(tLen, mCapacity - mWritePos);
         memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
 
@@ -89,8 +85,8 @@ public:
             memcpy(&mBuffer[0], tData + writable, overlap * sizeof(T));
         }
 
-        mWritePos.store((mWritePos + tLen) % mCapacity, std::memory_order_relaxed);
-        mSize.store(mSize.load(std::memory_order_relaxed) + tLen, std::memory_order_relaxed);
+        mWritePos.store((mWritePos.load(std::memory_order_relaxed) + tLen) & mCapacityMask, std::memory_order_relaxed);
+        mSize.store(mSize.load(std::memory_order_relaxed) + tLen, std::memory_order_release);
         return tLen;
     }
 
@@ -109,7 +105,7 @@ public:
             memcpy(tData + readable, &mBuffer[0], overlap * sizeof(T));
         }
 
-        mReadPos.store((mReadPos + tLen) % mCapacity, std::memory_order_release);
+        mReadPos.store((mReadPos.load(std::memory_order_relaxed) + tLen) & mCapacityMask, std::memory_order_relaxed);
         mSize.store(mSize.load(std::memory_order_relaxed) - tLen, std::memory_order_release);
 
         mCV.notify_one();
@@ -120,10 +116,7 @@ public:
 
 class StreamPlayer : public Player {
 
-    static size_t calcBufferSize(int tSampleRate, int tChannelCount, time_t tPreloadTime, size_t tBlockSize) {
-        static constexpr size_t timeMultiplier = 2;
-        return util::nextMultiple(tSampleRate * tChannelCount * tPreloadTime * timeMultiplier, tBlockSize);
-    }
+    static constexpr size_t kStreamBufferSize = 65536 * 4 * 2; // use pow2s rather than durations for optimzed % (≈ 6 sec @ 44.1k, 2 ch)
 
     const size_t mBufferSize;
     std::thread mLoadWorker;
@@ -134,8 +127,9 @@ class StreamPlayer : public Player {
 public:
     StreamPlayer(const AudioStreamFormat& tClientFormat, const std::string tName = "", time_t tPreloadTime = 0, float tFadeInTime = 0, float tFadeOutTime = 0) :
         Player(tClientFormat, tName, tPreloadTime, tFadeInTime, tFadeOutTime),
-        mBufferSize(calcBufferSize(clientFormat.sampleRate, clientFormat.channelCount, tPreloadTime, clientFormat.frameSize * clientFormat.channelCount))
+        mBufferSize(tClientFormat.channelCount * kStreamBufferSize)
     {
+        mStreamBuffer.resize(mBufferSize);
         category = "STRM";
         mBuffer = &mStreamBuffer;
     }
@@ -149,7 +143,6 @@ public:
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;
         // eject();
-        mStreamBuffer.resize(mBufferSize, true);
 
         if (mReader) mReader->cancel();
         mReader = std::make_unique<CodecReader>(clientFormat, tURL);
@@ -171,7 +164,6 @@ public:
         log.debug() << "StreamPlayer " << name << " stop...";
         Player::stop();
         if (mReader) mReader->cancel();
-        mStreamBuffer.resize(0, false);
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
         
