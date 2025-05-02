@@ -39,7 +39,6 @@ class StreamBuffer : public SourceBuffer<T> {
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mSize = 0;
     size_t mCapacity = 0;
-    bool mOverwrite = false;
     std::vector<T> mBuffer;
     std::mutex mMutex;
     std::condition_variable mCV;
@@ -56,8 +55,7 @@ public:
         return bytesz / mibi;
     }
 
-    void resize(size_t tCapacity, bool tOverwrite) override {
-        mOverwrite = tOverwrite;
+    void resize(size_t tCapacity) override {
         mReadPos = 0;
         mWritePos = 0;
         mSize = 0;

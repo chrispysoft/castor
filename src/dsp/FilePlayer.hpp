@@ -52,7 +52,7 @@ public:
         return bytesz / mibi;
     }
 
-    void resize(size_t tCapacity, bool tOverwrite) override {
+    void resize(size_t tCapacity) override {
         mReadPos = 0;
         mWritePos = 0;
         auto pagesize = sysconf(_SC_PAGE_SIZE);
@@ -108,7 +108,7 @@ public:
         if (playItem) playItem->metadata = mReader->metadata();
 
         auto sampleCount = mReader->sampleCount();
-        mFileBuffer.resize(sampleCount, false);
+        mFileBuffer.resize(sampleCount);
         mReader->read(mFileBuffer);
         mReader = nullptr;
 

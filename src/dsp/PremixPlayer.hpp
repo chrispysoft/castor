@@ -148,7 +148,7 @@ public:
         auto pagesize = sysconf(_SC_PAGE_SIZE);
         auto bufsize = util::nextMultiple(sampleCount, pagesize / sizeof(sam_t));
         log.debug() << "PremixPlayer " << name << " alloc...";
-        mPremixBuffer.resize(bufsize, false);
+        mPremixBuffer.resize(bufsize);
         mBuffer = &mPremixBuffer;
         mMonitorThread = std::thread(&PremixPlayer::runMonitor, this);
         log.debug() << "PremixPlayer " << name << " alloc done";
