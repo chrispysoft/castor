@@ -93,7 +93,7 @@ public:
     }
     
     ~FilePlayer() {
-        // log.debug() << "FilePlayer " << name << " dealloc...";
+        log.debug() << "FilePlayer " << name << " dealloc...";
         if (state != IDLE) stop();
         log.debug() << "FilePlayer " << name << " dealloced";
     }

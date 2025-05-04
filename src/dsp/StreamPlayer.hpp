@@ -135,11 +135,11 @@ public:
         mBuffer = &mStreamBuffer;
     }
     
-    // ~StreamPlayer() {
-    //     log.debug() << "StreamPlayer " << name << " dealloc...";
-    //     if (state != IDLE) stop();
-    //     log.debug() << "StreamPlayer " << name << " dealloced";
-    // }
+    ~StreamPlayer() {
+        log.debug() << "StreamPlayer " << name << " dealloc...";
+        if (state != IDLE) stop();
+        log.debug() << "StreamPlayer " << name << " dealloced";
+    }
 
     void load(const std::string& tURL, double tSeek = 0) override {
         log.info() << "StreamPlayer load " << tURL;

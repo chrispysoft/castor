@@ -262,7 +262,6 @@ public:
     void cleanPlayers() {
         auto players = getPlayers();
         while (players.size() && players.front()->isFinished()) {
-            players.front()->stop();
             players.pop_front();
         }
         setPlayers(players);
