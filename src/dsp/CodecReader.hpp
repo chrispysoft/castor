@@ -194,7 +194,7 @@ public:
                 auto fifosz = av_audio_fifo_size(mFIFO);
                 // log.debug() << fifoWritten << " written to fifo, size " << fifisz;
 
-                while (fifosz >= outFrameSize) {
+                while (!mCancelled && fifosz >= outFrameSize) {
                     void* dat[1] = { reinterpret_cast<uint8_t*>(mFrameBuffer.data()) };
 
                     auto fifoRead = av_audio_fifo_read(mFIFO, dat, outFrameSize);

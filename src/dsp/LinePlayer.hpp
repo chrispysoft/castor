@@ -56,16 +56,11 @@ public:
         mBuffer = &mLineBuffer;
     }
 
-    // ~LinePlayer() {
-    //     log.debug() << "LinePlayer " << name << " dealloc...";
-    //     if (state != IDLE) stop();
-    //     log.debug() << "LinePlayer " << name << " dealloced";
-    // }
-
-    // void schedule(const PlayItem& item) override {
-    //     playItem = std::move(item);
-    //     state = CUED;
-    // }
+    ~LinePlayer() {
+        log.debug() << "LinePlayer " << name << " dealloc...";
+        if (state != IDLE) stop();
+        log.debug() << "LinePlayer " << name << " dealloced";
+    } 
 
     void load(const std::string& tURL, double seek = 0) override {}
 

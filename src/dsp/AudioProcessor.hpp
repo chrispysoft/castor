@@ -69,7 +69,7 @@ public:
     virtual size_t writePosition() { return 0; }
     virtual size_t capacity() { return 0; }
     virtual float memorySizeMiB() { return 0; }
-    virtual void resize(size_t tCapacity, bool tOverwrite) {}
+    virtual void resize(size_t tCapacity) {}
     virtual size_t write(const T* tData, size_t tLen) = 0;
     virtual size_t read(T* tData, size_t tLen) = 0;
 };
