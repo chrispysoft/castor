@@ -36,6 +36,7 @@ namespace audio {
 
 template <typename T>
 class StreamBuffer : public SourceBuffer<T> {
+    std::atomic<bool> mCancelled = false;
     std::atomic<size_t> mWritePos = 0;
     std::atomic<size_t> mReadPos = 0;
     std::atomic<size_t> mSize = 0;
@@ -65,6 +66,12 @@ public:
         mBuffer.resize(tCapacity);
         mCapacity = tCapacity;
         mCapacityMask = mCapacity > 0 ? mCapacity - 1 : 0;
+        mCancelled = false;
+    }
+    
+    void cancel() {
+        mCancelled.store(true, std::memory_order_release);
+        mCV.notify_all();
     }
 
     size_t write(const T* tData, size_t tLen) override {
@@ -72,10 +79,10 @@ public:
 
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize.load(std::memory_order_acquire) + tLen < mCapacity || mCapacity == 0; });
+            mCV.wait(lock, [&]{ return mSize.load(std::memory_order_acquire) + tLen < mCapacity || mCancelled.load(std::memory_order_acquire); });
         }
 
-        if (mCapacity == 0) return 0;
+        if (mCancelled) return 0;
 
         auto writable = std::min(tLen, mCapacity - mWritePos);
         memcpy(&mBuffer[mWritePos], tData, writable * sizeof(T));
@@ -164,6 +171,7 @@ public:
     void stop() override {
         log.debug() << "StreamPlayer " << name << " stop...";
         Player::stop();
+        mStreamBuffer.cancel();
         if (mReader) mReader->cancel();
         if (mLoadWorker.joinable()) mLoadWorker.join();
         mReader = nullptr;
