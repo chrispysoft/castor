@@ -23,6 +23,7 @@
 #pragma once
 
 #include <atomic>
+#include <bit>
 #include <string>
 #include <thread>
 #include "AudioProcessor.hpp"
