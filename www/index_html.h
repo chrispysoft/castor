@@ -307,6 +307,17 @@ static const char* kStaticHTML = R"rawliteral(
         }
     }
 
+    // embedding audio stream needs some http header adaptions to work properly
+    // async function play() {
+    //     fetch('/audio')
+    //     .then(response => response.blob())
+    //     .then(blob => {
+    //         const url = URL.createObjectURL(blob);
+    //         const audio = new Audio(url);
+    //         audio.play();
+    //     });
+    // }
+
     window.onload = async () => {
         await getToken();
         const tokenTimeout = bearerToken ? (bearerToken.timeout - 1) * 1000 : 1000;
@@ -315,6 +326,7 @@ static const char* kStaticHTML = R"rawliteral(
         }, tokenTimeout);
         await getParameters();
         setInterval(getStatus, 250);
+        // await play();
     };
     
 </script>

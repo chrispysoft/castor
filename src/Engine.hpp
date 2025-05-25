@@ -41,6 +41,7 @@
 #include "dsp/SilenceDetector.hpp"
 #include "dsp/Recorder.hpp"
 #include "dsp/StreamOutput.hpp"
+#include "dsp/StreamProvider.hpp"
 #include "util/Log.hpp"
 #include "util/util.hpp"
 
@@ -95,6 +96,7 @@ class Engine : public audio::Client::Renderer {
     audio::Recorder mScheduleRecorder;
     audio::Recorder mBlockRecorder;
     audio::StreamOutput mStreamOutput;
+    audio::StreamProvider mStreamProvider;
     std::atomic<bool> mRunning = false;
     std::atomic<bool> mScheduleItemsChanged = false;
     std::thread mScheduleThread;
@@ -126,7 +128,7 @@ public:
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mParameters(mConfig.parametersPath),
-        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mConfig.webControlStatic, mParameters, mStatus)),
+        mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mConfig.webControlStatic, mConfig.webControlAudioStream, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
         mAudioClient(mConfig.iDevName, mConfig.oDevName, mConfig.sampleRate, mConfig.samplesPerFrame),
         mSilenceDet(mClientFormat, mConfig.silenceThreshold, mConfig.silenceStartDuration, mConfig.silenceStopDuration),
@@ -135,6 +137,7 @@ public:
         mScheduleRecorder(mClientFormat, mConfig.recordScheduleBitRate),
         mBlockRecorder(mClientFormat, mConfig.recordBlockBitRate),
         mStreamOutput(mClientFormat, mConfig.streamOutBitRate),
+        mStreamProvider(mClientFormat, 128000),
         mTCPUpdateTimer(1),
         mEjectTimer(1),
         mReportTimer(mConfig.healthReportInterval),
@@ -157,6 +160,7 @@ public:
         mRemote.registerCommand("s", [this] { updateStatus(); });
         mScheduleRecorder.logName = "Schedule Recorder";
         mBlockRecorder.logName = "Block Recorder";
+        mWebService->audioStreamBuffer = &mStreamProvider.mRingBufferO;
     }
 
     void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
@@ -181,6 +185,9 @@ public:
         mItemChangeWorker.start();
         if (mConfig.recordBlockPath.size()) {
             mBlockRecordTimer.start();
+        }
+        if (mConfig.webControlAudioStream) {
+            mStreamProvider.start();
         }
 
         try {
@@ -217,6 +224,7 @@ public:
         for (const auto& player : mPlayersBuf1) player->stop();
         for (const auto& player : mPlayersBuf2) player->stop();
         mStreamOutput.stop();
+        mStreamProvider.stop();
         mAudioClient.stop();
         log.info() << "Engine stopped";
     }
@@ -513,6 +521,10 @@ public:
 
         if (mStreamOutput.isRunning()) {
             mStreamOutput.process(out, nframes);
+        }
+
+        if (mStreamProvider.isRunning()) {
+            mStreamProvider.process(out, nframes);
         }
     }
 

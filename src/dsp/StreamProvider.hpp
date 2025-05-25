@@ -26,49 +26,53 @@
 #include <fstream>
 #include <vector>
 #include <stdexcept>
-#include "CodecWriter.hpp"
+#include "CodecTransformer.hpp"
 #include "audio.hpp"
 #include "../util/Log.hpp"
 #include "../util/util.hpp"
 
 namespace castor {
 namespace audio {
-class Recorder {
+class StreamProvider {
 
     static constexpr size_t kRingBufferSize = 65536;
 
     const AudioStreamFormat& mClientFormat;
     const int mBitRate;
-    util::RingBuffer<sam_t> mRingBuffer;
-    std::unique_ptr<CodecWriter> mWriter = nullptr;
+    util::RingBuffer<sam_t> mRingBufferI;
+    
+    std::unique_ptr<CodecTransformer> mTransformer = nullptr;
     std::unique_ptr<std::thread> mWorker = nullptr;
     std::atomic<bool> mRunning = false;
 
 public:
 
-    std::string logName = "Recorder";
+    std::string logName = "StreamProvider";
 
-    Recorder(const AudioStreamFormat& tClientFormat, int tBitRate) :
+    StreamProvider(const AudioStreamFormat& tClientFormat, int tBitRate) :
         mClientFormat(tClientFormat),
         mBitRate(tBitRate),
-        mRingBuffer(kRingBufferSize)
+        mRingBufferI(kRingBufferSize),
+        mRingBufferO(kRingBufferSize)
     {}
+    
+    util::RingBuffer<uint8_t> mRingBufferO;
 
-    void start(const std::string tURL, const std::unordered_map<std::string, std::string>& tMetadata = {}) {
+    void start() {
         log.debug(Log::Magenta) << logName << " start...";
         if (mRunning) {
             log.debug() << logName << " already running";
             return;
         }
 
-        mWriter = std::make_unique<CodecWriter>(mClientFormat, mBitRate, tURL, tMetadata);
+        mTransformer = std::make_unique<CodecTransformer>(mClientFormat, mBitRate, mRingBufferO);
         mRunning = true;
 
         log.info(Log::Magenta) << logName << " started";
 
         mWorker = std::make_unique<std::thread>([this] {
             try {
-                mWriter->write(mRingBuffer);
+                mTransformer->write(mRingBufferI);
             }
             catch (const std::exception& e) {
                 log.error() << logName << " error: " << e.what();
@@ -84,9 +88,9 @@ public:
         }
         log.debug() << logName << " stopping...";
         mRunning = false;
-        if (mWriter) mWriter->cancel();
+        if (mTransformer) mTransformer->cancel();
         if (mWorker && mWorker->joinable()) mWorker->join();
-        mWriter = nullptr;
+        mTransformer = nullptr;
         mWorker = nullptr;
         log.info(Log::Magenta) << logName << " stopped";
     }
@@ -98,7 +102,7 @@ public:
 
     void process(const sam_t* in, size_t nframes) {
         auto nsamples = nframes * mClientFormat.channelCount;
-        mRingBuffer.write(in, nsamples);
+        mRingBufferI.write(in, nsamples);
     }
 };
 }
