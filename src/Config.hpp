@@ -73,14 +73,15 @@ class Config {
     static constexpr const char* kProgramFadeOutTime = "1.0";
     static constexpr const char* kFallbackCrossFadeTime = "5.0";
     static constexpr const char* kSampleRate = "44100";
-    static constexpr const char* kFallbackShuffle = "1";
+    static constexpr const char* kFallbackShuffle = "0";
     static constexpr const char* kFallbackSineSynth = "1";
     static constexpr const char* kWebControlHost = "127.0.0.1";
     static constexpr const char* kWebControlPort = "8889";
     static constexpr const char* kWebControlAuthUser = "castor";
     static constexpr const char* kWebControlAuthPass = "beaver";
     static constexpr const char* kWebControlAuthToken = "";
-    static constexpr const char* kWebControlStatic = "1";
+    static constexpr const char* kWebControlStatic = "0";
+    static constexpr const char* kWebControlAudioStream = "0";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -145,6 +146,7 @@ public:
     std::string webControlAuthPass;
     std::string webControlAuthToken;
     bool webControlStatic;
+    bool webControlAudioStream;
     int webControlPort;
     int logLevel;
     int calendarRefreshInterval;
@@ -232,6 +234,7 @@ public:
         webControlAuthPass = get(map, "web_control_auth_pass", kWebControlAuthPass);
         webControlAuthToken = get(map, "web_control_auth_token", kWebControlAuthToken);
         webControlStatic = std::stoi(get(map, "web_control_static", kWebControlStatic));
+        webControlAudioStream = std::stoi(get(map, "web_control_audio_stream", kWebControlAudioStream));
         
         log.info() << "Config:"
         << "\n\t logPath=" << logPath
@@ -269,6 +272,7 @@ public:
         << "\n\t webControlHost=" << webControlHost
         << "\n\t webControlPort=" << webControlPort
         << "\n\t webControlStatic=" << webControlStatic
+        << "\n\t webControlAudioStream=" << webControlAudioStream
         << "\n\t webControlAuthUser=" << webControlAuthUser
         << "\n\t silenceThreshold=" << silenceThreshold
         << "\n\t silenceStartDuration=" << silenceStartDuration

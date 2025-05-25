@@ -32,6 +32,7 @@
 #include "../ctl/Status.hpp"
 #include "../util/Log.hpp"
 #include "../www/index_html.h"
+#include "../dsp/StreamPlayer.hpp"
 
 namespace castor {
 namespace io {
@@ -94,6 +95,7 @@ private:
     const int mPort;
     const AuthConf mAuthConf;
     const bool mServeStatic;
+    const bool mServeAudioStream;
     const std::string mStaticContent;
     std::unique_ptr<StaticContentToken> mStaticToken = nullptr;
     ctl::Parameters& mParameters;
@@ -104,13 +106,17 @@ private:
     typedef void(WebService::*InterceptionHandler)(const Request& req, Response& res);
 
 public:
-    WebService(const std::string& tHost, int tPort, const std::string& tAuthUser, const std::string& tAuthPass, const std::string& tAuthToken, bool tServeStatic, ctl::Parameters& tParameters, ctl::Status& tStatus) :
+
+    util::RingBuffer<uint8_t>* audioStreamBuffer;
+    
+    WebService(const std::string& tHost, int tPort, const std::string& tAuthUser, const std::string& tAuthPass, const std::string& tAuthToken, bool tServeStatic, bool tServeAudioStream, ctl::Parameters& tParameters, ctl::Status& tStatus) :
         mServer(),
         mHost(tHost),
         mPort(tPort),
         mStaticContent(kStaticHTML),
         mAuthConf(AuthConf{tAuthUser, tAuthPass, tAuthToken}),
         mServeStatic(tServeStatic),
+        mServeAudioStream(tServeAudioStream),
         mParameters(tParameters),
         mStatus(tStatus)
     {}
@@ -183,6 +189,9 @@ public:
             mServer.Get("/token", interceptStatic(&WebService::getStaticToken));
             mServer.Get("/", interceptStatic(&WebService::getStatic));
         }
+        if (mServeAudioStream) {
+            mServer.Get ("/audio", interceptStatic(&WebService::getAudio));
+        }
         
         log.info() << "WebService listening on " << mHost << ":" << mPort;
         mServer.listen(mHost, mPort);
@@ -237,6 +246,24 @@ private:
         res.set_content(mStaticToken->json, "text/html");
     }
 
+    void getAudio(const Request& req, Response& res) {
+        const auto content_type = "audio/mpeg";
+        static constexpr size_t chunkSize = 1024;
+
+        res.set_chunked_content_provider(content_type, [this](size_t offset, httplib::DataSink& sink) {
+            char chunk[chunkSize];
+            auto& audioBuffer = this->audioStreamBuffer;
+            while (sink.is_writable()) {
+                auto bytesRead = audioBuffer->read((uint8_t*)&chunk, chunkSize);
+                if (bytesRead) {
+                    sink.write(chunk, bytesRead);
+                    // log.debug() << "WebServerice wrote audio bytes " << bytesRead;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            return true;
+        });
+    }
 };
 
 }
