@@ -88,7 +88,6 @@ public:
         if (mWorker && mWorker->joinable()) mWorker->join();
         mWriter = nullptr;
         mWorker = nullptr;
-        mRingBuffer.flush();
         log.info(Log::Magenta) << logName << " stopped";
     }
 

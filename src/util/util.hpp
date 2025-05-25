@@ -181,8 +181,6 @@ class RingBuffer {
     std::atomic<size_t> mHead = 0;
     std::atomic<size_t> mTail = 0;
     std::vector<T> mBuffer;
-    std::mutex mMutex;
-    std::condition_variable mCV;
 
 public:
     RingBuffer(size_t tCapacity) :
@@ -199,49 +197,25 @@ public:
     }
 
     void write(const T* tData, size_t tLen) {
-        // std::lock_guard<std::mutex> lock(mMutex);
-
         for (auto i = 0; i < tLen; ++i) {
             mBuffer[mTail] = tData[i];
             mTail = (mTail + 1) % mCapacity;
             if (mSize < mCapacity) {
                 ++mSize;
             } else {
-                mHead = (mHead + 1) % mCapacity; // overwrite (prevented if tWait)
+                mHead = (mHead + 1) % mCapacity;
             }
         }
-
-        mCV.notify_all();
     }
 
     size_t read(T* tData, size_t tLen) {
-        if (mSize < tLen) {
-            return 0;
-        }
-
-        {
-            std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return mSize + tLen <= mCapacity; });
-        }
-
         size_t read = 0;
         while (read < tLen && mSize > 0) {
             tData[read++] = mBuffer[mHead];
             mHead = (mHead + 1) % mCapacity;
             --mSize;
         }
-        
         return read;
-    }
-
-    void flush() {
-        std::lock_guard<std::mutex> lock(mMutex);
-        mSize = 0;
-        mHead = 0;
-        mTail = 0;
-        // memset(mBuffer.data(), 0, mBuffer.size() * sizeof(T));
-        mBuffer = {};
-        mCV.notify_all();
     }
 };
 

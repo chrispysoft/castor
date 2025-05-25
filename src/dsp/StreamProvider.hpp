@@ -92,8 +92,6 @@ public:
         if (mWorker && mWorker->joinable()) mWorker->join();
         mTransformer = nullptr;
         mWorker = nullptr;
-        mRingBufferI.flush();
-        mRingBufferO.flush();
         log.info(Log::Magenta) << logName << " stopped";
     }
 
