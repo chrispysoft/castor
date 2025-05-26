@@ -44,7 +44,7 @@ class CodecTransformer : public CodecBase {
     
 public:
     
-    static int WritePacket(void* tOpaque, const uint8_t* tBuf, int tSize) {
+    static int WritePacket(void* tOpaque, uint8_t* tBuf, int tSize) {
         auto self = static_cast<CodecTransformer*>(tOpaque);
         self->mOutputRingBuffer.write(tBuf, tSize);
         return tSize;
