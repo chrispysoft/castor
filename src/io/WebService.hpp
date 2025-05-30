@@ -84,6 +84,9 @@ public:
 
 private:
     static constexpr time_t kClientConnectedTimeout = 1;
+    static constexpr size_t kAudioStreamChunkSize = 4096;
+    static constexpr const char* kContentTypeAudioStream = "audio/mpeg";
+    static constexpr const char* kContentRangeHeader = "Range";    
 
     using Handler = httplib::Server::Handler;
     using Request = httplib::Request;
@@ -247,14 +250,21 @@ private:
     }
 
     void getAudio(const Request& req, Response& res) {
-        const auto content_type = "audio/mpeg";
-        static constexpr size_t chunkSize = 1024;
+        if (req.has_header(kContentRangeHeader)) {
+            auto range = req.get_header_value(kContentRangeHeader);
+            log.debug() << "Range header: " << range;
+            res.set_header("Content-Type", kContentTypeAudioStream);
+            res.set_header("Content-Range", "bytes 0-1/*");
+            res.set_header("Content-Length", "2");
+            res.status = 206;
+            return;
+        }
 
-        res.set_chunked_content_provider(content_type, [this](size_t offset, httplib::DataSink& sink) {
-            char chunk[chunkSize];
+        res.set_chunked_content_provider(kContentTypeAudioStream, [this](size_t offset, httplib::DataSink& sink) {
+            char chunk[kAudioStreamChunkSize];
             auto& audioBuffer = this->audioStreamBuffer;
             while (sink.is_writable()) {
-                auto bytesRead = audioBuffer->read((uint8_t*)&chunk, chunkSize);
+                auto bytesRead = audioBuffer->read((uint8_t*)&chunk, kAudioStreamChunkSize);
                 if (bytesRead) {
                     sink.write(chunk, bytesRead);
                     // log.debug() << "WebServerice wrote audio bytes " << bytesRead;
