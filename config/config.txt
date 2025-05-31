@@ -74,3 +74,11 @@ web_control_auth_pass=beaver
 
 # Monitoring Audio Stream (secured by webcontrol auth)
 web_control_audio_stream=1
+
+# Mail Fallback Notification (comment-out url to disable)
+# smtp_url=smtp://mail.hello.tld:587
+smtp_user=user@mail.hello.tld
+smtp_pass=?
+smtp_sender_name=Notifier Name
+smtp_sender_address=notifier@radio.tld
+smtp_recipients=tech@radio.tld, manager@radio.tld

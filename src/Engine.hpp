@@ -32,6 +32,7 @@
 #include "ctl/RemoteControl.hpp"
 #include "io/TCPServer.hpp"
 #include "io/WebService.hpp"
+#include "io/SMTPSender.hpp"
 #include "api/APIClient.hpp"
 #include "dsp/AudioClient.hpp"
 #include "dsp/LinePlayer.hpp"
@@ -83,6 +84,7 @@ class Engine : public audio::Client::Renderer {
     const audio::AudioStreamFormat mClientFormat;
     std::unique_ptr<Calendar> mCalendar;
     std::unique_ptr<io::TCPServer> mTCPServer;
+    std::unique_ptr<io::SMTPSender> mSMTPSender;
     std::unique_ptr<api::Client> mAPIClient;
     std::unique_ptr<PlayerFactory> mPlayerFactory;
     ctl::RemoteControl mRemote;
@@ -113,6 +115,7 @@ class Engine : public audio::Client::Renderer {
     util::AsyncTimer mReportTimer;
     util::AsyncAlignedTimer mBlockRecordTimer;
     util::AsyncWorker<std::shared_ptr<PlayItem>> mItemChangeWorker;
+    util::TaskQueue mMailTaskQueue;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
     time_t mStartTime;
@@ -127,6 +130,7 @@ public:
         mCalendar(std::make_unique<Calendar>(mConfig)),
         mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
+        mSMTPSender(std::make_unique<io::SMTPSender>()),
         mParameters(mConfig.parametersPath),
         mWebService(std::make_unique<io::WebService>(mConfig.webControlHost, mConfig.webControlPort, mConfig.webControlAuthUser, mConfig.webControlAuthPass, mConfig.webControlAuthToken, mConfig.webControlStatic, mConfig.webControlAudioStream, mParameters, mStatus)),
         mPlayerFactory(std::make_unique<PlayerFactory>(mClientFormat, mConfig)),
@@ -333,6 +337,9 @@ public:
         log.debug() << "Engine onSilenceChanged " << tSilence;
         if (tSilence) mFallback.start();
         else mFallback.stop();
+        mMailTaskQueue.async([this, tSilence] {
+            sendSilenceNotificationMail(tSilence);
+        });
     }
     
     void onCalendarChanged(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
@@ -480,6 +487,22 @@ public:
         }
         catch (const std::exception& e) {
             log.error() << "Engine failed to post health: " << e.what();
+        }
+    }
+
+    // send mail notification on silence
+
+    void sendSilenceNotificationMail(bool tSilence) {
+        if (mConfig.smtpURL.empty()) return;
+        std::string action = tSilence ? "started" : "stopped";
+        std::string subject = "Castor Silence Notification (" + action + ")";
+        std::string body = "Silence " + action + " at " + util::currTimeFmtMs() + "\n\n";
+        try {
+            mSMTPSender->send(mConfig.smtpURL, mConfig.smtpUser, mConfig.smtpPass, mConfig.smtpSenderName, mConfig.smtpSenderAddress, mConfig.smtpRecipients, subject, body);
+            log.info() << "Engine sent mail notification to: " << mConfig.smtpRecipients;
+        }
+        catch (const std::exception& e) {
+            log.error() << "Engine failed to send mail: " << e.what();
         }
     }
     
