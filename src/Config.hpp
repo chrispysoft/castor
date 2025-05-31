@@ -288,7 +288,6 @@ public:
         << "\n\t calendarCachePath=" << calendarCachePath
         << "\n\t smtpURL=" << smtpURL
         << "\n\t smtpUser=" << smtpUser
-        << "\n\t smtpPass=" << smtpPass
         << "\n\t smtpSenderName=" << smtpSenderName
         << "\n\t smtpSenderAddress=" << smtpSenderAddress
         << "\n\t smtpRecipients=" << smtpRecipients
