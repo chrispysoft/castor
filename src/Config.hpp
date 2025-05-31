@@ -33,8 +33,9 @@ namespace castor {
 class Config {
 
     typedef std::unordered_map<std::string, std::string> Map;
-
+    
     static constexpr const char* kLogPath = "./logs/castor.log";
+    static constexpr const char* kLogLevel = "1";
     static constexpr const char* kSocketPath = "/tmp/castor.socket";
     static constexpr const char* kAudioSourcePath = "";
     static constexpr const char* kAudioPlaylistPath = "";
@@ -59,7 +60,6 @@ class Config {
     static constexpr const char* kPlaylogURL = "";
     static constexpr const char* kHealthURL = "";
     static constexpr const char* kClockURL = "";
-    static constexpr const char* kLogLevel = "1";
     static constexpr const char* kCalendarRefreshInterval = "60";
     static constexpr const char* kCalendarCachePath = "./cache/calendar.json";
     static constexpr const char* kHealthReportInterval = "60";
@@ -82,6 +82,12 @@ class Config {
     static constexpr const char* kWebControlAuthToken = "";
     static constexpr const char* kWebControlStatic = "0";
     static constexpr const char* kWebControlAudioStream = "0";
+    static constexpr const char* kSMTPURL = "";
+    static constexpr const char* kSMTPUser = "";
+    static constexpr const char* kSMTPPass = "";
+    static constexpr const char* kSMTPSenderName = "";
+    static constexpr const char* kSMTPSenderAddress = "";
+    static constexpr const char* kSMTPRecipients = "";
 
     static Map parseConfigFile(const std::string& tPath) {
         std::ifstream cfgfile(tPath);
@@ -141,6 +147,12 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string calendarCachePath;
+    std::string smtpURL;
+    std::string smtpUser;
+    std::string smtpPass;
+    std::string smtpSenderName;
+    std::string smtpSenderAddress;
+    std::string smtpRecipients;
     std::string webControlHost;
     std::string webControlAuthUser;
     std::string webControlAuthPass;
@@ -228,6 +240,12 @@ public:
         fallbackCrossFadeTime = std::stof(get(map, "fallback_cross_fade_time", kFallbackCrossFadeTime));
         fallbackShuffle = std::stoi(get(map, "fallback_shuffle", kFallbackShuffle));
         fallbackSineSynth = std::stoi(get(map, "fallback_sine_synth", kFallbackSineSynth));
+        smtpURL = get(map, "smtp_url", kSMTPURL);
+        smtpUser = get(map, "smtp_user", kSMTPUser);
+        smtpPass = get(map, "smtp_pass", kSMTPPass);
+        smtpSenderName = get(map, "smtp_sender_name", kSMTPSenderName);
+        smtpSenderAddress = get(map, "smtp_sender_address", kSMTPSenderAddress);
+        smtpRecipients = get(map, "smtp_recipients", kSMTPRecipients);
         webControlHost = get(map, "web_control_host", kWebControlHost);
         webControlPort = std::stoi(get(map, "web_control_port", kWebControlPort));
         webControlAuthUser = get(map, "web_control_auth_user", kWebControlAuthUser);
@@ -268,6 +286,12 @@ public:
         << "\n\t calendarRefreshInterval=" << calendarRefreshInterval
         << "\n\t healthReportInterval=" << healthReportInterval
         << "\n\t calendarCachePath=" << calendarCachePath
+        << "\n\t smtpURL=" << smtpURL
+        << "\n\t smtpUser=" << smtpUser
+        << "\n\t smtpPass=" << smtpPass
+        << "\n\t smtpSenderName=" << smtpSenderName
+        << "\n\t smtpSenderAddress=" << smtpSenderAddress
+        << "\n\t smtpRecipients=" << smtpRecipients
         << "\n\t tcpPort=" << tcpPort
         << "\n\t webControlHost=" << webControlHost
         << "\n\t webControlPort=" << webControlPort
@@ -282,7 +306,8 @@ public:
         << "\n\t programFadeInTime=" << programFadeInTime
         << "\n\t programFadeOutTime=" << programFadeOutTime
         << "\n\t fallbackCrossFadeTime=" << fallbackCrossFadeTime
-        << "\n\t fallbackSineSynth=" << fallbackSineSynth;
+        << "\n\t fallbackSineSynth=" << fallbackSineSynth
+        << "\n\t fallbackShuffle=" << fallbackShuffle;
     }
 };
 }

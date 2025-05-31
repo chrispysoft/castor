@@ -369,5 +369,51 @@ private:
     }
 };
 
+
+class TaskQueue {
+    bool mRunning = true;
+    std::thread mThread;
+    std::mutex mMutex;
+    std::condition_variable mCV;
+    std::queue<std::function<void()>> mTasks;
+
+public:
+    TaskQueue() :
+        mThread(std::thread(&TaskQueue::run, this))
+    {}
+
+    ~TaskQueue() {
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mRunning = false;
+            mCV.notify_one();
+        }
+        if (mThread.joinable()) mThread.join();
+    }
+
+    void async(std::function<void()> tTask) {
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mTasks.push(tTask);
+        }
+        mCV.notify_one();
+    }
+
+private:
+    void run() {
+        while (true) {
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                mCV.wait(lock, [this] { return mTasks.size() || !mRunning; });
+                if (!mRunning) return;
+                task = std::move(mTasks.front());
+                mTasks.pop();
+            }
+            task();
+        }
+    }
+};
+
 }
 }
