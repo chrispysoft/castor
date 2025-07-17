@@ -4,20 +4,20 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #pragma once
@@ -34,8 +34,8 @@ class Config {
 
     typedef std::unordered_map<std::string, std::string> Map;
     
-    static constexpr const char* kLogPath = "./logs/castor.log";
     static constexpr const char* kLogLevel = "1";
+    static constexpr const char* kLogPath = "./logs/castor.log";
     static constexpr const char* kSocketPath = "/tmp/castor.socket";
     static constexpr const char* kAudioSourcePath = "";
     static constexpr const char* kAudioPlaylistPath = "";
@@ -63,7 +63,9 @@ class Config {
     static constexpr const char* kCalendarRefreshInterval = "60";
     static constexpr const char* kCalendarCachePath = "./cache/calendar.json";
     static constexpr const char* kHealthReportInterval = "60";
-    static constexpr const char* kTCPPort = "0";
+    static constexpr const char* kYARMHost = "";
+    static constexpr const char* kYARMUser = "";
+    static constexpr const char* kYARMPass = "";
     static constexpr const char* kSilenceThreshold = "-80";
     static constexpr const char* kSilenceStartDuration = "5";
     static constexpr const char* kSilenceStopDuration = "1";
@@ -147,6 +149,9 @@ public:
     std::string healthURL;
     std::string clockURL;
     std::string calendarCachePath;
+    std::string yarmHost;
+    std::string yarmUser;
+    std::string yarmPass;
     std::string smtpURL;
     std::string smtpUser;
     std::string smtpPass;
@@ -163,7 +168,6 @@ public:
     int logLevel;
     int calendarRefreshInterval;
     int healthReportInterval;
-    int tcpPort;
     int silenceThreshold;
     int silenceStartDuration;
     int silenceStopDuration;
@@ -198,6 +202,7 @@ public:
             log.error() << "Config failed to parse file: " << e.what();
         }
 
+        logLevel = std::stoi(get(map, "log_level", kLogLevel));
         logPath = get(map, "log_path", kLogPath);
         socketPath = get(map, "socket_path", kSocketPath);
         audioSourcePath = get(map, "audio_source_path", kAudioSourcePath);
@@ -226,10 +231,11 @@ public:
         healthURL = get(map, "health_url", kHealthURL);
         clockURL = get(map, "clock_url", kClockURL);
         calendarCachePath = get(map, "calendar_cache_path", kCalendarCachePath);
-        logLevel = std::stoi(get(map, "log_level", kLogLevel));
+        yarmHost = get(map, "yarm_host", kYARMHost);
+        yarmUser = get(map, "yarm_user", kYARMUser);
+        yarmPass = get(map, "yarm_pass", kYARMPass);
         calendarRefreshInterval = std::stoi(get(map, "calendar_refresh_interval", kCalendarRefreshInterval));
         healthReportInterval = std::stoi(get(map, "health_report_interval", kHealthReportInterval));
-        tcpPort = std::stoi(get(map, "tcp_port", kTCPPort));
         silenceThreshold = std::stoi(get(map, "silence_threshold", kSilenceThreshold));
         silenceStartDuration = std::stoi(get(map, "silence_start_duration", kSilenceStartDuration));
         silenceStopDuration = std::stoi(get(map, "silence_stop_duration", kSilenceStopDuration));
@@ -255,8 +261,8 @@ public:
         webControlAudioStream = std::stoi(get(map, "web_control_audio_stream", kWebControlAudioStream));
         
         log.info() << "Config:"
-        << "\n\t logPath=" << logPath
         << "\n\t logLevel=" << logLevel
+        << "\n\t logPath=" << logPath
         << "\n\t socketPath=" << socketPath
         << "\n\t audioSourcePath=" << audioSourcePath
         << "\n\t audioPlaylistPath=" << audioPlaylistPath
@@ -286,12 +292,13 @@ public:
         << "\n\t calendarRefreshInterval=" << calendarRefreshInterval
         << "\n\t healthReportInterval=" << healthReportInterval
         << "\n\t calendarCachePath=" << calendarCachePath
+        << "\n\t yarmHost=" << yarmHost
+        << "\n\t yarmUser=" << yarmUser
         << "\n\t smtpURL=" << smtpURL
         << "\n\t smtpUser=" << smtpUser
         << "\n\t smtpSenderName=" << smtpSenderName
         << "\n\t smtpSenderAddress=" << smtpSenderAddress
         << "\n\t smtpRecipients=" << smtpRecipients
-        << "\n\t tcpPort=" << tcpPort
         << "\n\t webControlHost=" << webControlHost
         << "\n\t webControlPort=" << webControlPort
         << "\n\t webControlStatic=" << webControlStatic

@@ -288,7 +288,7 @@ static const char* kStaticHTML = R"rawliteral(
                 tdState.appendChild(statusSpan);
                 tdLoaded.textContent = Math.round(row.loaded * 100);
                 tdPlayed.textContent = Math.round(row.played * 100);
-                tdSize.textContent = row.size.toFixed(2) + " MiB";
+                tdSize.textContent = row.size.toFixed(2);
 
                 tdLoaded.classList.add("number");
                 tdPlayed.classList.add("number");

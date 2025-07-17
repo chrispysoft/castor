@@ -4,20 +4,20 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #pragma once
@@ -31,9 +31,8 @@
 #include <json.hpp>
 #include "Config.hpp"
 #include "api/API.hpp"
-#include "api/APIClient.hpp"
+#include "api/APIClientYARM.hpp"
 #include "util/CSVParser.hpp"
-#include "util/M3UParser.hpp"
 #include "util/util.hpp"
 
 namespace castor {
@@ -50,8 +49,7 @@ class Calendar {
     std::mutex mWorkMutex;
     std::condition_variable mWorkCV;
     std::vector<std::shared_ptr<PlayItem>> mItems;
-    api::Client mAPIClient;
-    util::M3UParser m3uParser;
+    api::ClientYARM mAPIClient;
 
 public:
 
@@ -60,16 +58,15 @@ public:
     Calendar(const Config& tConfig) :
         mStartupTime(std::time(0)),
         mConfig(tConfig),
-        mAPIClient(mConfig),
-        m3uParser()
+        mAPIClient(mConfig)
     {}
 
 
     void start() {
-        if (mConfig.programURL.empty()) {
-            log.warn() << "Calendar can't start - missing config";
-            return;
-        }
+        // if (mConfig.programURL.empty()) {
+        //     log.warn() << "Calendar can't start - missing config";
+        //     return;
+        // }
 
         if (mRunning.exchange(true)) return;
         mWorker = std::thread([this] {
@@ -118,106 +115,54 @@ private:
     void refresh() {
         log.debug() << "Calendar refresh";
 
-        auto items = fetchItems();
-
-        if (!std::ranges::equal(items, mItems, [](const auto& a, const auto& b) { return *a == *b; })) {
-            log.info(Log::Yellow) << "Calendar changed";
-            storeItems(items);
-        } else {
-            log.debug() << "Calendar not changed";
+        std::vector<std::shared_ptr<PlayItem>> items;
+        try {
+            items = mAPIClient.fetchItems();
         }
+        catch (const std::exception& e) {
+            log.error() << "Calendar failed to fetch items from API: " << e.what();
+            try {
+                deserialize(items);
+                log.info() << "Calendar loaded cached data";
+            }
+            catch (const std::exception& e) {
+                throw std::runtime_error(std::string("Failed to deserialize cached data: ") + e.what());
+            }
+        }
+
+        storeItems(items);
     }
 
     void storeItems(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
         std::lock_guard<std::mutex> lock(mItemsMutex);
+        if (std::ranges::equal(tItems, mItems, [](const auto& a, const auto& b) { return *a == *b; })) {
+            log.debug() << "Calendar not changed";
+            return;
+        }
+        log.info(Log::Yellow) << "Calendar changed";
+
         mItems = std::move(tItems);
-        if (calendarChangedCallback) {
-            calendarChangedCallback(mItems);
+        if (calendarChangedCallback) calendarChangedCallback(mItems);
+        try {
+            serialize(mItems);
+        } catch (const std::exception& e) {
+            log.error() << "Calendar failed to serialize items: " << e.what();
         }
     }
-    
-    std::vector<std::shared_ptr<PlayItem>> fetchItems() {
-        std::vector<std::shared_ptr<PlayItem>> items;
-        // m3uParser.reset();
-        const auto now = std::time(0);
-        const auto program = mAPIClient.getProgram(mConfig.preloadTimeFile);
-        for (const auto& pr : program) {
-            // log.debug() << pr.start << " - " << pr.end << " Show: " << pr.showName << ", Episode: " << pr.episodeTitle;
-            if (pr->mediaId <= 0) {
-                log.error() << "Calendar item '" << pr->showName << "' has no media id";
-                continue;
-            }
-            const auto media = mAPIClient.getMedia(pr->mediaId);
-            const auto prStart = util::parseDatetime(pr->start);
-            const auto prEnd = util::parseDatetime(pr->end);
-            auto itemStart = prStart;
 
-            for (const auto& entry : media->entries) {
-                // log.debug() << entry.uri;
-                auto entryDuration = (entry.duration > 0) ? entry.duration : prEnd - itemStart;
-                auto itemEnd = itemStart + entryDuration;
-                if (itemEnd == itemStart) {
-                    itemEnd = prEnd;
-                }
-                if (itemEnd < now) {
-                    itemStart = itemEnd;
-                    continue;
-                }
-                
-                if (entry.uri.starts_with(m3uPrefix)) {
-                    auto uri = mConfig.audioPlaylistPath + entry.uri.substr(m3uPrefix.size());
-                    try {
-                        // log.debug() << "Calendar parsing m3u " << uri;
-                        auto m3u = m3uParser.parse(uri, itemStart, itemEnd);
-                        if (!m3u.empty()) {
-                            // auto prPtr = std::make_shared<api::Program>(pr);
-                            // for (auto& itm : m3u) itm.program = prPtr;
-                            // items.insert(items.end(), m3u.begin(), m3u.end());
-                            auto maxEnd = std::time(0) + mConfig.preloadTimeFile;
-                            for (const auto& itm : m3u) {
-                                if (itm->end <= maxEnd) {
-                                    itm->program = pr;
-                                    items.emplace_back(itm);
-                                }
-                            }
-                        } else {
-                            log.warn() << "Calendar found no M3U metadata - adding file as item";
-                            items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
-                        }
-                    } catch (const std::exception& e) {
-                        log.error() << "Calendar error reading M3U: " << e.what();
-                    }
-                } else {
-                    auto uri = entry.uri;
-                    if (std::all_of(uri.begin(), uri.end(), ::isdigit)) {
-                        uri = mConfig.audioSourcePath + "/" + std::to_string(pr->showId) + "/" + uri + defaultFileSuffix;
-                    }
-                    items.emplace_back(std::make_shared<PlayItem>(itemStart, itemEnd, uri, pr));
-                }
-                itemStart += entryDuration;
-            }
-
-            // if (!std::filesystem::exists(uri)) {
-            //     log.error() << "Calendar item '" << uri << "' does not exist";
-            //     continue;
-            // }
-        }
-        return items;
-    }
-
-    void serialize() {
-        nlohmann::json j = mItems;
+    void serialize(const std::vector<std::shared_ptr<PlayItem>>& tItems) const {
+        nlohmann::json j = tItems;
         std::ofstream f(mConfig.calendarCachePath);
         if (!f.is_open()) throw std::runtime_error("Failed to open output file");
         f << j;
     }
 
-    void deserialize() {
+    void deserialize(std::vector<std::shared_ptr<PlayItem>>& tItems) const {
         std::ifstream f(mConfig.calendarCachePath);
         if (!f.is_open()) throw std::runtime_error("Failed to open input file");
         nlohmann::json j;
         f >> j;
-        mItems = j;
+        tItems = j;
     }
 };
 }

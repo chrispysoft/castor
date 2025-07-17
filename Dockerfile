@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libcurl4-openssl-dev \
+    libmariadb-dev \
     libasound2-dev \
     portaudio19-dev \
     libavcodec-dev \
@@ -28,6 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    libmariadb-dev \
     libasound2 \
     libportaudio2 \
     ffmpeg \

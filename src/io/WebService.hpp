@@ -4,20 +4,20 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #pragma once
@@ -103,6 +103,7 @@ private:
     std::unique_ptr<StaticContentToken> mStaticToken = nullptr;
     ctl::Parameters& mParameters;
     ctl::Status& mStatus;
+    std::atomic<bool> mRunning = false;
     std::atomic<time_t> mLastClientRequest = 0;
     std::mutex mInterceptionMutex;
 
@@ -144,13 +145,13 @@ public:
 
     httplib::Server::Handler interceptStatic(InterceptionHandler handler) {
         return [this, handler](const Request& req, Response& res) {
-            std::lock_guard<std::mutex> lock(mInterceptionMutex);
+            // std::lock_guard<std::mutex> lock(mInterceptionMutex);
 
             log.debug() << "WebService interceptStatic from " << req.remote_addr << " " << req.path;
 
             auto it = req.headers.find("Authorization");
             if (it != req.headers.end()) {
-                log.debug() << "WebService auth header: " << it->first << " " << it->second;
+                // log.debug() << "WebService auth header: " << it->first << " " << it->second;
                 if (it->second == ("Basic " + httplib::detail::base64_encode(mAuthConf.user + ":" + mAuthConf.pass))) {
                     (this->*handler)(req, res);
                     return;
@@ -183,7 +184,7 @@ public:
             log.debug() << "WebService request: " << req.method << " " << req.path << " " << res.status;
         });
 
-        //mServer.set_error_handler(std::bind(&WebService::errorHandler, this, std::placeholders::_1, std::placeholders::_2));
+        // mServer.set_error_handler(std::bind(&WebService::errorHandler, this, std::placeholders::_1, std::placeholders::_2));
 
         mServer.Get ("/status", interceptAPI(&WebService::getStatus));
         mServer.Get ("/parameters", interceptAPI(&WebService::getParameters));
@@ -197,11 +198,13 @@ public:
         }
         
         log.info() << "WebService listening on " << mHost << ":" << mPort;
+        mRunning.exchange(true, std::memory_order_relaxed);
         mServer.listen(mHost, mPort);
     }
 
     void stop() {
         log.debug() << "WebService stopping...";
+        mRunning.exchange(false, std::memory_order_release);
         mServer.stop();
         log.info() << "WebService stopped";
     }
@@ -261,17 +264,18 @@ private:
         }
 
         res.set_chunked_content_provider(kContentTypeAudioStream, [this](size_t offset, httplib::DataSink& sink) {
-            char chunk[kAudioStreamChunkSize];
+            std::vector<char> chunk(kAudioStreamChunkSize);
             auto& audioBuffer = this->audioStreamBuffer;
-            while (sink.is_writable()) {
-                auto bytesRead = audioBuffer->read((uint8_t*)&chunk, kAudioStreamChunkSize);
+            while (sink.is_writable() && mRunning.load(std::memory_order_acquire)) {
+                auto bytesRead = audioBuffer->read((uint8_t*) chunk.data(), kAudioStreamChunkSize);
                 if (bytesRead) {
-                    sink.write(chunk, bytesRead);
+                    auto didWrite = sink.write(chunk.data(), bytesRead);
+                    if (!didWrite) return false;
                     // log.debug() << "WebServerice wrote audio bytes " << bytesRead;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
-            return true;
+            return false;
         });
     }
 };

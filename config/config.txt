@@ -60,10 +60,13 @@ stream_out_href=http://localhost:8000/radio.mp3
 # health_url=http://localhost:8010/api/v1/source/health/1
 # clock_url=http://localhost:8010/api/v1/clock
 calendar_refresh_interval=60
+calendar_cache_path=./cache/calendar.json
 health_report_interval=10
 
-# TCP Server
-tcp_port=1234
+# YARM MySQL API
+# yarm_host=
+# yarm_user=
+# yarm_pass=
 
 # Web Control
 web_control_host=127.0.0.1

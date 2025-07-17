@@ -4,20 +4,20 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #pragma once
@@ -312,59 +312,6 @@ private:
                 if (mCV.wait_until(lock, nextTimePt, [this]{ return !mRunning.load(std::memory_order_acquire); })) return;
             }
             if (callback) callback();
-        }
-    }
-};
-
-
-template <typename T>
-class AsyncWorker {
-    std::atomic<bool> mRunning = false;
-    std::thread mThread;
-    std::mutex mMutex;
-    std::condition_variable mCV;
-    std::queue<T> mItems;
-
-public:
-
-    std::function<void(T t)> callback;
-
-    AsyncWorker() = default;
-
-    ~AsyncWorker() {
-        if (mRunning.load()) stop();
-    }
-
-    void start() {
-        if (mRunning.exchange(true)) return;
-        mThread = std::thread(&AsyncWorker::run, this);
-    }
-
-    void stop() {
-        if (!mRunning.exchange(false, std::memory_order_release)) return;
-        mCV.notify_all();
-        if (mThread.joinable()) mThread.join();
-    }
-
-
-    void async(T tItem) {
-        std::lock_guard<std::mutex> lock(mMutex);
-        mItems.push(std::move(tItem));
-        mCV.notify_one();
-    }
-
-private:
-    void run() {
-        while (mRunning.load()) {
-            T item;
-            {
-                std::unique_lock<std::mutex> lock(mMutex);
-                mCV.wait(lock, [this]{ return mItems.size() > 0 || !mRunning.load(std::memory_order_acquire); });
-                if (!mRunning) return;
-                item = std::move(mItems.front());
-                mItems.pop();
-            }
-            if (callback) callback(item);
         }
     }
 };

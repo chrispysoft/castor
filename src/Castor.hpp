@@ -4,28 +4,28 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #include <condition_variable>
 #include <csignal>
 #include <mutex>
 #include <string>
-#include "Engine.hpp"
 #include "Config.hpp"
+#include "Engine.hpp"
 #include "util/util.hpp"
 #include "util/ArgumentParser.hpp"
 #include "util/Log.hpp"
@@ -33,19 +33,14 @@
 namespace castor {
 class Castor {
 
+    static constexpr const char* kConfigPath = "./config/config.txt";
+
     bool mRunning = false;
     std::mutex mMutex;
     std::condition_variable mCV;
-    Config mConfig;
-    Engine mEngine;
+    std::unique_ptr<Engine> mEngine = nullptr;
     
-    Castor() :
-        mConfig("./config/config.txt"),
-        mEngine(mConfig)
-    {
-        log.setFilePath(mConfig.logPath);
-        log.setLevel(mConfig.logLevel);
-
+    Castor() {
         std::signal(SIGINT,  handlesig);
         std::signal(SIGTERM, handlesig);
         std::signal(SIGPIPE, handlesig);
@@ -67,18 +62,29 @@ public:
     }
 
     void run(int argc, char* argv[]) {
+        auto args = util::ArgumentParser(argc, argv).args();
+        std::string configPath = kConfigPath;
+        try {
+            auto cfgpath = args.at("--config");
+            if (cfgpath.size()) configPath = std::move(cfgpath);
+        } catch (...) {}
+        auto config = Config(std::move(configPath));
+        log.setFilePath(config.logPath);
+        log.setLevel(config.logLevel);
+
+        mEngine = std::make_unique<Engine>(std::move(config));
         mRunning = true;
-        mEngine.parseArgs(util::ArgumentParser(argc, argv).args());
-        mEngine.start();
+        mEngine->parseArgs(std::move(args));
+        mEngine->start();
         {
             std::unique_lock<std::mutex> lock(mMutex);
-            mCV.wait(lock, [&]{ return !mRunning; });
+            mCV.wait(lock, [this]{ return !mRunning; });
         }
     }
 
     void terminate() {
         log.info() << "Castor terminating...";
-        mEngine.stop();
+        mEngine->stop();
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mRunning = false;

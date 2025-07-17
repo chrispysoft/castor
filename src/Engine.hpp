@@ -4,20 +4,20 @@
  *  This file is part of Castor.
  *
  *  Castor is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
+ *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
  *  Castor is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU Affero General Public License for more details.
+ *  GNU Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU Affero General Public License
+ *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  *  If you use this program over a network, you must also offer access
- *  to the source code under the terms of the GNU Affero General Public License.
+ *  to the source code under the terms of the GNU Lesser General Public License.
  */
 
 #include <atomic>
@@ -29,8 +29,6 @@
 #include <vector>
 #include "Config.hpp"
 #include "Calendar.hpp"
-#include "ctl/RemoteControl.hpp"
-#include "io/TCPServer.hpp"
 #include "io/WebService.hpp"
 #include "io/SMTPSender.hpp"
 #include "api/APIClient.hpp"
@@ -80,14 +78,12 @@ public:
 
 class Engine : public audio::Client::Renderer {
 
-    const Config& mConfig;
+    const Config mConfig;
     const audio::AudioStreamFormat mClientFormat;
     std::unique_ptr<Calendar> mCalendar;
-    std::unique_ptr<io::TCPServer> mTCPServer;
     std::unique_ptr<io::SMTPSender> mSMTPSender;
     std::unique_ptr<api::Client> mAPIClient;
     std::unique_ptr<PlayerFactory> mPlayerFactory;
-    ctl::RemoteControl mRemote;
     ctl::Parameters mParameters;
     ctl::Status mStatus;
     std::unique_ptr<io::WebService> mWebService;
@@ -100,22 +96,20 @@ class Engine : public audio::Client::Renderer {
     audio::StreamOutput mStreamOutput;
     audio::StreamProvider mStreamProvider;
     std::atomic<bool> mRunning = false;
-    std::atomic<bool> mScheduleItemsChanged = false;
     std::thread mScheduleThread;
     std::thread mLoadThread;
-    std::mutex mScheduleItemsMutex;
-    std::mutex mPlayersMutex;
     std::atomic<std::deque<std::shared_ptr<audio::Player>>*> mPlayers{};
     std::deque<std::shared_ptr<audio::Player>> mPlayersBuf1, mPlayersBuf2;
     
     std::shared_ptr<api::Program> mCurrProgram = nullptr;
-    std::vector<std::shared_ptr<PlayItem>> mScheduleItems;
-    util::ManualTimer mTCPUpdateTimer;
     util::ManualTimer mEjectTimer;
     util::AsyncTimer mReportTimer;
     util::AsyncAlignedTimer mBlockRecordTimer;
-    util::AsyncWorker<std::shared_ptr<PlayItem>> mItemChangeWorker;
-    util::TaskQueue mMailTaskQueue;
+    util::TaskQueue mPlayerModifyQueue;
+    util::TaskQueue mItemChangeQueue;
+    util::TaskQueue mParamChangeQueue;
+    util::TaskQueue mReportQueue;
+    util::TaskQueue mMailSendQueue;
     // audio::Player* mPlayerPtrs[3];
     // std::atomic<size_t> mPlayerPtrIdx;
     time_t mStartTime;
@@ -124,11 +118,10 @@ class Engine : public audio::Client::Renderer {
     
     
 public:
-    Engine(const Config& tConfig) :
+    Engine(Config tConfig) :
         mConfig(tConfig),
         mClientFormat(mConfig.sampleRate, mConfig.samplesPerFrame, 2),
         mCalendar(std::make_unique<Calendar>(mConfig)),
-        mTCPServer(std::make_unique<io::TCPServer>(mConfig.tcpPort)),
         mAPIClient(std::make_unique<api::Client>(mConfig)),
         mSMTPSender(std::make_unique<io::SMTPSender>()),
         mParameters(mConfig.parametersPath),
@@ -142,34 +135,27 @@ public:
         mBlockRecorder(mClientFormat, mConfig.recordBlockBitRate),
         mStreamOutput(mClientFormat, mConfig.streamOutBitRate),
         mStreamProvider(mClientFormat, 128000),
-        mTCPUpdateTimer(1),
         mEjectTimer(1),
         mReportTimer(mConfig.healthReportInterval),
         mBlockRecordTimer(mConfig.recordBlockDuration),
         mStartTime(std::time(0))
     {
-        mCalendar->calendarChangedCallback = [this](const auto& items) { this->onCalendarChanged(items); };
-        mSilenceDet.silenceChangedCallback = [this](const auto& silence) { this->onSilenceChanged(silence); };
-        mFallback.startCallback = [this](auto itm) { this->onPlayerStart(itm); };
-        mReportTimer.callback = [this] { postStatus(); };
-        mBlockRecordTimer.callback = [this] { recordBlockChanged(); };
-        mItemChangeWorker.callback = [this](const auto& item) { playItemChanged(item); };
-        mParameters.onParametersChanged = [this] { this->onParametersChanged(); };
+        mCalendar->calendarChangedCallback = [this](const auto& items) { onCalendarChanged(items); };
+        mSilenceDet.silenceChangedCallback = [this](const auto& silence) { onSilenceChanged(silence); };
+        mFallback.startCallback = [this](auto itm) { onPlayerStart(itm); };
+        mReportTimer.callback = [this] { onReportStatus(); };
+        mBlockRecordTimer.callback = [this] { onRecordBlockChanged(); };
+        mParameters.onParametersChanged = [this] { onParametersChanged(); };
         mParameters.publish();
         mAudioClient.setRenderer(this);
-        mTCPServer->onDataReceived = [this](const auto& command) { return mRemote.executeCommand(command, ""); };
-        mTCPServer->welcomeMessage = "f1: fallback start, f0: fallback stop, s: status\n";
-        mRemote.registerCommand("f1", [this] { mFallback.start(); });
-        mRemote.registerCommand("f0", [this] { mFallback.stop(); });
-        mRemote.registerCommand("s", [this] { updateStatus(); });
         mScheduleRecorder.logName = "Schedule Recorder";
         mBlockRecorder.logName = "Block Recorder";
         mWebService->audioStreamBuffer = &mStreamProvider.mRingBufferO;
     }
 
-    void parseArgs(std::unordered_map<std::string,std::string> tArgs) {
+    void parseArgs(const std::unordered_map<std::string,std::string>& tArgs) {
         try {
-            auto calFile = tArgs["--calendar"];
+            auto calFile = tArgs.at("--calendar");
             if (!calFile.empty()) mCalendar->load(calFile);
         }
         catch (const std::exception& e) {
@@ -185,8 +171,9 @@ public:
         mCalendar->start();
         mScheduleThread = std::thread(&Engine::runSchedule, this);
         mLoadThread = std::thread(&Engine::runLoad, this);
-        mReportTimer.start();
-        mItemChangeWorker.start();
+        if (mConfig.healthURL.size()) {
+            mReportTimer.start();
+        }
         if (mConfig.recordBlockPath.size()) {
             mBlockRecordTimer.start();
         }
@@ -201,12 +188,6 @@ public:
             log.error() << "Engine failed to start output stream: " << e.what();
         }
 
-        try {
-            mTCPServer->start();
-        }
-        catch (const std::exception& e) {
-            log.error() << "Engine failed to start TCP server: " << e.what();
-        }
         log.info() << "Engine started";
 
         mWebService->start();
@@ -216,10 +197,8 @@ public:
         log.debug() << "Engine stopping...";
         mRunning = false;
         mWebService->stop();
-        mTCPServer->stop();
         mCalendar->stop();
         mReportTimer.stop();
-        mItemChangeWorker.stop();
         if (mScheduleThread.joinable()) mScheduleThread.join();
         if (mLoadThread.joinable()) mLoadThread.join();
         mScheduleRecorder.stop();
@@ -251,16 +230,10 @@ public:
     // schedule thread
     void runSchedule() {
         while (mRunning) {
-
             if (mEjectTimer.query()) {
-                cleanPlayers();
-            }
-            
-            if (mScheduleItemsChanged) {
-                mScheduleItemsChanged = false;
-                std::lock_guard<std::mutex> lock(mScheduleItemsMutex);
-                refreshPlayers();
-                mScheduleItems.clear();
+                mPlayerModifyQueue.async([this] {
+                    cleanPlayers();
+                });
             }
 
             if (mWebService->isClientConnected()) {
@@ -279,8 +252,8 @@ public:
         setPlayers(players);
     }
 
-    void refreshPlayers() {
-        log.debug() << "Engine refreshPlayers";
+    void schedulePlayers(std::vector<std::shared_ptr<PlayItem>> tScheduleItems) {
+        log.debug() << "Engine schedulePlayers";
 
         auto itemsEqual = [](const std::shared_ptr<PlayItem>& lhs, const std::shared_ptr<PlayItem>& rhs) {
             return lhs && rhs && *lhs == *rhs;
@@ -290,7 +263,7 @@ public:
         std::deque<std::shared_ptr<audio::Player>> newPlayers;
 
         // push existing players matching new play items
-        for (const auto& item : mScheduleItems) {
+        for (const auto& item : tScheduleItems) {
             if (item->end < std::time(0)) continue;
 
             auto it = std::find_if(oldPlayers.begin(), oldPlayers.end(), [&](const auto& plr) { return itemsEqual(plr->playItem, item); });
@@ -306,8 +279,8 @@ public:
         
         // stop players not matching new play items
         for (const auto& player : oldPlayers) {
-            auto it = std::find_if(mScheduleItems.begin(), mScheduleItems.end(), [&](const auto& itm) { return itemsEqual(itm, player->playItem); });
-            if (it == mScheduleItems.end()) {
+            auto it = std::find_if(tScheduleItems.begin(), tScheduleItems.end(), [&](const auto& itm) { return itemsEqual(itm, player->playItem); });
+            if (it == tScheduleItems.end()) {
                 player->stop();
             }
         }
@@ -337,16 +310,16 @@ public:
         log.debug() << "Engine onSilenceChanged " << tSilence;
         if (tSilence) mFallback.start();
         else mFallback.stop();
-        mMailTaskQueue.async([this, tSilence] {
-            sendSilenceNotificationMail(tSilence);
+        mMailSendQueue.async([this, silence=tSilence] {
+            sendSilenceNotificationMail(silence);
         });
     }
     
     void onCalendarChanged(const std::vector<std::shared_ptr<PlayItem>>& tItems) {
         log.debug() << "Engine onCalendarChanged";
-        std::lock_guard<std::mutex> lock(mScheduleItemsMutex);
-        mScheduleItems = tItems;
-        mScheduleItemsChanged = true;
+        mPlayerModifyQueue.async([this, items=tItems] {
+            schedulePlayers(items);
+        });
     }
 
     void onPlayerStart(std::shared_ptr<PlayItem> tItem) {
@@ -355,18 +328,40 @@ public:
             log.error() << "Engine playerStartCallback item is null";
             return;
         }
+        mItemChangeQueue.async([this, item=tItem] {
+            playItemChanged(item);
+        });
+    }
 
-        mItemChangeWorker.async(tItem); // playItemChanged async on same thread
+    void onReportStatus() {
+        log.debug() << "Engine onReportStatus";
+        mReportQueue.async([this] {
+            postStatus();
+        });
+    }
+
+    void onRecordBlockChanged() {
+        log.debug() << "Engine onRecordBlockChanged";
+        mBlockRecorder.stop();
+        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::fileTimestamp() + "." + mConfig.recordBlockFormat;
+        try {
+            mBlockRecorder.start(recURL);
+        }
+        catch (const std::runtime_error& e) {
+            log.error() << "Engine failed to start block recorder: " << e.what();
+        }
     }
 
     void onParametersChanged() {
-        auto params = mParameters.get();
-        auto outGainLog = params.outputGain.load();
-        if (outGainLog != mOutputGainLog) {
-            mOutputGainLog = outGainLog;
-            mOutputGainLin = util::dbLinear(mOutputGainLog);
-            log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
-        }
+        mParamChangeQueue.async([this] {
+            auto params = mParameters.get();
+            auto outGainLog = params.outputGain.load();
+            if (outGainLog != mOutputGainLog) {
+                mOutputGainLog = outGainLog;
+                mOutputGainLin = util::dbLinear(mOutputGainLog);
+                log.info() << "Engine output gain changed to " << mOutputGainLog << " dB / " << mOutputGainLin << " linear";
+            }
+        });
     }
 
 
@@ -390,7 +385,9 @@ public:
 
         log.info(Log::Cyan) << "Track changed to '" << tItem->uri << "'";
 
-        postPlaylog(tItem);
+        mReportQueue.async([this, item=tItem] {
+            postPlaylog(item);
+        });
     }
 
     void programChanged() {
@@ -410,41 +407,6 @@ public:
                 }
             }
         }
-    }
-
-    void recordBlockChanged() {
-        log.debug() << "Engine timeBlockChanged";
-        mBlockRecorder.stop();
-        auto recURL = mConfig.audioRecordPath + "/" + mConfig.recordBlockPath + "/" + util::fileTimestamp() + "." + mConfig.recordBlockFormat;
-        try {
-            mBlockRecorder.start(recURL);
-        }
-        catch (const std::runtime_error& e) {
-            log.error() << "Engine failed to start block recorder: " << e.what();
-        }
-    }
-
-    // temporary monitoring "UI" 
-    std::ostringstream strstr;
-
-    void updateStatus() {
-        // strstr.flush();
-        // strstr << "\x1b[5A";
-        auto players = getPlayers();
-        strstr << "____________________________________________________________________________________________________________\n";
-        strstr << "RMS In:  " << std::fixed << std::setprecision(2) << util::linearDB(mInputMeter.currentRMS()) << " dB\n";
-        strstr << "RMS Out: " << std::fixed << std::setprecision(2) << util::linearDB(mSilenceDet.currentRMS()) << " dB\n";
-        strstr << "Fallback: " << (mFallback.isActive() ? "ACTIVE" : "INACTIVE") << '\n';
-        strstr << "Player queue (" << players.size() << " items):\n";
-
-        audio::Player::getStatusHeader(strstr);
-        for (auto player : players) {
-            if (player) player->getStatus(strstr);
-        }
-        strstr << std::endl;
-
-        mTCPServer->pushStatus(strstr.str());
-        // log.debug() << statusSS.str();
     }
 
     void updateWebService() {

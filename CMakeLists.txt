@@ -5,6 +5,7 @@ find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(CURL REQUIRED libcurl)
+pkg_check_modules(MYSQLCLIENT REQUIRED libmariadb)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswresample)
 
@@ -23,8 +24,24 @@ set_target_properties(castor PROPERTIES
 
 target_include_directories(castor PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${CURL_INCLUDE_DIRS}
+    ${MYSQLCLIENT_INCLUDE_DIRS}
+    ${PORTAUDIO_INCLUDE_DIRS}
+    ${FFMPEG_INCLUDE_DIRS}
 )
 
-target_link_libraries(castor PRIVATE ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${FFMPEG_LIBRARIES})
+target_link_libraries(castor PRIVATE
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${CURL_LIBRARIES}
+    ${MYSQLCLIENT_LIBRARIES}
+    ${PORTAUDIO_LIBRARIES}
+    ${FFMPEG_LIBRARIES}
+)
 
-target_compile_options(castor PRIVATE -Wno-psabi)
+target_compile_options(castor PRIVATE
+    -Wno-psabi
+    ${CURL_CFLAGS_OTHER}
+    ${MYSQLCLIENT_CFLAGS_OTHER}
+    ${PORTAUDIO_CFLAGS_OTHER}
+    ${FFMPEG_CFLAGS_OTHER}
+)
